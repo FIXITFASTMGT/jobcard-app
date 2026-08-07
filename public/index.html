@@ -169,6 +169,21 @@
   .job-actions button:hover{background:var(--plate-50);}
   .model-stats{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--steel-600);margin-top:4px;font-family:var(--font-mono);}
 
+  /* ---------- KPI strip (dashboard overview) ---------- */
+  .kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  @media(max-width:640px){.kpi-strip{grid-template-columns:1fr 1fr;}}
+  .kpi-card{background:var(--plate-50);border:1px solid var(--plate-100);border-radius:4px;padding:14px 12px;text-align:center;}
+  .kpi-card.warn{background:var(--red-100);border-color:var(--red-600);}
+  .kpi-num{font-family:var(--font-display);font-size:26px;font-weight:600;color:var(--graphite-950);}
+  .kpi-card.warn .kpi-num{color:var(--red-600);}
+  .kpi-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--steel-600);margin-top:2px;}
+
+  /* ---------- sticky-header table scroll container ---------- */
+  .table-scroll{max-height:520px;overflow-y:auto;overflow-x:auto;border:1px solid var(--plate-100);}
+  .table-scroll table.entries th{position:sticky;top:0;z-index:1;}
+  tr.hold-row td{background:var(--red-100);}
+  tr.hold-row:hover td{background:#f6d4cf;}
+
   /* ---------- paste-from-excel ---------- */
   .paste-box{margin-top:10px;padding:12px;background:var(--plate-50);border:1.5px dashed var(--steel-200);border-radius:3px;}
   .paste-box textarea{min-height:100px;font-family:var(--font-mono);font-size:12px;}
@@ -257,6 +272,25 @@ function toast(msg, isErr){
 function esc(s){ return (s||'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function lampClass(status){ return status==='Completed'?'green':status==='Partial'?'amber':status==='Hold'?'red':'grey'; }
 
+// Prevents double-submit: disables the button and swaps its label while fn() runs,
+// restores it afterward (success or failure) unless the button was replaced by a re-render.
+async function withLock(btn, busyLabel, fn){
+  if(!btn || btn.disabled) return;
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = busyLabel || 'Working…';
+  try{ await fn(); }
+  finally{ if(btn && document.body.contains(btn)){ btn.disabled = false; btn.textContent = original; } }
+}
+
+let unsavedOpsDirty = false;
+window.addEventListener('beforeunload', (e)=>{ if(unsavedOpsDirty){ e.preventDefault(); e.returnValue=''; } });
+function switchView(v){
+  if(unsavedOpsDirty && !confirm('You have unsaved operation changes on screen. Leave without saving?')) return;
+  unsavedOpsDirty = false;
+  view = v; render();
+}
+
 const params = new URLSearchParams(location.search);
 const scanToken = params.get('job');
 let view = 'dashboard';
@@ -299,7 +333,7 @@ function setNav(){
   const items=[['dashboard','Dashboard'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels']];
   bar.innerHTML = items.map(([id,l])=>`<button data-v="${id}" class="${view===id?'active':''}">${l}</button>`).join('')
     + `<button id="logoutBtn" class="small">Log Out</button>`;
-  bar.querySelectorAll('button[data-v]').forEach(b=> b.onclick=()=>{ view=b.dataset.v; render(); });
+  bar.querySelectorAll('button[data-v]').forEach(b=> b.onclick=()=> switchView(b.dataset.v));
   const lo = document.getElementById('logoutBtn');
   if(lo) lo.onclick = async ()=>{ await sb.auth.signOut(); session=null; boot(); };
 }
@@ -495,8 +529,10 @@ async function openOpsEditor({ title, loadFn, saveFn, filenamePrefix }){
   panel.style.display='block';
   panel.innerHTML = `<div class="empty">Loading operations…</div>`;
   let list = (await loadFn() || []).map(o=>({...o}));
+  let firstPaint = true;
 
   function paint(){
+    if(!firstPaint) unsavedOpsDirty = true; else firstPaint = false;
     const totalOps = list.length;
     const totalStdHours = list.reduce((s,o)=> s + (parseFloat(o.std_hours)||0), 0);
     const totalLabourHours = list.reduce((s,o)=> s + (parseFloat(o.std_hours)||0) * (parseInt(o.std_manpower)||1), 0);
@@ -508,6 +544,7 @@ async function openOpsEditor({ title, loadFn, saveFn, filenamePrefix }){
             <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none;">
           </label>
           <button class="btn ghost small" id="exportOpsBtn">Export Excel</button>
+          <button class="btn ghost small" id="closeOpsBtn" type="button">Close</button>
         </div>
       </div>
       <div class="stat-line" style="display:flex;gap:18px;flex-wrap:wrap;">
@@ -555,8 +592,8 @@ async function openOpsEditor({ title, loadFn, saveFn, filenamePrefix }){
     panel.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.up; if(i>0){ [list[i-1],list[i]]=[list[i],list[i-1]]; paint(); }});
     panel.querySelectorAll('[data-down]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.down; if(i<list.length-1){ [list[i+1],list[i]]=[list[i],list[i+1]]; paint(); }});
     panel.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ list.splice(+b.dataset.del,1); paint(); });
-    panel.querySelectorAll('[data-hrs]').forEach(inp=>inp.onchange=()=>{ list[+inp.dataset.hrs].std_hours=parseFloat(inp.value)||0; });
-    panel.querySelectorAll('[data-man]').forEach(inp=>inp.onchange=()=>{ list[+inp.dataset.man].std_manpower=parseInt(inp.value)||1; });
+    panel.querySelectorAll('[data-hrs]').forEach(inp=>inp.onchange=()=>{ list[+inp.dataset.hrs].std_hours=parseFloat(inp.value)||0; unsavedOpsDirty=true; });
+    panel.querySelectorAll('[data-man]').forEach(inp=>inp.onchange=()=>{ list[+inp.dataset.man].std_manpower=parseInt(inp.value)||1; unsavedOpsDirty=true; });
     panel.querySelectorAll('[data-exec]').forEach(sel=>sel.onchange=()=>{ list[+sel.dataset.exec].execution_mode=sel.value; paint(); });
 
     // drag-and-drop reordering
@@ -606,11 +643,18 @@ async function openOpsEditor({ title, loadFn, saveFn, filenamePrefix }){
       toast('Added '+parsed.length+' rows');
       paint();
     };
-    document.getElementById('saveOpsBtn').onclick = async ()=>{
+    document.getElementById('closeOpsBtn').onclick = ()=>{
+      if(unsavedOpsDirty && !confirm('Unsaved changes will be lost. Close anyway?')) return;
+      unsavedOpsDirty = false;
+      panel.style.display='none';
+      panel.innerHTML='';
+    };
+    document.getElementById('saveOpsBtn').onclick = (e)=> withLock(e.target, 'Saving…', async ()=>{
       const { error } = await saveFn(list);
       if(error) return toast(error.message, true);
+      unsavedOpsDirty = false;
       toast('Saved');
-    };
+    });
   }
   paint();
 }
@@ -677,17 +721,23 @@ async function renderNewJob(app){
   let copyOps = true;
   document.getElementById('copyYesBtn').onclick = ()=>{ copyOps=true; document.getElementById('copyYesBtn').classList.add('on'); document.getElementById('copyNoBtn').classList.remove('on'); };
   document.getElementById('copyNoBtn').onclick = ()=>{ copyOps=false; document.getElementById('copyNoBtn').classList.add('on'); document.getElementById('copyYesBtn').classList.remove('on'); };
-  document.getElementById('createBtn').onclick = async ()=>{
+  document.getElementById('createBtn').onclick = (e)=> withLock(e.target, 'Creating…', async ()=>{
     const machine_no = document.getElementById('f_machine').value.trim().toUpperCase();
     const customer = document.getElementById('f_customer').value.trim();
     const model_id = document.getElementById('f_model').value;
     const start_date = document.getElementById('f_start').value || null;
     const planned_end_date = document.getElementById('f_end').value || null;
     const delivery_date = document.getElementById('f_delivery').value || null;
-    if(!machine_no || !model_id) return toast('Machine No. and Model are required', true);
+    if(!machine_no || !model_id) { toast('Machine No. and Model are required', true); return; }
+
+    const { data: existingActive } = await sb.from('jobs').select('id, customer, models(model_name)').eq('machine_no', machine_no).eq('status','Active');
+    if(existingActive && existingActive.length>0){
+      const ex = existingActive[0];
+      if(!confirm(`Machine ${machine_no} already has an active job (${ex.customer||'no customer'}, ${ex.models?.model_name||''}). Create another active job on the same machine number anyway?`)) return;
+    }
 
     const { data: job, error } = await sb.from('jobs').insert({ machine_no, customer, model_id, start_date, planned_end_date, delivery_date }).select().single();
-    if(error) return toast(error.message, true);
+    if(error) { toast(error.message, true); return; }
 
     if(copyOps){
       const { data: modelOps } = await sb.from('model_operations').select('*').eq('model_id', model_id).order('sequence');
@@ -698,7 +748,6 @@ async function renderNewJob(app){
       }
     }
     toast('Job created — review its operations below, then head to Jobs / QR Labels to print.');
-    document.getElementById('createBtn').disabled = true;
     openOpsEditor({
       title: 'Job Operations — ' + machine_no,
       loadFn: async ()=> (await sb.from('job_operations').select('*').eq('job_id', job.id).order('sequence')).data,
@@ -710,7 +759,7 @@ async function renderNewJob(app){
       },
       filenamePrefix: machine_no
     });
-  };
+  });
 }
 
 /* ================= JOBS / QR LABELS ================= */
@@ -726,6 +775,9 @@ async function renderJobsQr(app){
     <div class="panel no-print">
       <div class="panel-title">Label Sheet Builder <span class="sub">64×34mm · 24/sheet</span></div>
       <div class="stat-line">Tick jobs below, click Build Sheet to preview, then pick the print profile matching whichever printer/browser you're using right now — different printers shift the start position on the sheet, these two profiles compensate for that.</div>
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-weight:400;font-size:13px;color:var(--graphite-950);margin:0 0 8px;">
+        <input type="checkbox" id="selectAllChk" style="width:auto;"> Select All
+      </label>
       <div id="checkList"></div>
       <button class="btn amber" id="buildBtn">Build Label Sheet</button>
       <div class="print-profiles no-print" id="printProfiles" style="display:none;">
@@ -802,6 +854,10 @@ async function renderJobsQr(app){
       <input type="checkbox" class="jobChk" value="${j.id}" style="width:auto;"> ${esc(j.machine_no)} — ${esc(j.customer||'')} — ${esc(j.models?.model_name||'')}
     </label>`).join('') || '<div class="empty">No active jobs to label.</div>';
 
+  document.getElementById('selectAllChk').onchange = (e)=>{
+    document.querySelectorAll('.jobChk').forEach(c=> c.checked = e.target.checked);
+  };
+
   document.getElementById('buildBtn').onclick = ()=>{
     const chosen = [...document.querySelectorAll('.jobChk:checked')].map(c=>c.value);
     if(chosen.length===0) return toast('Select at least one job', true);
@@ -811,6 +867,12 @@ async function renderJobsQr(app){
   };
   document.getElementById('printMethodBtn').onclick = ()=> handlePrint('method');
   document.getElementById('printMfgBtn').onclick = ()=> handlePrint('mfg');
+  // Remember the last print profile used on this device, so it doesn't need reselecting every session.
+  const lastProfile = localStorage.getItem('jobcard_print_profile');
+  if(lastProfile === 'mfg'){
+    document.getElementById('printMfgBtn').classList.remove('ghost');
+    document.getElementById('printMethodBtn').classList.add('ghost');
+  }
 }
 
 // Two print profiles — only the top margin differs (10mm less for "mfg"), because
@@ -820,6 +882,7 @@ function handlePrint(profile){
   if(!sheet){ toast('Build the label sheet first', true); return; }
   const topMargin = profile === 'mfg' ? '6.479mm' : '16.479mm';
   sheet.style.paddingTop = topMargin;
+  localStorage.setItem('jobcard_print_profile', profile);
   const oldTitle = document.title;
   document.title = 'QR_Labels_' + new Date().toISOString().slice(0,10);
   window.print();
@@ -868,7 +931,7 @@ async function renderScan(app, token){
     </div>
     <div class="panel">
       <div class="panel-title">Log Your Work</div>
-      <label>Your Name</label><input id="s_name" placeholder="Operator name">
+      <label>Your Name</label><input id="s_name" name="operator_name" autocomplete="name" placeholder="Your name">
       <label>Operation</label>
       <select id="s_op"><option value="">— Select —</option>
         ${(ops||[]).map(o=>`<option value="${o.id}">${esc(o.op_no)} — ${esc(o.description)}${o.execution_mode==='Parallel'?' [Parallel]':''} (${o.std_hours}h std)</option>`).join('')}
@@ -926,7 +989,7 @@ async function renderScan(app, token){
     row.innerHTML = `<div><input placeholder="Operator name" class="extraName"></div><div><input placeholder="Hours" class="extraHours"></div>`;
     document.getElementById('extraOps').appendChild(row);
   };
-  document.getElementById('s_submit').onclick = async ()=>{
+  document.getElementById('s_submit').onclick = (e)=> withLock(e.target, 'Submitting…', async ()=>{
     const name=document.getElementById('s_name').value.trim();
     const op_id=document.getElementById('s_op').value;
     const date=document.getElementById('s_date').value;
@@ -936,13 +999,13 @@ async function renderScan(app, token){
     const issue=document.getElementById('s_issue').value.trim();
     const delayHrs=document.getElementById('s_delayhrs').value;
     const resp=document.getElementById('s_resp').value;
-    if(!name) return toast('Enter your name', true);
-    if(!op_id) return toast('Select an operation', true);
-    if(!date||!start||!end) return toast('Fill date, start and end time', true);
+    if(!name) { toast('Enter your name', true); return; }
+    if(!op_id) { toast('Select an operation', true); return; }
+    if(!date||!start||!end) { toast('Fill date, start and end time', true); return; }
     if(status==='Partial'||status==='Hold'){
-      if(!issue) return toast('Issue/Delay reason is required for Partial/Hold', true);
-      if(!delayHrs) return toast('Enter delay hours for Partial/Hold', true);
-      if(!resp) return toast('Select which department (Responsibility) for Partial/Hold', true);
+      if(!issue) { toast('Issue/Delay reason is required for Partial/Hold', true); return; }
+      if(!delayHrs) { toast('Enter delay hours for Partial/Hold', true); return; }
+      if(!resp) { toast('Select which department (Responsibility) for Partial/Hold', true); return; }
     }
 
     const { data: entry, error } = await sb.from('entries').insert({
@@ -950,7 +1013,7 @@ async function renderScan(app, token){
       activity_date: date, start_time: start, end_time: end, status, issue_reason: issue||null,
       delay_hours: delayHrs ? parseFloat(delayHrs) : null, responsibility: resp || null
     }).select().single();
-    if(error) return toast(error.message, true);
+    if(error) { toast(error.message, true); return; }
 
     const extraRows = [...document.querySelectorAll('#extraOps .row2')].map(r=>({
       entry_id: entry.id,
@@ -962,7 +1025,7 @@ async function renderScan(app, token){
     app.innerHTML = `<div class="panel"><div class="empty"><span class="lamp green" style="width:16px;height:16px;"></span><br><br>Entry submitted for <b>${esc(job.machine_no)}</b>.<br><br>
       <button class="btn amber" id="another">Log Another Entry</button></div></div>`;
     document.getElementById('another').onclick=()=>renderScan(app, token);
-  };
+  });
 }
 
 /* ================= DASHBOARD ================= */
@@ -984,7 +1047,24 @@ async function renderDashboard(app){
     if(m && !latestByMachine[m]) latestByMachine[m] = e.status; // entries already sorted newest-first
   });
 
+  // KPI strip
+  const todayStr = new Date().toISOString().slice(0,10);
+  const weekAgo = new Date(Date.now() - 6*24*60*60*1000).toISOString().slice(0,10);
+  const entriesToday = (entries||[]).filter(e=> e.activity_date === todayStr).length;
+  const entriesThisWeek = (entries||[]).filter(e=> e.activity_date >= weekAgo).length;
+  const onHoldNow = activeMachines.filter(j=> latestByMachine[j.machine_no] === 'Hold').length;
+  const delayHoursThisWeek = (entries||[]).filter(e=> e.activity_date >= weekAgo).reduce((s,e)=> s + (parseFloat(e.delay_hours)||0), 0);
+
   app.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">Overview</div>
+      <div class="kpi-strip">
+        <div class="kpi-card"><div class="kpi-num">${entriesToday}</div><div class="kpi-label">Entries Today</div></div>
+        <div class="kpi-card"><div class="kpi-num">${entriesThisWeek}</div><div class="kpi-label">Entries This Week</div></div>
+        <div class="kpi-card ${onHoldNow>0?'warn':''}"><div class="kpi-num">${onHoldNow}</div><div class="kpi-label">Machines On Hold Now</div></div>
+        <div class="kpi-card"><div class="kpi-num">${delayHoursThisWeek.toFixed(1)}h</div><div class="kpi-label">Delay Hours This Week</div></div>
+      </div>
+    </div>
     <div class="panel">
       <div class="panel-title">Floor Status <span class="sub">latest entry per active machine</span></div>
       <div class="floor-strip" id="floorStrip"></div>
@@ -992,11 +1072,16 @@ async function renderDashboard(app){
     <div class="panel">
       <div class="panel-title">Live Production Log</div>
       <div class="stat-line">${(entries||[]).length} entries · approx. ${sizeLabel} · <button class="btn ghost small" id="exportBtn">Export to Excel</button></div>
-      <div class="row2" style="margin-bottom:10px;">
+      <div class="row3" style="margin-bottom:4px;">
         <div><label>Filter Machine</label><select id="filterM"><option value="">All</option>${(jobs||[]).map(j=>`<option value="${esc(j.machine_no)}">${esc(j.machine_no)}</option>`).join('')}</select></div>
         <div><label>Filter Status</label><select id="filterS"><option value="">All</option><option>Completed</option><option>Partial</option><option>Hold</option></select></div>
+        <div><label>Search Operator</label><input id="filterOp" placeholder="Type a name…"></div>
       </div>
-      <div style="overflow-x:auto;"><table class="entries" id="entryTable"></table></div>
+      <div class="row2" style="margin-bottom:10px;">
+        <div><label>From Date</label><input id="filterFrom" type="date"></div>
+        <div><label>To Date</label><input id="filterTo" type="date"></div>
+      </div>
+      <div class="table-scroll"><table class="entries" id="entryTable"></table></div>
     </div>
     <div class="panel">
       <div class="panel-title">Archive Old Entries</div>
@@ -1018,11 +1103,20 @@ async function renderDashboard(app){
   function paint(){
     const fm = document.getElementById('filterM').value;
     const fs = document.getElementById('filterS').value;
-    const rows = (entries||[]).filter(e => (!fm || e.jobs?.machine_no===fm) && (!fs || e.status===fs));
+    const fo = document.getElementById('filterOp').value.trim().toLowerCase();
+    const ffrom = document.getElementById('filterFrom').value;
+    const fto = document.getElementById('filterTo').value;
+    const rows = (entries||[]).filter(e =>
+      (!fm || e.jobs?.machine_no===fm) &&
+      (!fs || e.status===fs) &&
+      (!fo || (e.primary_operator||'').toLowerCase().includes(fo)) &&
+      (!ffrom || e.activity_date >= ffrom) &&
+      (!fto || e.activity_date <= fto)
+    );
     const table = document.getElementById('entryTable');
     if(rows.length===0){ table.innerHTML=`<tr><td class="empty">No entries match this filter.</td></tr>`; return; }
     table.innerHTML = `<tr><th>Machine</th><th>Op</th><th>Operator</th><th>Date</th><th>Time</th><th>Status</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th></tr>
-      ${rows.map(e=>`<tr>
+      ${rows.map(e=>`<tr class="${e.status==='Hold'?'hold-row':''}">
         <td><b>${esc(e.jobs?.machine_no)}</b><br><span style="color:var(--steel-600);font-size:11px;">${esc(e.jobs?.customer||'')}</span></td>
         <td class="mono">${esc(e.job_operations?.op_no)}<br><span style="color:var(--steel-600);font-size:11px;font-family:var(--font-body);">${esc(e.job_operations?.description)}</span></td>
         <td>${esc(e.primary_operator)}</td>
@@ -1038,6 +1132,9 @@ async function renderDashboard(app){
   paint();
   document.getElementById('filterM').onchange = paint;
   document.getElementById('filterS').onchange = paint;
+  document.getElementById('filterOp').oninput = paint;
+  document.getElementById('filterFrom').onchange = paint;
+  document.getElementById('filterTo').onchange = paint;
 
   function exportRows(rows, filename){
     const ws = XLSX.utils.json_to_sheet(rows.map(e=>({
@@ -1050,19 +1147,19 @@ async function renderDashboard(app){
   }
   document.getElementById('exportBtn').onclick = ()=> exportRows(entries||[], 'production_log_'+new Date().toISOString().slice(0,10)+'.xlsx');
 
-  document.getElementById('archiveBtn').onclick = async ()=>{
+  document.getElementById('archiveBtn').onclick = (e)=> withLock(e.target, 'Archiving…', async ()=>{
     const cutoff = document.getElementById('archiveDate').value;
-    if(!cutoff) return toast('Pick a cutoff date', true);
-    const toArchive = (entries||[]).filter(e => e.activity_date < cutoff);
-    if(toArchive.length===0) return toast('No entries before that date', true);
+    if(!cutoff) { toast('Pick a cutoff date', true); return; }
+    const toArchive = (entries||[]).filter(en => en.activity_date < cutoff);
+    if(toArchive.length===0) { toast('No entries before that date', true); return; }
     if(!confirm(`This will export ${toArchive.length} entries and permanently delete them from the live dashboard. Continue?`)) return;
     exportRows(toArchive, 'archive_before_'+cutoff+'.xlsx');
-    const ids = toArchive.map(e=>e.id);
-    const { error } = await sb.from('entries').delete().in('id', ids);
-    if(error) return toast('Delete failed: '+error.message, true);
+    const ids = toArchive.map(en=>en.id);
+    const { error: delErr } = await sb.from('entries').delete().in('id', ids);
+    if(delErr) { toast('Delete failed: '+delErr.message, true); return; }
     toast('Archived and deleted '+ids.length+' entries');
     renderDashboard(app);
-  };
+  });
 }
 
 boot();
