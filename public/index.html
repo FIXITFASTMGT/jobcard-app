@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   :root{
     --graphite-950:#1a1e22;
@@ -183,6 +184,28 @@
   .table-scroll table.entries th{position:sticky;top:0;z-index:1;}
   tr.hold-row td{background:var(--red-100);}
   tr.hold-row:hover td{background:#f6d4cf;}
+
+  /* ---------- section headers (mini KPI strips + charts) ---------- */
+  .section-header{background:var(--plate-50);border:1px solid var(--plate-100);border-radius:4px;padding:14px;margin-bottom:14px;}
+  .mini-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+  @media(max-width:640px){.mini-kpi-row{grid-template-columns:1fr 1fr;}}
+  .mini-kpi{background:#fff;border:1px solid var(--plate-100);border-radius:3px;padding:10px;text-align:center;}
+  .mini-kpi .num{font-family:var(--font-display);font-size:20px;font-weight:600;color:var(--graphite-950);}
+  .mini-kpi .lbl{font-size:10px;text-transform:uppercase;color:var(--steel-600);letter-spacing:.3px;margin-top:2px;}
+  .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:720px){.chart-row{grid-template-columns:1fr;}}
+  .chart-box{background:#fff;border:1px solid var(--plate-100);border-radius:3px;padding:10px;}
+  .chart-box canvas{max-height:220px;}
+  .ranked-list{font-size:12.5px;}
+  .ranked-row{display:flex;justify-content:space-between;padding:5px 2px;border-bottom:1px solid var(--plate-100);}
+  .ranked-row:last-child{border-bottom:none;}
+  .date-presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .date-presets button{padding:6px 12px;font-size:11px;font-weight:700;text-transform:uppercase;border-radius:12px;
+    border:1.5px solid var(--steel-200);background:#fff;cursor:pointer;color:var(--steel-600);}
+  .date-presets button.on{background:var(--graphite-950);color:#fff;border-color:var(--graphite-950);}
+  table.eff th{text-align:left;background:var(--steel-700);color:#fff;padding:7px 6px;font-size:10px;text-transform:uppercase;}
+  table.eff td{padding:6px;border-bottom:1px solid var(--plate-100);font-size:12px;}
+  table.eff{width:100%;border-collapse:collapse;}
 
   /* ---------- paste-from-excel ---------- */
   .paste-box{margin-top:10px;padding:12px;background:var(--plate-50);border:1.5px dashed var(--steel-200);border-radius:3px;}
@@ -1239,14 +1262,80 @@ async function bulkAddEntries(rows, resultsEl){
   return validRows.length > 0;
 }
 
+/* ================= EFFICIENCY / CHART HELPERS ================= */
+function toHours(start, end){
+  if(!start || !end) return 0;
+  const [sh,sm] = start.split(':').map(Number);
+  const [eh,em] = end.split(':').map(Number);
+  if(isNaN(sh)||isNaN(sm)||isNaN(eh)||isNaN(em)) return 0;
+  let mins = (eh*60+em) - (sh*60+sm);
+  if(mins < 0) mins += 24*60; // overnight shift
+  return mins/60;
+}
+function applyDatePreset(preset, fromEl, toEl){
+  const fmt = d => d.toISOString().slice(0,10);
+  const today = new Date();
+  if(preset==='today'){ fromEl.value = fmt(today); toEl.value = fmt(today); }
+  else if(preset==='week'){
+    const day = today.getDay();
+    const monday = new Date(today); monday.setDate(today.getDate() - ((day+6)%7));
+    fromEl.value = fmt(monday); toEl.value = fmt(today);
+  } else if(preset==='month'){
+    const first = new Date(today.getFullYear(), today.getMonth(), 1);
+    fromEl.value = fmt(first); toEl.value = fmt(today);
+  } else { fromEl.value=''; toEl.value=''; }
+}
+// Earned Hours method: a Completed operation earns its full Std Hours regardless of
+// actual time taken; an operation not yet Completed earns exactly the actual hours
+// logged against it so far. Efficiency % = Earned Hours ÷ Actual Hours × 100.
+function computeEfficiency(filteredEntries, jobOpsAll, entryOpsByEntry, jobsById){
+  const byJob = {};
+  filteredEntries.forEach(e=>{ if(e.job_id) (byJob[e.job_id] = byJob[e.job_id] || []).push(e); });
+  const rows = [];
+  Object.keys(byJob).forEach(jobId=>{
+    const jobEntries = byJob[jobId];
+    const job = jobsById[jobId];
+    if(!job) return;
+    const jobOps = jobOpsAll.filter(o=>o.job_id===jobId);
+    const stdHours = jobOps.reduce((s,o)=> s + (parseFloat(o.std_hours)||0), 0);
+    const opActualMap = {};
+    let actualHours = 0, actualLabourHours = 0;
+    jobEntries.forEach(e=>{
+      const dur = toHours(e.start_time, e.end_time);
+      actualHours += dur;
+      actualLabourHours += dur;
+      if(e.job_operation_id) opActualMap[e.job_operation_id] = (opActualMap[e.job_operation_id]||0) + dur;
+      (entryOpsByEntry[e.id]||[]).forEach(x=> actualLabourHours += parseFloat(x.hours)||0);
+    });
+    let earnedHours = 0;
+    Object.keys(opActualMap).forEach(opId=>{
+      const op = jobOps.find(o=>o.id===opId);
+      if(op && op.is_completed) earnedHours += parseFloat(op.std_hours)||0;
+      else earnedHours += opActualMap[opId];
+    });
+    const effPct = actualHours>0 ? (earnedHours/actualHours*100) : null;
+    rows.push({ job_id:jobId, machine_no:job.machine_no, customer:job.customer, model_name:job.models?.model_name,
+      stdHours, actualHours, actualLabourHours, earnedHours, effPct });
+  });
+  return rows.sort((a,b)=> (a.machine_no||'').localeCompare(b.machine_no||''));
+}
+
 /* ================= DASHBOARD ================= */
 async function renderDashboard(app){
   const { data: entries, error } = await sb.from('entries')
     .select('*, jobs(machine_no, customer), job_operations(op_no, description)')
     .order('submitted_at', {ascending:false});
   if(error){ app.innerHTML = `<div class="panel"><div class="empty">Error loading entries: ${esc(error.message)}</div></div>`; return; }
-  const { data: jobs } = await sb.from('jobs').select('id, machine_no, status').order('machine_no');
+  const { data: jobs } = await sb.from('jobs').select('id, machine_no, customer, status, models(model_name)').order('machine_no');
   const { data: respList } = await sb.from('responsibilities').select('*').order('name');
+  const { data: jobOpsAll } = await sb.from('job_operations').select('id, job_id, std_hours, is_completed');
+  const { data: entryOpsAll } = await sb.from('entry_operators').select('entry_id, operator_name, hours');
+
+  const jobsById = {}; (jobs||[]).forEach(j=> jobsById[j.id]=j);
+  const entryOpsByEntry = {}; (entryOpsAll||[]).forEach(x=>{ (entryOpsByEntry[x.entry_id]=entryOpsByEntry[x.entry_id]||[]).push(x); });
+
+  let issueChartResp=null, issueChartTrend=null;
+  let lastFilteredEntries=[], lastFilteredIssues=[], lastEffRows=[];
 
   const approxBytes = JSON.stringify(entries||[]).length;
   const sizeLabel = approxBytes > 1024*1024 ? (approxBytes/1024/1024).toFixed(2)+' MB' : (approxBytes/1024).toFixed(1)+' KB';
@@ -1310,17 +1399,40 @@ async function renderDashboard(app){
 
     <div class="panel">
       <div class="panel-title">Delay / Issue Log <span class="sub">${issueEntries.length} entries with a reason logged</span></div>
+      <div class="section-header">
+        <div class="date-presets" id="iDatePresets">
+          <button data-p="today">Today</button><button data-p="week">This Week</button><button data-p="month">This Month</button><button data-p="custom" class="on">Custom</button>
+        </div>
+        <div class="mini-kpi-row" id="issueMiniKpis"></div>
+        <div class="chart-row">
+          <div class="chart-box"><b style="font-size:12px;">By Responsibility</b><canvas id="respChart" height="140"></canvas><div class="ranked-list" id="topRespList"></div></div>
+          <div class="chart-box"><b style="font-size:12px;">Trend — Delay Hours / Day</b><canvas id="trendChart" height="140"></canvas></div>
+        </div>
+        <div class="chart-box" style="margin-top:10px;"><b style="font-size:12px;">Top Machines by Delay Hours</b><div class="ranked-list" id="topMachineList"></div></div>
+      </div>
       <div class="row3" style="margin-bottom:10px;">
         <div><label>Machine</label><select id="iFilterM"><option value="">All</option>${(jobs||[]).map(j=>`<option value="${esc(j.machine_no)}">${esc(j.machine_no)}</option>`).join('')}</select></div>
         <div><label>Responsibility</label><select id="iFilterR"><option value="">All</option>${(respList||[]).map(r=>`<option>${esc(r.name)}</option>`).join('')}</select></div>
+        <div></div>
+      </div>
+      <div class="row2" style="margin-bottom:10px;">
         <div><label>From Date</label><input id="iFilterFrom" type="date"></div>
+        <div><label>To Date</label><input id="iFilterTo" type="date"></div>
       </div>
       <div class="table-scroll"><table class="entries" id="issueTable"></table></div>
     </div>
 
     <div class="panel">
       <div class="panel-title">All Production Entries</div>
-      <div class="stat-line">${(entries||[]).length} entries · approx. ${sizeLabel} · <button class="btn ghost small" id="exportBtn">Export to Excel</button></div>
+      <div class="section-header">
+        <div class="date-presets" id="pDatePresets">
+          <button data-p="today">Today</button><button data-p="week">This Week</button><button data-p="month">This Month</button><button data-p="custom" class="on">Custom</button>
+        </div>
+        <div class="mini-kpi-row" id="prodMiniKpis"></div>
+        <b style="font-size:12px;display:block;margin:10px 0 4px;">Efficiency by Machine <span style="font-weight:400;color:var(--steel-600);">— Earned Hours method</span></b>
+        <div style="overflow-x:auto;"><table class="eff" id="effTable"></table></div>
+      </div>
+      <div class="stat-line">${(entries||[]).length} entries · approx. ${sizeLabel} · <button class="btn ghost small" id="exportBtn">Export to Excel</button> · <button class="btn ghost small" id="exportSummaryBtn">Export Summary Report</button></div>
       <div class="row3" style="margin-bottom:4px;">
         <div><label>Filter Machine</label><select id="filterM"><option value="">All</option>${(jobs||[]).map(j=>`<option value="${esc(j.machine_no)}">${esc(j.machine_no)}</option>`).join('')}</select></div>
         <div><label>Filter Status</label><select id="filterS"><option value="">All</option><option>Completed</option><option>Partial</option><option>Hold</option></select></div>
@@ -1362,9 +1474,49 @@ async function renderDashboard(app){
     const fm = document.getElementById('iFilterM').value;
     const fr = document.getElementById('iFilterR').value;
     const ff = document.getElementById('iFilterFrom').value;
+    const ft = document.getElementById('iFilterTo').value;
     const rows = issueEntries.filter(e =>
-      (!fm || e.jobs?.machine_no===fm) && (!fr || e.responsibility===fr) && (!ff || e.activity_date >= ff)
+      (!fm || e.jobs?.machine_no===fm) && (!fr || e.responsibility===fr) &&
+      (!ff || e.activity_date >= ff) && (!ft || e.activity_date <= ft)
     );
+    lastFilteredIssues = rows;
+
+    const totalDelayHrs = rows.reduce((s,e)=> s+(parseFloat(e.delay_hours)||0),0);
+    const uniqueMachines = new Set(rows.map(e=>e.jobs?.machine_no)).size;
+    document.getElementById('issueMiniKpis').innerHTML = `
+      <div class="mini-kpi"><div class="num">${rows.length}</div><div class="lbl">Issue Entries</div></div>
+      <div class="mini-kpi"><div class="num">${totalDelayHrs.toFixed(1)}h</div><div class="lbl">Total Delay Hours</div></div>
+      <div class="mini-kpi"><div class="num">${uniqueMachines}</div><div class="lbl">Machines Affected</div></div>
+      <div class="mini-kpi"><div class="num">${rows.length ? (totalDelayHrs/rows.length).toFixed(1) : '0'}h</div><div class="lbl">Avg Delay / Entry</div></div>
+    `;
+
+    const respData = {};
+    rows.forEach(e=>{ if(e.responsibility) respData[e.responsibility] = (respData[e.responsibility]||0) + (parseFloat(e.delay_hours)||0); });
+    const respLabels = Object.keys(respData);
+    if(issueChartResp) issueChartResp.destroy();
+    issueChartResp = new Chart(document.getElementById('respChart'), {
+      type:'bar',
+      data:{ labels:respLabels, datasets:[{ label:'Delay Hours', data:respLabels.map(k=>respData[k]), backgroundColor:'#e0a300' }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+    });
+    document.getElementById('topRespList').innerHTML = Object.entries(respData).sort((a,b)=>b[1]-a[1])
+      .map(([k,v])=>`<div class="ranked-row"><span>${esc(k)}</span><b>${v.toFixed(1)}h</b></div>`).join('') || '<div class="empty">No data.</div>';
+
+    const trendData = {};
+    rows.forEach(e=>{ trendData[e.activity_date] = (trendData[e.activity_date]||0) + (parseFloat(e.delay_hours)||0); });
+    const trendDates = Object.keys(trendData).sort();
+    if(issueChartTrend) issueChartTrend.destroy();
+    issueChartTrend = new Chart(document.getElementById('trendChart'), {
+      type:'line',
+      data:{ labels:trendDates, datasets:[{ label:'Delay Hrs/Day', data:trendDates.map(d=>trendData[d]), borderColor:'#c0392b', backgroundColor:'rgba(192,57,43,0.15)', fill:true, tension:.2 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+    });
+
+    const machData = {};
+    rows.forEach(e=>{ const m=e.jobs?.machine_no; if(m) machData[m] = (machData[m]||0) + (parseFloat(e.delay_hours)||0); });
+    document.getElementById('topMachineList').innerHTML = Object.entries(machData).sort((a,b)=>b[1]-a[1]).slice(0,10)
+      .map(([m,h])=>`<div class="ranked-row"><span>${esc(m)}</span><b>${h.toFixed(1)}h</b></div>`).join('') || '<div class="empty">No data.</div>';
+
     const table = document.getElementById('issueTable');
     table.innerHTML = rowsHtml(rows);
     wireEditButtons(table);
@@ -1372,7 +1524,19 @@ async function renderDashboard(app){
   paintIssues();
   document.getElementById('iFilterM').onchange = paintIssues;
   document.getElementById('iFilterR').onchange = paintIssues;
-  document.getElementById('iFilterFrom').onchange = paintIssues;
+  document.getElementById('iFilterFrom').onchange = ()=>{ setPresetOn('iDatePresets','custom'); paintIssues(); };
+  document.getElementById('iFilterTo').onchange = ()=>{ setPresetOn('iDatePresets','custom'); paintIssues(); };
+
+  function setPresetOn(groupId, preset){
+    document.querySelectorAll('#'+groupId+' button').forEach(b=> b.classList.toggle('on', b.dataset.p===preset));
+  }
+  document.querySelectorAll('#iDatePresets button').forEach(b=>{
+    b.onclick = ()=>{
+      setPresetOn('iDatePresets', b.dataset.p);
+      applyDatePreset(b.dataset.p, document.getElementById('iFilterFrom'), document.getElementById('iFilterTo'));
+      paintIssues();
+    };
+  });
 
   function paint(){
     const fm = document.getElementById('filterM').value;
@@ -1387,6 +1551,28 @@ async function renderDashboard(app){
       (!ffrom || e.activity_date >= ffrom) &&
       (!fto || e.activity_date <= fto)
     );
+    lastFilteredEntries = rows;
+
+    const completedCt = rows.filter(e=>e.status==='Completed').length;
+    const partialCt = rows.filter(e=>e.status==='Partial').length;
+    const holdCt = rows.filter(e=>e.status==='Hold').length;
+    document.getElementById('prodMiniKpis').innerHTML = `
+      <div class="mini-kpi"><div class="num">${rows.length}</div><div class="lbl">Total Entries</div></div>
+      <div class="mini-kpi"><div class="num">${completedCt}</div><div class="lbl">Completed</div></div>
+      <div class="mini-kpi"><div class="num">${partialCt}</div><div class="lbl">Partial</div></div>
+      <div class="mini-kpi"><div class="num">${holdCt}</div><div class="lbl">Hold</div></div>
+    `;
+
+    const effRows = computeEfficiency(rows, jobOpsAll||[], entryOpsByEntry, jobsById);
+    lastEffRows = effRows;
+    document.getElementById('effTable').innerHTML = `<tr><th>Machine</th><th>Customer</th><th>Std Hrs</th><th>Actual Hrs</th><th>Labour Hrs</th><th>Earned Hrs</th><th>Eff %</th></tr>` +
+      (effRows.length ? effRows.map(r=>`<tr>
+        <td><b>${esc(r.machine_no)}</b></td><td>${esc(r.customer||'')}</td>
+        <td class="mono">${r.stdHours.toFixed(1)}</td><td class="mono">${r.actualHours.toFixed(1)}</td>
+        <td class="mono">${r.actualLabourHours.toFixed(1)}</td><td class="mono">${r.earnedHours.toFixed(1)}</td>
+        <td class="mono" style="font-weight:700;color:${r.effPct===null?'var(--steel-600)':r.effPct>=100?'var(--green-600)':'var(--red-600)'};">${r.effPct===null?'—':r.effPct.toFixed(0)+'%'}</td>
+      </tr>`).join('') : `<tr><td class="empty" colspan="7">No data for current filters.</td></tr>`);
+
     const table = document.getElementById('entryTable');
     table.innerHTML = rowsHtml(rows);
     wireEditButtons(table);
@@ -1395,8 +1581,15 @@ async function renderDashboard(app){
   document.getElementById('filterM').onchange = paint;
   document.getElementById('filterS').onchange = paint;
   document.getElementById('filterOp').oninput = paint;
-  document.getElementById('filterFrom').onchange = paint;
-  document.getElementById('filterTo').onchange = paint;
+  document.getElementById('filterFrom').onchange = ()=>{ setPresetOn('pDatePresets','custom'); paint(); };
+  document.getElementById('filterTo').onchange = ()=>{ setPresetOn('pDatePresets','custom'); paint(); };
+  document.querySelectorAll('#pDatePresets button').forEach(b=>{
+    b.onclick = ()=>{
+      setPresetOn('pDatePresets', b.dataset.p);
+      applyDatePreset(b.dataset.p, document.getElementById('filterFrom'), document.getElementById('filterTo'));
+      paint();
+    };
+  });
 
   document.getElementById('bulkAddBtn').onclick = (e)=> withLock(e.target, 'Adding…', async ()=>{
     const text = document.getElementById('bulkPaste').value;
@@ -1417,6 +1610,27 @@ async function renderDashboard(app){
     XLSX.writeFile(wb, filename);
   }
   document.getElementById('exportBtn').onclick = ()=> exportRows(entries||[], 'production_log_'+new Date().toISOString().slice(0,10)+'.xlsx');
+
+  document.getElementById('exportSummaryBtn').onclick = ()=>{
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
+      { Metric:'Entries Today', Value:entriesToday },
+      { Metric:'Entries This Week', Value:entriesThisWeek },
+      { Metric:'Machines On Hold Now', Value:onHoldNow },
+      { Metric:'Delay Hours This Week', Value:delayHoursThisWeek.toFixed(1) },
+      { Metric:'Note', Value:'Efficiency / Delay sheets below reflect whichever filters are currently applied on the dashboard' }
+    ]), 'Overview');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastEffRows.map(r=>({
+      Machine:r.machine_no, Customer:r.customer, Model:r.model_name,
+      StdHours:r.stdHours.toFixed(1), ActualHours:r.actualHours.toFixed(1), LabourHours:r.actualLabourHours.toFixed(1),
+      EarnedHours:r.earnedHours.toFixed(1), EfficiencyPct: r.effPct===null?'':r.effPct.toFixed(1)
+    }))), 'Efficiency by Machine');
+    const respMap={}; lastFilteredIssues.forEach(e=>{ if(e.responsibility) respMap[e.responsibility]=(respMap[e.responsibility]||0)+(parseFloat(e.delay_hours)||0); });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(respMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({Responsibility:k, DelayHours:v.toFixed(1)}))), 'Delay by Responsibility');
+    const machMap={}; lastFilteredIssues.forEach(e=>{ const m=e.jobs?.machine_no; if(m) machMap[m]=(machMap[m]||0)+(parseFloat(e.delay_hours)||0); });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(machMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({Machine:k, DelayHours:v.toFixed(1)}))), 'Delay by Machine');
+    XLSX.writeFile(wb, 'summary_report_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  };
 
   document.getElementById('archiveBtn').onclick = (e)=> withLock(e.target, 'Archiving…', async ()=>{
     const cutoff = document.getElementById('archiveDate').value;
