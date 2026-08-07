@@ -578,7 +578,7 @@ async function openOpsEditor({ title, loadFn, saveFn, filenamePrefix }){
         <span class="drag-handle" title="Drag to reorder">⠿</span>
         <div class="up-down"><button data-up="${i}" title="Move up">▲</button><button data-down="${i}" title="Move down">▼</button></div>
         <span class="grp">${esc(o.group_name||'')}</span>
-        <span class="desc"><span class="opno">${esc(o.op_no)}</span> — ${esc(o.description)}</span>
+        <span class="desc">${o.is_completed?'<span class="status-tag Completed" style="margin-right:6px;">✓ Done</span>':''}<span class="opno">${esc(o.op_no)}</span> — ${esc(o.description)}</span>
         <span class="exec-pill ${o.execution_mode==='Parallel'?'Parallel':'Series'}">${o.execution_mode==='Parallel'?'Parallel':'Series'}</span>
         <select class="exec-select" data-exec="${i}">
           <option value="Series" ${o.execution_mode!=='Parallel'?'selected':''}>Series</option>
@@ -933,8 +933,9 @@ async function renderScan(app, token){
       <label>Your Name</label><input id="s_name" name="operator_name" autocomplete="name" placeholder="Your name">
       <label>Operation</label>
       <select id="s_op"><option value="">— Select —</option>
-        ${(ops||[]).map(o=>`<option value="${o.id}">${esc(o.op_no)} — ${esc(o.description)}${o.execution_mode==='Parallel'?' [Parallel]':''} (${o.std_hours}h std)</option>`).join('')}
+        ${(ops||[]).map(o=>`<option value="${o.id}">${o.is_completed?'✓ ':''}${esc(o.op_no)} — ${esc(o.description)}${o.execution_mode==='Parallel'?' [Parallel]':''} (${o.std_hours}h std)</option>`).join('')}
       </select>
+      ${ops && ops.some(o=>o.is_completed) ? '<div class="stat-line">✓ = already logged as Completed at least once</div>' : ''}
       ${(!ops || ops.length===0) ? '<div class="stat-line" style="color:var(--red-600);">No operations are set up for this job yet — tell your supervisor before submitting.</div>' : ''}
 
       <label>Work Started?</label>
@@ -1002,18 +1003,15 @@ async function renderScan(app, token){
       document.getElementById('timeRow').style.display = 'grid';
       document.getElementById('statusBlock').style.display = 'block';
       document.getElementById('extraOpsSection').style.display = 'block';
-      if(status === 'Completed'){
-        document.getElementById('delayFields').style.display = 'none';
-      } else if(status === 'Partial'){
-        document.getElementById('delayFields').style.display = 'block';
-        document.getElementById('issueLabel').innerHTML = 'Issue / Delay Reason <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span>';
-        document.getElementById('delayHrsLabel').innerHTML = 'Delay Hours <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span>';
-        document.getElementById('respLabel').innerHTML = 'Responsibility <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span>';
-      } else { // Hold
-        document.getElementById('delayFields').style.display = 'block';
+      document.getElementById('delayFields').style.display = 'block';
+      if(status === 'Hold'){
         document.getElementById('issueLabel').innerHTML = 'Issue / Delay Reason <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
         document.getElementById('delayHrsLabel').innerHTML = 'Delay Hours <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
         document.getElementById('respLabel').innerHTML = 'Responsibility <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
+      } else {
+        document.getElementById('issueLabel').innerHTML = 'Issue / Delay Reason <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span>';
+        document.getElementById('delayHrsLabel').innerHTML = 'Delay Hours <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span>';
+        document.getElementById('respLabel').innerHTML = 'Responsibility <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span>';
       }
     }
   }
@@ -1095,6 +1093,145 @@ async function renderScan(app, token){
   });
 }
 
+/* ================= ENTRY EDITOR (supervisor corrects/moves an entry) ================= */
+async function openEntryEditor(entry, app){
+  let panel = document.getElementById('entryEditPanel');
+  if(!panel){
+    panel = document.createElement('div');
+    panel.className = 'panel';
+    panel.id = 'entryEditPanel';
+    app.insertBefore(panel, app.firstChild);
+  }
+  panel.style.display='block';
+  panel.innerHTML = `<div class="empty">Loading…</div>`;
+  const { data: allJobs } = await sb.from('jobs').select('id, machine_no, customer, models(model_name)').order('machine_no');
+  const { data: resp } = await sb.from('responsibilities').select('*').order('name');
+  async function loadOpsForJob(jobId){
+    const { data } = await sb.from('job_operations').select('*').eq('job_id', jobId).order('sequence');
+    return data || [];
+  }
+  let currentOps = await loadOpsForJob(entry.job_id);
+
+  panel.innerHTML = `
+    <div class="panel-title">Edit Entry <button class="btn ghost small" id="cancelEditBtn" type="button">Cancel</button></div>
+    <div class="row2">
+      <div><label>Machine / Job</label>
+        <select id="e_job">${(allJobs||[]).map(j=>`<option value="${j.id}" ${j.id===entry.job_id?'selected':''}>${esc(j.machine_no)} — ${esc(j.customer||'')} — ${esc(j.models?.model_name||'')}</option>`).join('')}</select>
+      </div>
+      <div><label>Operation</label><select id="e_op"></select></div>
+    </div>
+    <div class="row2">
+      <div><label>Operator Name</label><input id="e_name" value="${esc(entry.primary_operator)}"></div>
+      <div><label>Activity Date</label><input id="e_date" type="date" value="${entry.activity_date}"></div>
+    </div>
+    <div class="row2">
+      <div><label>Start Time</label><input id="e_start" type="time" value="${entry.start_time||''}"></div>
+      <div><label>End Time</label><input id="e_end" type="time" value="${entry.end_time||''}"></div>
+    </div>
+    <label>Status</label>
+    <div class="seg" id="e_statusSeg">
+      <button type="button" class="${entry.status==='Completed'?'on ':''}Completed" data-s="Completed"><span class="lamp green"></span>Completed</button>
+      <button type="button" class="${entry.status==='Partial'?'on ':''}Partial" data-s="Partial"><span class="lamp amber"></span>Partial</button>
+      <button type="button" class="${entry.status==='Hold'?'on ':''}Hold" data-s="Hold"><span class="lamp red"></span>Hold</button>
+    </div>
+    <input type="hidden" id="e_status" value="${entry.status}">
+    <label>Issue / Delay Reason</label>
+    <textarea id="e_issue">${esc(entry.issue_reason||'')}</textarea>
+    <div class="row2">
+      <div><label>Delay Hours</label><input id="e_delayhrs" type="number" step="0.5" value="${entry.delay_hours ?? ''}"></div>
+      <div><label>Responsibility</label>
+        <select id="e_resp"><option value="">— Select —</option>${(resp||[]).map(r=>`<option ${r.name===entry.responsibility?'selected':''}>${esc(r.name)}</option>`).join('')}</select>
+      </div>
+    </div>
+    <button class="btn amber" id="e_save">Save Changes</button>
+  `;
+  function paintOpsSelect(){
+    document.getElementById('e_op').innerHTML = currentOps.map(o=>`<option value="${o.id}" ${o.id===entry.job_operation_id?'selected':''}>${esc(o.op_no)} — ${esc(o.description)}</option>`).join('') || '<option value="">No operations on this job</option>';
+  }
+  paintOpsSelect();
+
+  document.getElementById('e_job').onchange = async (ev)=>{
+    currentOps = await loadOpsForJob(ev.target.value);
+    document.getElementById('e_op').innerHTML = currentOps.map(o=>`<option value="${o.id}">${esc(o.op_no)} — ${esc(o.description)}</option>`).join('') || '<option value="">No operations on this job</option>';
+  };
+  document.querySelectorAll('#e_statusSeg button').forEach(b=>{
+    b.onclick = ()=>{
+      document.getElementById('e_status').value = b.dataset.s;
+      document.querySelectorAll('#e_statusSeg button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+    };
+  });
+  document.getElementById('cancelEditBtn').onclick = ()=>{ panel.style.display='none'; panel.innerHTML=''; };
+  document.getElementById('e_save').onclick = (ev)=> withLock(ev.target, 'Saving…', async ()=>{
+    const job_id = document.getElementById('e_job').value;
+    const job_operation_id = document.getElementById('e_op').value;
+    const primary_operator = document.getElementById('e_name').value.trim();
+    const activity_date = document.getElementById('e_date').value;
+    const start_time = document.getElementById('e_start').value || null;
+    const end_time = document.getElementById('e_end').value || null;
+    const status = document.getElementById('e_status').value;
+    const issue_reason = document.getElementById('e_issue').value.trim() || null;
+    const delayHrsVal = document.getElementById('e_delayhrs').value;
+    const delay_hours = delayHrsVal ? parseFloat(delayHrsVal) : null;
+    const responsibility = document.getElementById('e_resp').value || null;
+    if(!primary_operator || !activity_date || !job_operation_id) { toast('Name, date and operation are required', true); return; }
+    if(status==='Hold' && (!issue_reason || !delay_hours || !responsibility)) { toast('Hold requires reason, delay hours and responsibility', true); return; }
+    const { error } = await sb.from('entries').update({
+      job_id, job_operation_id, primary_operator, activity_date, start_time, end_time, status, issue_reason, delay_hours, responsibility
+    }).eq('id', entry.id);
+    if(error) { toast(error.message, true); return; }
+    toast('Entry updated');
+    panel.style.display='none'; panel.innerHTML='';
+    renderDashboard(app);
+  });
+  panel.scrollIntoView({behavior:'smooth'});
+}
+
+/* ================= BULK ADD (paste missed entries) ================= */
+function parseBulkEntries(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim()!=='');
+  if(lines.length===0) return [];
+  let rows = lines.map(l=>l.split('\t'));
+  if(rows.length && /^machine/i.test((rows[0][0]||'').trim())) rows = rows.slice(1);
+  return rows.map(cols=>({
+    machine_no:(cols[0]||'').trim().toUpperCase(), op_no:(cols[1]||'').trim(), operator:(cols[2]||'').trim(),
+    date:(cols[3]||'').trim(), start:(cols[4]||'').trim(), end:(cols[5]||'').trim(),
+    status:(cols[6]||'').trim() || 'Completed', issue:(cols[7]||'').trim(), delayHrs:(cols[8]||'').trim(), resp:(cols[9]||'').trim()
+  })).filter(r=>r.machine_no && r.operator && r.date);
+}
+async function bulkAddEntries(rows, resultsEl){
+  const jobCache = {};
+  const results = [];
+  for(const r of rows){
+    let job = jobCache[r.machine_no];
+    if(job === undefined){
+      const { data: jobsFound } = await sb.from('jobs').select('id').eq('machine_no', r.machine_no).order('created_at',{ascending:false}).limit(1);
+      job = (jobsFound && jobsFound[0]) || null;
+      jobCache[r.machine_no] = job;
+    }
+    if(!job){ results.push({...r, ok:false, reason:'Machine not found'}); continue; }
+    const { data: opsFound } = await sb.from('job_operations').select('id').eq('job_id', job.id).eq('op_no', r.op_no).limit(1);
+    const op = opsFound && opsFound[0];
+    if(!op){ results.push({...r, ok:false, reason:'Operation "'+r.op_no+'" not found on that machine\'s job'}); continue; }
+    if(!['Completed','Partial','Hold'].includes(r.status)){ results.push({...r, ok:false, reason:'Status must be Completed, Partial, or Hold'}); continue; }
+    if(r.status==='Hold' && (!r.issue || !r.delayHrs || !r.resp)){ results.push({...r, ok:false, reason:'Hold requires issue, delay hours, responsibility'}); continue; }
+    results.push({...r, ok:true, job_id:job.id, job_operation_id:op.id});
+  }
+  const validRows = results.filter(r=>r.ok).map(r=>({
+    id: crypto.randomUUID(), job_id:r.job_id, job_operation_id:r.job_operation_id, primary_operator:r.operator,
+    activity_date:r.date, start_time:r.start||null, end_time:r.end||null, status:r.status,
+    issue_reason:r.issue||null, delay_hours:r.delayHrs?parseFloat(r.delayHrs):null, responsibility:r.resp||null
+  }));
+  if(validRows.length){
+    const { error } = await sb.from('entries').insert(validRows);
+    if(error){ resultsEl.innerHTML = `<div class="stat-line" style="color:var(--red-600);">Insert failed: ${esc(error.message)}</div>`; return false; }
+  }
+  const failedRows = results.filter(r=>!r.ok);
+  resultsEl.innerHTML = `<div class="stat-line"><b>${validRows.length}</b> added successfully${failedRows.length? ', <b>'+failedRows.length+'</b> failed:':''}</div>` +
+    (failedRows.length ? failedRows.map(r=>`<div style="color:var(--red-600);font-size:12px;padding:3px 0;">${esc(r.machine_no)} / Op ${esc(r.op_no)} (${esc(r.operator)}) — ${esc(r.reason)}</div>`).join('') : '');
+  return validRows.length > 0;
+}
+
 /* ================= DASHBOARD ================= */
 async function renderDashboard(app){
   const { data: entries, error } = await sb.from('entries')
@@ -1102,25 +1239,52 @@ async function renderDashboard(app){
     .order('submitted_at', {ascending:false});
   if(error){ app.innerHTML = `<div class="panel"><div class="empty">Error loading entries: ${esc(error.message)}</div></div>`; return; }
   const { data: jobs } = await sb.from('jobs').select('id, machine_no, status').order('machine_no');
+  const { data: respList } = await sb.from('responsibilities').select('*').order('name');
 
   const approxBytes = JSON.stringify(entries||[]).length;
   const sizeLabel = approxBytes > 1024*1024 ? (approxBytes/1024/1024).toFixed(2)+' MB' : (approxBytes/1024).toFixed(1)+' KB';
 
-  // Floor status strip: latest entry status per active machine
   const activeMachines = (jobs||[]).filter(j=>j.status==='Active');
   const latestByMachine = {};
   (entries||[]).forEach(e=>{
     const m = e.jobs?.machine_no;
-    if(m && !latestByMachine[m]) latestByMachine[m] = e.status; // entries already sorted newest-first
+    if(m && !latestByMachine[m]) latestByMachine[m] = e.status;
   });
 
-  // KPI strip
   const todayStr = new Date().toISOString().slice(0,10);
   const weekAgo = new Date(Date.now() - 6*24*60*60*1000).toISOString().slice(0,10);
   const entriesToday = (entries||[]).filter(e=> e.activity_date === todayStr).length;
   const entriesThisWeek = (entries||[]).filter(e=> e.activity_date >= weekAgo).length;
   const onHoldNow = activeMachines.filter(j=> latestByMachine[j.machine_no] === 'Hold').length;
   const delayHoursThisWeek = (entries||[]).filter(e=> e.activity_date >= weekAgo).reduce((s,e)=> s + (parseFloat(e.delay_hours)||0), 0);
+
+  const issueEntries = (entries||[]).filter(e=> e.issue_reason);
+
+  function rowsHtml(rows){
+    if(rows.length===0) return `<tr><td class="empty">No entries match this filter.</td></tr>`;
+    return `<tr><th>Machine</th><th>Op</th><th>Operator</th><th>Date</th><th>Time</th><th>Status</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th><th></th></tr>
+      ${rows.map(e=>`<tr class="${e.status==='Hold'?'hold-row':''}">
+        <td><b>${esc(e.jobs?.machine_no)}</b><br><span style="color:var(--steel-600);font-size:11px;">${esc(e.jobs?.customer||'')}</span></td>
+        <td class="mono">${esc(e.job_operations?.op_no)}<br><span style="color:var(--steel-600);font-size:11px;font-family:var(--font-body);">${esc(e.job_operations?.description)}</span></td>
+        <td>${esc(e.primary_operator)}</td>
+        <td class="mono">${esc(e.activity_date)}</td>
+        <td class="mono">${e.start_time ? esc(e.start_time)+'–'+esc(e.end_time) : '<span style="color:var(--steel-600);">not worked</span>'}</td>
+        <td><span class="status-tag ${e.status}"><span class="lamp ${lampClass(e.status)}" style="width:8px;height:8px;"></span>${esc(e.status)}</span></td>
+        <td>${e.issue_reason ? '<span class="issue-flag">'+esc(e.issue_reason)+'</span>' : '—'}</td>
+        <td class="mono">${e.delay_hours ?? '—'}</td>
+        <td>${e.responsibility ? esc(e.responsibility) : '—'}</td>
+        <td style="font-size:10.5px;color:var(--steel-600);" class="mono">${new Date(e.submitted_at).toLocaleString()}</td>
+        <td><button class="btn ghost small entryEditBtn" data-id="${e.id}">Edit</button></td>
+      </tr>`).join('')}`;
+  }
+  function wireEditButtons(container){
+    container.querySelectorAll('.entryEditBtn').forEach(b=>{
+      b.onclick = ()=>{
+        const found = (entries||[]).find(e=>e.id===b.dataset.id);
+        if(found) openEntryEditor(found, app);
+      };
+    });
+  }
 
   app.innerHTML = `
     <div class="panel">
@@ -1136,8 +1300,19 @@ async function renderDashboard(app){
       <div class="panel-title">Floor Status <span class="sub">latest entry per active machine</span></div>
       <div class="floor-strip" id="floorStrip"></div>
     </div>
+
     <div class="panel">
-      <div class="panel-title">Live Production Log</div>
+      <div class="panel-title">Delay / Issue Log <span class="sub">${issueEntries.length} entries with a reason logged</span></div>
+      <div class="row3" style="margin-bottom:10px;">
+        <div><label>Machine</label><select id="iFilterM"><option value="">All</option>${(jobs||[]).map(j=>`<option value="${esc(j.machine_no)}">${esc(j.machine_no)}</option>`).join('')}</select></div>
+        <div><label>Responsibility</label><select id="iFilterR"><option value="">All</option>${(respList||[]).map(r=>`<option>${esc(r.name)}</option>`).join('')}</select></div>
+        <div><label>From Date</label><input id="iFilterFrom" type="date"></div>
+      </div>
+      <div class="table-scroll"><table class="entries" id="issueTable"></table></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">All Production Entries</div>
       <div class="stat-line">${(entries||[]).length} entries · approx. ${sizeLabel} · <button class="btn ghost small" id="exportBtn">Export to Excel</button></div>
       <div class="row3" style="margin-bottom:4px;">
         <div><label>Filter Machine</label><select id="filterM"><option value="">All</option>${(jobs||[]).map(j=>`<option value="${esc(j.machine_no)}">${esc(j.machine_no)}</option>`).join('')}</select></div>
@@ -1150,6 +1325,15 @@ async function renderDashboard(app){
       </div>
       <div class="table-scroll"><table class="entries" id="entryTable"></table></div>
     </div>
+
+    <div class="panel">
+      <div class="panel-title">Bulk Add Missed Entries</div>
+      <div class="stat-line">Paste rows copied from Excel — columns in order: Machine No, Op No, Operator Name, Date (YYYY-MM-DD), Start Time, End Time, Status, Issue Reason, Delay Hours, Responsibility. Header row optional. Start/End/Issue/Delay/Responsibility can be left blank unless Status is Hold.</div>
+      <textarea id="bulkPaste" placeholder="7822M&#9;10&#9;Vaseem&#9;2026-08-05&#9;09:00&#9;17:00&#9;Completed" style="min-height:100px;font-family:var(--font-mono);font-size:12px;"></textarea>
+      <button class="btn amber" id="bulkAddBtn" style="margin-top:8px;">Add Rows</button>
+      <div id="bulkResults" style="margin-top:10px;"></div>
+    </div>
+
     <div class="panel">
       <div class="panel-title">Archive Old Entries</div>
       <div class="stat-line">Exports everything before the date to Excel, then deletes it from the live table to keep things fast. Cannot be undone.</div>
@@ -1167,6 +1351,22 @@ async function renderDashboard(app){
     return `<div class="floor-chip"><span class="lamp ${cls}${pulse}"></span>${esc(j.machine_no)}</div>`;
   }).join('') || '<div class="empty">No active machines yet.</div>';
 
+  function paintIssues(){
+    const fm = document.getElementById('iFilterM').value;
+    const fr = document.getElementById('iFilterR').value;
+    const ff = document.getElementById('iFilterFrom').value;
+    const rows = issueEntries.filter(e =>
+      (!fm || e.jobs?.machine_no===fm) && (!fr || e.responsibility===fr) && (!ff || e.activity_date >= ff)
+    );
+    const table = document.getElementById('issueTable');
+    table.innerHTML = rowsHtml(rows);
+    wireEditButtons(table);
+  }
+  paintIssues();
+  document.getElementById('iFilterM').onchange = paintIssues;
+  document.getElementById('iFilterR').onchange = paintIssues;
+  document.getElementById('iFilterFrom').onchange = paintIssues;
+
   function paint(){
     const fm = document.getElementById('filterM').value;
     const fs = document.getElementById('filterS').value;
@@ -1181,20 +1381,8 @@ async function renderDashboard(app){
       (!fto || e.activity_date <= fto)
     );
     const table = document.getElementById('entryTable');
-    if(rows.length===0){ table.innerHTML=`<tr><td class="empty">No entries match this filter.</td></tr>`; return; }
-    table.innerHTML = `<tr><th>Machine</th><th>Op</th><th>Operator</th><th>Date</th><th>Time</th><th>Status</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th></tr>
-      ${rows.map(e=>`<tr class="${e.status==='Hold'?'hold-row':''}">
-        <td><b>${esc(e.jobs?.machine_no)}</b><br><span style="color:var(--steel-600);font-size:11px;">${esc(e.jobs?.customer||'')}</span></td>
-        <td class="mono">${esc(e.job_operations?.op_no)}<br><span style="color:var(--steel-600);font-size:11px;font-family:var(--font-body);">${esc(e.job_operations?.description)}</span></td>
-        <td>${esc(e.primary_operator)}</td>
-        <td class="mono">${esc(e.activity_date)}</td>
-        <td class="mono">${e.start_time ? esc(e.start_time)+'–'+esc(e.end_time) : '<span style="color:var(--steel-600);">not worked</span>'}</td>
-        <td><span class="status-tag ${e.status}"><span class="lamp ${lampClass(e.status)}" style="width:8px;height:8px;"></span>${esc(e.status)}</span></td>
-        <td>${e.issue_reason ? '<span class="issue-flag">'+esc(e.issue_reason)+'</span>' : '—'}</td>
-        <td class="mono">${e.delay_hours ?? '—'}</td>
-        <td>${e.responsibility ? esc(e.responsibility) : '—'}</td>
-        <td style="font-size:10.5px;color:var(--steel-600);" class="mono">${new Date(e.submitted_at).toLocaleString()}</td>
-      </tr>`).join('')}`;
+    table.innerHTML = rowsHtml(rows);
+    wireEditButtons(table);
   }
   paint();
   document.getElementById('filterM').onchange = paint;
@@ -1202,6 +1390,15 @@ async function renderDashboard(app){
   document.getElementById('filterOp').oninput = paint;
   document.getElementById('filterFrom').onchange = paint;
   document.getElementById('filterTo').onchange = paint;
+
+  document.getElementById('bulkAddBtn').onclick = (e)=> withLock(e.target, 'Adding…', async ()=>{
+    const text = document.getElementById('bulkPaste').value;
+    const rows = parseBulkEntries(text);
+    const resultsEl = document.getElementById('bulkResults');
+    if(rows.length===0){ toast('No valid rows found in pasted text', true); return; }
+    const anyAdded = await bulkAddEntries(rows, resultsEl);
+    if(anyAdded){ document.getElementById('bulkPaste').value=''; renderDashboard(app); }
+  });
 
   function exportRows(rows, filename){
     const ws = XLSX.utils.json_to_sheet(rows.map(e=>({
