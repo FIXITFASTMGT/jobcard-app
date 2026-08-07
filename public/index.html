@@ -153,6 +153,22 @@
   .exec-pill.Series{background:var(--plate-100);color:var(--steel-600);}
   .exec-pill.Parallel{background:var(--amber-100);color:var(--amber-700);}
 
+  /* ---------- job card (Jobs / QR Labels list) ---------- */
+  .job-card{border-bottom:1px solid var(--plate-100);padding:12px 4px;}
+  .job-card:last-child{border-bottom:none;}
+  .job-card .job-head{display:flex;align-items:center;gap:9px;margin-bottom:8px;}
+  .job-card .job-head b{font-size:14px;}
+  .job-card .job-head .model-tag{font-family:var(--font-mono);font-size:10px;background:var(--steel-700);color:#fff;padding:2px 7px;border-radius:2px;}
+  .job-actions{display:flex;flex-wrap:wrap;gap:6px;}
+  .job-actions button{
+    font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:6px 11px;
+    border-radius:3px;border:1.5px solid var(--steel-200);background:#fff;cursor:pointer;color:var(--graphite-950);
+  }
+  .job-actions button.warn{border-color:var(--amber-signal);color:var(--amber-700);}
+  .job-actions button.danger{border-color:var(--red-600);color:var(--red-600);}
+  .job-actions button:hover{background:var(--plate-50);}
+  .model-stats{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--steel-600);margin-top:4px;font-family:var(--font-mono);}
+
   /* ---------- paste-from-excel ---------- */
   .paste-box{margin-top:10px;padding:12px;background:var(--plate-50);border:1.5px dashed var(--steel-200);border-radius:3px;}
   .paste-box textarea{min-height:100px;font-family:var(--font-mono);font-size:12px;}
@@ -338,6 +354,14 @@ async function renderModels(app){
   app.innerHTML = `<div class="panel"><div class="empty">Loading models…</div></div>`;
   const { data: models, error } = await sb.from('models').select('*').order('model_name');
   if(error){ app.innerHTML = `<div class="panel"><div class="empty">Error loading models: ${esc(error.message)}</div></div>`; return; }
+  const { data: allOps } = await sb.from('model_operations').select('model_id, std_hours, std_manpower');
+  const statsByModel = {};
+  (allOps||[]).forEach(o=>{
+    if(!statsByModel[o.model_id]) statsByModel[o.model_id] = {count:0, stdHours:0, labourHours:0};
+    statsByModel[o.model_id].count += 1;
+    statsByModel[o.model_id].stdHours += parseFloat(o.std_hours)||0;
+    statsByModel[o.model_id].labourHours += (parseFloat(o.std_hours)||0) * (parseInt(o.std_manpower)||1);
+  });
   app.innerHTML = `
     <div class="panel">
       <div class="panel-title">Model Master
@@ -347,12 +371,24 @@ async function renderModels(app){
     </div>
     <div class="panel" id="opsPanel" style="display:none;"></div>
   `;
-  document.getElementById('modelList').innerHTML = (models||[]).map(m=>`
-    <div class="op-row">
-      <span class="grp">${esc(m.base_model)}</span>
-      <span class="desc"><b>${esc(m.model_name)}</b></span>
-      <button data-open="${m.id}" data-name="${esc(m.model_name)}" style="color:var(--graphite-950);font-weight:700;">Edit Ops →</button>
-    </div>`).join('') || '<div class="empty">No models yet — add your first variant above.</div>';
+  document.getElementById('modelList').innerHTML = (models||[]).map(m=>{
+    const s = statsByModel[m.id] || {count:0, stdHours:0, labourHours:0};
+    return `
+    <div class="job-card">
+      <div class="job-head">
+        <span class="grp">${esc(m.base_model)}</span>
+        <b>${esc(m.model_name)}</b>
+      </div>
+      <div class="model-stats">
+        <span>${s.count} operations</span>
+        <span>${s.stdHours.toFixed(1)}h std hours</span>
+        <span>${s.labourHours.toFixed(1)}h labour hours</span>
+      </div>
+      <div class="job-actions" style="margin-top:8px;">
+        <button data-open="${m.id}" data-name="${esc(m.model_name)}">Edit Ops →</button>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty">No models yet — add your first variant above.</div>';
 
   document.querySelectorAll('[data-open]').forEach(b=>{
     b.onclick=()=>openOpsEditor({
@@ -707,11 +743,21 @@ async function renderJobsQr(app){
   `;
   const activeJobs = (jobs||[]).filter(j=>j.status==='Active');
   document.getElementById('jobList').innerHTML = (jobs||[]).map(j=>`
-    <div class="op-row">
-      <span class="lamp ${j.status==='Active'?'green':'grey'}"></span>
-      <span class="desc"><b>${esc(j.machine_no)}</b> · ${esc(j.customer||'')} · ${esc(j.models?.model_name||'')}</span>
-      ${j.status==='Active' ? `<button data-editdetails="${j.id}" style="color:var(--graphite-950);font-weight:700;">Edit Details</button><button data-edit="${j.id}" data-machine="${esc(j.machine_no)}" style="color:var(--graphite-950);font-weight:700;">Edit Ops</button><button data-close="${j.id}">Mark Completed</button>` : ''}
-      <button data-delete="${j.id}" data-machine="${esc(j.machine_no)}" style="color:var(--red-600);font-weight:700;">Delete</button>
+    <div class="job-card">
+      <div class="job-head">
+        <span class="lamp ${j.status==='Active'?'green':'grey'}"></span>
+        <b>${esc(j.machine_no)}</b>
+        <span style="color:var(--steel-600);font-size:13px;">${esc(j.customer||'')}</span>
+        <span class="model-tag">${esc(j.models?.model_name||'')}</span>
+      </div>
+      <div class="job-actions">
+        ${j.status==='Active' ? `
+          <button data-editdetails="${j.id}">Edit Details</button>
+          <button data-edit="${j.id}" data-machine="${esc(j.machine_no)}">Edit Ops</button>
+          <button class="warn" data-close="${j.id}">Mark Completed</button>
+        ` : ''}
+        <button class="danger" data-delete="${j.id}" data-machine="${esc(j.machine_no)}">Delete</button>
+      </div>
     </div>`).join('') || '<div class="empty">No jobs yet — go to New Job to create one.</div>';
 
   document.querySelectorAll('[data-close]').forEach(b=>{
@@ -726,8 +772,9 @@ async function renderJobsQr(app){
   document.querySelectorAll('[data-delete]').forEach(b=>{
     b.onclick = async ()=>{
       if(!confirm(`Permanently delete job ${b.dataset.machine}? This also deletes its operation list and every logged entry for it. This cannot be undone — export first if you need the records.`)) return;
-      const { error } = await sb.from('jobs').delete().eq('id', b.dataset.delete);
+      const { data, error } = await sb.from('jobs').delete().eq('id', b.dataset.delete).select();
       if(error) return toast(error.message, true);
+      if(!data || data.length===0) return toast('Delete blocked — you may need to run migration_004_job_delete_policy.sql on your database', true);
       toast('Job deleted'); renderJobsQr(app);
     };
   });
