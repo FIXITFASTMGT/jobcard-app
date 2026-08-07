@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Shopfloor Job Card System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --graphite-950:#1a1e22;
+    --graphite-800:#262d33;
+    --steel-700:#3d4a55;
+    --steel-600:#57687a;
+    --steel-300:#a7b3bd;
+    --steel-200:#c7cfd6;
+    --plate-50:#f2f3f1;
+    --plate-100:#e8eae6;
+    --amber-500:#f2a30f;
+    --amber-600:#d68f0a;
+    --amber-700:#8a5e08;
+    --green-600:#3f8f63;
+    --green-100:#e0f0e7;
+    --amber-signal:#e0a300;
+    --amber-100:#faedd1;
+    --red-600:#c0392b;
+    --red-100:#fae3e0;
+    --font-display:'Oswald',Arial,sans-serif;
+    --font-body:'Inter',Arial,sans-serif;
+    --font-mono:'IBM Plex Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-font-smoothing:antialiased;}
+  body{margin:0;background:var(--plate-50);font-family:var(--font-body);color:var(--graphite-950);}
+  @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} }
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    background:var(--graphite-950);color:#fff;padding:14px 20px 12px;
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
+    position:relative;
+  }
+  .topbar::after{
+    content:'';position:absolute;left:0;right:0;bottom:0;height:4px;
+    background:repeating-linear-gradient(135deg,var(--amber-500) 0 10px,var(--graphite-950) 10px 20px);
+    opacity:.9;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:600;
+    text-transform:uppercase;letter-spacing:1.5px;font-size:15px;}
+  .brand .lamp{width:9px;height:9px;}
+  .nav{display:flex;gap:4px;flex-wrap:wrap;}
+  .nav button{
+    background:transparent;border:1px solid var(--steel-700);color:var(--steel-300);
+    padding:8px 13px;font-size:12px;font-family:var(--font-body);font-weight:600;
+    text-transform:uppercase;letter-spacing:.4px;border-radius:2px;cursor:pointer;
+  }
+  .nav button.active{background:var(--amber-500);color:var(--graphite-950);border-color:var(--amber-500);}
+  .nav button:hover:not(.active){border-color:var(--steel-300);color:#fff;}
+  .nav button:focus-visible{outline:2px solid var(--amber-500);outline-offset:2px;}
+
+  .wrap{max-width:980px;margin:0 auto;padding:20px 16px 70px;}
+
+  /* ---------- panels ---------- */
+  .panel{background:#fff;border:1px solid var(--plate-100);border-left:3px solid var(--steel-700);
+    border-radius:3px;padding:20px 22px;margin-bottom:16px;}
+  .panel-title{font-family:var(--font-display);font-size:13px;text-transform:uppercase;letter-spacing:1.2px;
+    color:var(--graphite-950);margin:0 0 14px;padding-bottom:9px;border-bottom:2px solid var(--graphite-950);
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-weight:600;}
+  .panel-title .sub{font-family:var(--font-body);font-weight:400;font-size:11px;color:var(--steel-600);
+    text-transform:none;letter-spacing:0;}
+
+  label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--steel-600);
+    margin:14px 0 5px;font-weight:600;}
+  input,select,textarea{
+    width:100%;padding:12px 11px;font-size:15px;border:1.5px solid var(--steel-200);border-radius:3px;
+    background:var(--plate-50);font-family:var(--font-body);color:var(--graphite-950);
+  }
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--amber-500);outline-offset:0;border-color:var(--amber-500);}
+  textarea{min-height:74px;resize:vertical;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 14px;}
+  @media(max-width:560px){.row2,.row3{grid-template-columns:1fr;}}
+
+  /* ---------- buttons ---------- */
+  .btn{display:inline-block;background:var(--graphite-950);color:#fff;border:none;padding:13px 22px;
+    font-size:13px;font-weight:700;font-family:var(--font-body);text-transform:uppercase;letter-spacing:.5px;
+    border-radius:3px;cursor:pointer;margin-top:16px;}
+  .btn.amber{background:var(--amber-500);color:var(--graphite-950);}
+  .btn.amber:hover{background:var(--amber-600);}
+  .btn.ghost{background:transparent;color:var(--graphite-950);border:1.5px solid var(--graphite-950);}
+  .btn.red{background:var(--red-600);color:#fff;}
+  .btn.small{padding:8px 13px;font-size:11px;margin-top:0;}
+  .btn:focus-visible{outline:2px solid var(--amber-500);outline-offset:2px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  /* ---------- andon lamp (signature status element) ---------- */
+  .lamp{width:11px;height:11px;border-radius:50%;flex-shrink:0;display:inline-block;position:relative;}
+  .lamp.green{background:var(--green-600);box-shadow:0 0 6px 1px rgba(63,143,99,.55);}
+  .lamp.amber{background:var(--amber-signal);box-shadow:0 0 6px 1px rgba(224,163,0,.55);}
+  .lamp.red{background:var(--red-600);box-shadow:0 0 7px 2px rgba(192,57,43,.6);}
+  .lamp.grey{background:var(--steel-300);}
+  .lamp.red.pulse{animation:pulse 1.6s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.45;}}
+
+  .status-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.4px;padding:3px 9px 3px 7px;border-radius:11px;}
+  .status-tag.Completed{background:var(--green-100);color:var(--green-600);}
+  .status-tag.Partial{background:var(--amber-100);color:var(--amber-700);}
+  .status-tag.Hold{background:var(--red-100);color:var(--red-600);}
+
+  /* ---------- nameplate (signature identity element) ---------- */
+  .nameplate{
+    position:relative;border-radius:5px;padding:18px 22px;margin-bottom:16px;color:#eef1f0;
+    background:linear-gradient(155deg,var(--steel-700) 0%,var(--graphite-800) 55%,var(--graphite-950) 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 2px 6px rgba(0,0,0,.25);
+  }
+  .nameplate::before,.nameplate::after,.nameplate .rv2,.nameplate .rv3{
+    content:'';position:absolute;width:6px;height:6px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #dfe4e6, #7c8892 70%);
+    box-shadow:0 1px 1px rgba(0,0,0,.5);
+  }
+  .nameplate::before{top:8px;left:8px;}
+  .nameplate::after{top:8px;right:8px;}
+  .nameplate .rv2{bottom:8px;left:8px;}
+  .nameplate .rv3{bottom:8px;right:8px;}
+  .nameplate .np-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;
+    border-bottom:1px solid rgba(255,255,255,.1);}
+  .nameplate .np-row:last-child{border:none;}
+  .nameplate .np-row span{color:#aab6bd;text-transform:uppercase;font-size:10.5px;letter-spacing:.5px;
+    font-weight:600;align-self:center;}
+  .nameplate .np-row b{font-family:var(--font-display);font-weight:600;letter-spacing:.4px;
+    text-shadow:0 1px 0 rgba(0,0,0,.4);font-size:15px;}
+
+  /* ---------- op list rows ---------- */
+  .op-row{display:flex;align-items:center;gap:9px;padding:9px 4px;border-bottom:1px solid var(--plate-100);font-size:13px;}
+  .op-row:last-child{border-bottom:none;}
+  .op-row .grp{font-family:var(--font-mono);font-size:10px;background:var(--steel-700);color:#fff;
+    padding:3px 7px;border-radius:2px;min-width:84px;text-align:center;flex-shrink:0;}
+  .op-row .desc{flex:1;}
+  .op-row .opno{font-family:var(--font-mono);color:var(--steel-600);}
+  .op-row .mini{width:58px;padding:6px;font-size:12px;flex-shrink:0;font-family:var(--font-mono);}
+  .op-row .exec-select{width:88px;padding:6px 4px;font-size:11px;flex-shrink:0;}
+  .op-row button{background:none;border:none;color:var(--red-600);font-size:16px;cursor:pointer;flex-shrink:0;padding:0 3px;}
+  .op-row .up-down{display:flex;flex-direction:column;flex-shrink:0;}
+  .op-row .up-down button{color:var(--steel-600);font-size:10px;line-height:1.1;}
+  .op-row .drag-handle{cursor:grab;color:var(--steel-300);font-size:16px;flex-shrink:0;user-select:none;}
+  .op-row.dragging{opacity:.35;}
+  .op-row.drag-over{border-top:2px solid var(--amber-500);}
+  .exec-pill{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2px 6px;border-radius:8px;flex-shrink:0;}
+  .exec-pill.Series{background:var(--plate-100);color:var(--steel-600);}
+  .exec-pill.Parallel{background:var(--amber-100);color:var(--amber-700);}
+
+  /* ---------- paste-from-excel ---------- */
+  .paste-box{margin-top:10px;padding:12px;background:var(--plate-50);border:1.5px dashed var(--steel-200);border-radius:3px;}
+  .paste-box textarea{min-height:100px;font-family:var(--font-mono);font-size:12px;}
+
+  /* ---------- toggle pair (New Job: copy ops or blank) ---------- */
+  .toggle-pair{display:flex;gap:8px;margin-top:6px;}
+  .toggle-pair button{flex:1;padding:12px 8px;border-radius:3px;border:1.5px solid var(--steel-200);background:#fff;
+    font-family:var(--font-body);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.3px;
+    cursor:pointer;color:var(--steel-600);}
+  .toggle-pair button.on{border-color:var(--graphite-950);background:var(--graphite-950);color:#fff;}
+
+  /* ---------- print profile buttons ---------- */
+  .print-profiles{display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;}
+  .print-profile-cap{font-size:11px;color:var(--steel-600);margin-top:5px;max-width:220px;line-height:1.4;}
+
+  /* ---------- segmented status control (operator entry) ---------- */
+  .seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px;}
+  .seg button{
+    padding:14px 6px;border-radius:3px;border:1.5px solid var(--steel-200);background:#fff;
+    font-family:var(--font-body);font-weight:700;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;
+    cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--steel-600);
+  }
+  .seg button .lamp{width:13px;height:13px;}
+  .seg button.on.Completed{border-color:var(--green-600);background:var(--green-100);color:var(--green-600);}
+  .seg button.on.Partial{border-color:var(--amber-signal);background:var(--amber-100);color:var(--amber-700);}
+  .seg button.on.Hold{border-color:var(--red-600);background:var(--red-100);color:var(--red-600);}
+
+  /* ---------- floor status strip (dashboard) ---------- */
+  .floor-strip{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
+  .floor-chip{display:flex;align-items:center;gap:7px;background:var(--plate-50);border:1px solid var(--plate-100);
+    border-radius:20px;padding:6px 12px 6px 10px;font-family:var(--font-mono);font-size:12px;font-weight:600;}
+
+  /* ---------- table ---------- */
+  table.entries{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.entries th{text-align:left;background:var(--graphite-950);color:#fff;padding:9px 7px;
+    text-transform:uppercase;font-size:10px;letter-spacing:.4px;font-weight:600;border-bottom:3px solid var(--amber-500);}
+  table.entries td{padding:8px 7px;border-bottom:1px solid var(--plate-100);vertical-align:top;}
+  table.entries tr:hover td{background:var(--plate-50);}
+  .mono{font-family:var(--font-mono);}
+  .issue-flag{color:var(--red-600);font-weight:600;}
+
+  .empty{text-align:center;color:var(--steel-600);padding:34px 14px;font-size:13.5px;line-height:1.5;}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--graphite-950);color:#fff;
+    padding:12px 20px;border-radius:3px;font-size:13px;z-index:50;border-left:4px solid var(--green-600);
+    box-shadow:0 6px 18px rgba(0,0,0,.3);}
+  .toast.err{border-left-color:var(--red-600);}
+
+  .stat-line{font-size:12px;color:var(--steel-600);margin-bottom:12px;}
+  .login-wrap{min-height:calc(100vh - 62px);display:flex;align-items:center;justify-content:center;}
+  .login-box{max-width:340px;width:100%;}
+  .file-btn{display:inline-block;background:transparent;border:1.5px solid var(--graphite-950);padding:8px 13px;
+    font-size:11px;font-weight:700;text-transform:uppercase;border-radius:3px;cursor:pointer;}
+
+  /* ---------- QR label sheet (printable — kept high-contrast/ink-light for shop printers) ---------- */
+  .label-sheet{width:210mm;min-height:297mm;padding:10mm 6.5mm;display:grid;grid-template-columns:repeat(3,64mm);
+    grid-auto-rows:34mm;column-gap:2.5mm;row-gap:0mm;background:#fff;}
+  .label{border:1px dashed #999;display:flex;align-items:center;padding:2mm;font-family:var(--font-body);overflow:hidden;}
+  .label .qrbox{width:26mm;height:26mm;flex-shrink:0;}
+  .label .info{padding-left:2mm;line-height:1.3;font-size:7.5pt;}
+  .label .info b{font-family:var(--font-display);font-size:9.5pt;display:block;letter-spacing:.3px;}
+  @media print{ .topbar,.nav,.no-print{display:none !important;} body{background:#fff;} .wrap{padding:0;max-width:none;} .label{border:none;} }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><span class="lamp green"></span>SHOPFLOOR JOB CARDS</div>
+  <div class="nav" id="navBar"></div>
+</div>
+<div class="wrap" id="app"></div>
+
+<script>
+/* ============ CONFIG ============ */
+const SUPABASE_URL = 'https://ouieexlkjokeymjztshi.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_NivUy7To80ZNLftfWF8i1A_sou45aZD';
+/* ================================= */
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function toast(msg, isErr){
+  const t=document.createElement('div');
+  t.className='toast'+(isErr?' err':'');
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2800);
+}
+function esc(s){ return (s||'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function lampClass(status){ return status==='Completed'?'green':status==='Partial'?'amber':status==='Hold'?'red':'grey'; }
+
+const params = new URLSearchParams(location.search);
+const scanToken = params.get('job');
+let view = 'dashboard';
+let session = null;
+
+/* ---------------- AUTH ---------------- */
+async function checkSession(){
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+}
+
+async function renderLogin(){
+  document.getElementById('navBar').innerHTML='';
+  document.getElementById('app').innerHTML = `
+    <div class="login-wrap"><div class="panel login-box">
+      <div class="panel-title">Supervisor Access</div>
+      <label>Username / Email</label>
+      <input id="l_user" placeholder="admin@yourcompany.local">
+      <label>Password</label>
+      <input id="l_pass" type="password" placeholder="••••••••">
+      <button class="btn amber" id="l_btn" style="width:100%;">Log In</button>
+      <div class="stat-line" style="margin-top:14px;">First time? Create this login in Supabase → Authentication → Users, with "Auto Confirm User" ticked.</div>
+    </div></div>`;
+  document.getElementById('l_btn').onclick = async ()=>{
+    const email = document.getElementById('l_user').value.trim();
+    const password = document.getElementById('l_pass').value;
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){ toast(error.message, true); return; }
+    await checkSession();
+    view='dashboard';
+    boot();
+  };
+}
+
+/* ---------------- NAV ---------------- */
+function setNav(){
+  const bar=document.getElementById('navBar');
+  if(scanToken){ bar.innerHTML=''; return; }
+  if(!session){ bar.innerHTML=''; return; }
+  const items=[['dashboard','Dashboard'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels']];
+  bar.innerHTML = items.map(([id,l])=>`<button data-v="${id}" class="${view===id?'active':''}">${l}</button>`).join('')
+    + `<button id="logoutBtn" class="small">Log Out</button>`;
+  bar.querySelectorAll('button[data-v]').forEach(b=> b.onclick=()=>{ view=b.dataset.v; render(); });
+  const lo = document.getElementById('logoutBtn');
+  if(lo) lo.onclick = async ()=>{ await sb.auth.signOut(); session=null; boot(); };
+}
+
+/* ---------------- BOOT / ROUTER ---------------- */
+async function boot(){
+  await checkSession();
+  if(scanToken) return render();
+  if(!session) return renderLogin();
+  render();
+}
+async function render(){
+  setNav();
+  const app=document.getElementById('app');
+  if(scanToken) return renderScan(app, scanToken);
+  if(view==='models') return renderModels(app);
+  if(view==='newjob') return renderNewJob(app);
+  if(view==='jobs') return renderJobsQr(app);
+  return renderDashboard(app);
+}
+
+/* ================= Excel import/export helpers ================= */
+function exportOpsToExcel(list, filename){
+  const ws = XLSX.utils.json_to_sheet(list.map(o=>({OpNo:o.op_no,Group:o.group_name,Description:o.description,StdHours:o.std_hours,StdManpower:o.std_manpower})));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Operations');
+  XLSX.writeFile(wb, filename);
+}
+function importOpsFromExcel(file, onDone){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws);
+      const list = rows.map(r=>({
+        op_no:(r.OpNo ?? r['Op No'] ?? '').toString(),
+        group_name:(r.Group ?? r['Group Name'] ?? '').toString(),
+        description:(r.Description ?? '').toString(),
+        std_hours:parseFloat(r.StdHours ?? r['Std Hours'] ?? 0) || 0,
+        std_manpower:parseInt(r.StdManpower ?? r['Std Manpower'] ?? 1) || 1
+      })).filter(r=>r.description);
+      if(list.length===0){ toast('No valid rows found — expected columns OpNo, Group, Description, StdHours, StdManpower', true); return; }
+      onDone(list);
+      toast('Imported '+list.length+' operations');
+    }catch(err){ toast('Import failed: '+err.message, true); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ================= MODEL MASTER ================= */
+async function renderModels(app){
+  app.innerHTML = `<div class="panel"><div class="empty">Loading models…</div></div>`;
+  const { data: models, error } = await sb.from('models').select('*').order('model_name');
+  if(error){ app.innerHTML = `<div class="panel"><div class="empty">Error loading models: ${esc(error.message)}</div></div>`; return; }
+  app.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">Model Master
+        <button class="btn small" id="newModelBtn">+ New Model Variant</button>
+      </div>
+      <div id="modelList"></div>
+    </div>
+    <div class="panel" id="opsPanel" style="display:none;"></div>
+  `;
+  document.getElementById('modelList').innerHTML = (models||[]).map(m=>`
+    <div class="op-row">
+      <span class="grp">${esc(m.base_model)}</span>
+      <span class="desc"><b>${esc(m.model_name)}</b></span>
+      <button data-open="${m.id}" data-name="${esc(m.model_name)}" style="color:var(--graphite-950);font-weight:700;">Edit Ops →</button>
+    </div>`).join('') || '<div class="empty">No models yet — add your first variant above.</div>';
+
+  document.querySelectorAll('[data-open]').forEach(b=>{
+    b.onclick=()=>openOpsEditor({
+      title: 'Operations — ' + b.dataset.name,
+      loadFn: async ()=> (await sb.from('model_operations').select('*').eq('model_id', b.dataset.open).order('sequence')).data,
+      saveFn: async (list)=>{
+        await sb.from('model_operations').delete().eq('model_id', b.dataset.open);
+        const rows = list.map((o,i)=>({ model_id:b.dataset.open, op_no:o.op_no, group_name:o.group_name, description:o.description, std_hours:o.std_hours, std_manpower:o.std_manpower, execution_mode:o.execution_mode||'Series', sequence:i }));
+        if(rows.length) return sb.from('model_operations').insert(rows);
+        return {error:null};
+      },
+      filenamePrefix: b.dataset.name
+    });
+  });
+
+  document.getElementById('newModelBtn').onclick = async ()=>{
+    const name = prompt('New model variant name (e.g. ECO-200E):');
+    if(!name) return;
+    const base = prompt('Base model group (e.g. ECO-200):', name.replace(/[EUI]$/,''));
+    const { error } = await sb.from('models').insert({ model_name:name.toUpperCase(), base_model: base||name });
+    if(error) return toast(error.message, true);
+    toast('Model created'); renderModels(app);
+  };
+}
+
+/* ================= SHARED OPERATIONS EDITOR ================= */
+async function openOpsEditor({ title, loadFn, saveFn, filenamePrefix }){
+  const panel = document.getElementById('opsPanel');
+  panel.style.display='block';
+  panel.innerHTML = `<div class="empty">Loading operations…</div>`;
+  let list = (await loadFn() || []).map(o=>({...o}));
+
+  function paint(){
+    panel.innerHTML = `
+      <div class="panel-title">${esc(title)}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn ghost small" id="pasteBtn" type="button">Paste from Excel</button>
+          <label class="file-btn" style="margin:0;">Import File
+            <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none;">
+          </label>
+          <button class="btn ghost small" id="exportOpsBtn">Export Excel</button>
+        </div>
+      </div>
+      <div class="paste-box" id="pasteBox" style="display:none;">
+        <label style="margin:0 0 6px;">Paste cells copied from Excel <span style="text-transform:none;font-weight:400;">(columns: Op No, Group, Description, Std Hours, Std Manpower — header row optional)</span></label>
+        <textarea id="pasteInput" placeholder="10&#9;Caracas&#9;Bed Resting On Pad&#9;2&#9;1"></textarea>
+        <button class="btn small" id="parsePasteBtn" type="button" style="margin-top:8px;">Add Pasted Rows</button>
+      </div>
+      <div id="opsList"></div>
+      <div class="row3" style="margin-top:10px;">
+        <div><label>Op No.</label><input id="a_op" placeholder="310"></div>
+        <div><label>Group</label><input id="a_grp" placeholder="Group"></div>
+        <div><label>Description</label><input id="a_desc" placeholder="Operation description"></div>
+      </div>
+      <div class="row3">
+        <div><label>Std Hours</label><input id="a_hrs" placeholder="7.5"></div>
+        <div><label>Std Manpower</label><input id="a_man" placeholder="1"></div>
+        <div><label>Execution</label>
+          <select id="a_exec"><option value="Series">Series</option><option value="Parallel">Parallel</option></select>
+        </div>
+      </div>
+      <button class="btn small" id="addOpBtn" style="margin-top:10px;">+ Add Operation</button>
+      <button class="btn amber" id="saveOpsBtn" style="width:100%;text-align:center;">Save Changes</button>
+    `;
+    document.getElementById('opsList').innerHTML = list.map((o,i)=>`
+      <div class="op-row" draggable="true" data-idx="${i}">
+        <span class="drag-handle" title="Drag to reorder">⠿</span>
+        <div class="up-down"><button data-up="${i}" title="Move up">▲</button><button data-down="${i}" title="Move down">▼</button></div>
+        <span class="grp">${esc(o.group_name||'')}</span>
+        <span class="desc"><span class="opno">${esc(o.op_no)}</span> — ${esc(o.description)}</span>
+        <span class="exec-pill ${o.execution_mode==='Parallel'?'Parallel':'Series'}">${o.execution_mode==='Parallel'?'Parallel':'Series'}</span>
+        <select class="exec-select" data-exec="${i}">
+          <option value="Series" ${o.execution_mode!=='Parallel'?'selected':''}>Series</option>
+          <option value="Parallel" ${o.execution_mode==='Parallel'?'selected':''}>Parallel</option>
+        </select>
+        <input class="mini" data-hrs="${i}" value="${o.std_hours||''}" title="Std Hours">
+        <input class="mini" data-man="${i}" value="${o.std_manpower||1}" title="Std Manpower">
+        <button data-del="${i}" title="Remove">✕</button>
+      </div>`).join('') || '<div class="empty">No operations yet — add below, paste from Excel, or import a file.</div>';
+
+    panel.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.up; if(i>0){ [list[i-1],list[i]]=[list[i],list[i-1]]; paint(); }});
+    panel.querySelectorAll('[data-down]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.down; if(i<list.length-1){ [list[i+1],list[i]]=[list[i],list[i+1]]; paint(); }});
+    panel.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ list.splice(+b.dataset.del,1); paint(); });
+    panel.querySelectorAll('[data-hrs]').forEach(inp=>inp.onchange=()=>{ list[+inp.dataset.hrs].std_hours=parseFloat(inp.value)||0; });
+    panel.querySelectorAll('[data-man]').forEach(inp=>inp.onchange=()=>{ list[+inp.dataset.man].std_manpower=parseInt(inp.value)||1; });
+    panel.querySelectorAll('[data-exec]').forEach(sel=>sel.onchange=()=>{ list[+sel.dataset.exec].execution_mode=sel.value; paint(); });
+
+    // drag-and-drop reordering
+    let dragSrc = null;
+    panel.querySelectorAll('.op-row').forEach(row=>{
+      row.addEventListener('dragstart', ()=>{ dragSrc = +row.dataset.idx; row.classList.add('dragging'); });
+      row.addEventListener('dragend', ()=>{ row.classList.remove('dragging'); panel.querySelectorAll('.op-row').forEach(r=>r.classList.remove('drag-over')); });
+      row.addEventListener('dragover', (e)=>{ e.preventDefault(); row.classList.add('drag-over'); });
+      row.addEventListener('dragleave', ()=> row.classList.remove('drag-over'));
+      row.addEventListener('drop', (e)=>{
+        e.preventDefault();
+        const destIdx = +row.dataset.idx;
+        if(dragSrc===null || dragSrc===destIdx) return;
+        const [moved] = list.splice(dragSrc,1);
+        list.splice(destIdx,0,moved);
+        paint();
+      });
+    });
+
+    document.getElementById('addOpBtn').onclick=()=>{
+      const op=document.getElementById('a_op').value.trim();
+      const grp=document.getElementById('a_grp').value.trim();
+      const desc=document.getElementById('a_desc').value.trim();
+      const hrs=parseFloat(document.getElementById('a_hrs').value)||0;
+      const man=parseInt(document.getElementById('a_man').value)||1;
+      const exec=document.getElementById('a_exec').value;
+      if(!desc) return toast('Enter a description', true);
+      list.push({op_no:op, group_name:grp, description:desc, std_hours:hrs, std_manpower:man, execution_mode:exec, sequence:list.length});
+      paint();
+    };
+    document.getElementById('exportOpsBtn').onclick=()=> exportOpsToExcel(list, filenamePrefix+'_operations.xlsx');
+    document.getElementById('importFile').onchange=(e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      importOpsFromExcel(file, (imported)=>{ list = list.concat(imported.map(o=>({...o, sequence:list.length}))); paint(); });
+    };
+    document.getElementById('pasteBtn').onclick=()=>{
+      const box = document.getElementById('pasteBox');
+      box.style.display = box.style.display==='none' ? 'block' : 'none';
+    };
+    document.getElementById('parsePasteBtn').onclick=()=>{
+      const text = document.getElementById('pasteInput').value;
+      const parsed = parsePastedExcel(text);
+      if(parsed.length===0){ toast('No valid rows found in pasted text', true); return; }
+      list = list.concat(parsed.map(o=>({...o, sequence:list.length})));
+      document.getElementById('pasteInput').value='';
+      toast('Added '+parsed.length+' rows');
+      paint();
+    };
+    document.getElementById('saveOpsBtn').onclick = async ()=>{
+      const { error } = await saveFn(list);
+      if(error) return toast(error.message, true);
+      toast('Saved');
+    };
+  }
+  paint();
+}
+
+function parsePastedExcel(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim()!=='');
+  if(lines.length===0) return [];
+  let rows = lines.map(l=>l.split('\t'));
+  if(rows.length && /^op/i.test((rows[0][0]||'').trim())){ rows = rows.slice(1); } // drop header row if present
+  return rows.map(cols=>({
+    op_no:(cols[0]||'').trim(),
+    group_name:(cols[1]||'').trim(),
+    description:(cols[2]||'').trim(),
+    std_hours:parseFloat(cols[3])||0,
+    std_manpower:parseInt(cols[4])||1,
+    execution_mode:(cols[5]||'').trim()==='Parallel' ? 'Parallel' : 'Series'
+  })).filter(r=>r.description);
+}
+
+/* ================= NEW JOB ================= */
+async function renderNewJob(app){
+  const { data: models } = await sb.from('models').select('*').order('model_name');
+  app.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">Create New Job</div>
+      <div class="row3">
+        <div><label>Machine No.</label><input id="f_machine" placeholder="e.g. 7822M"></div>
+        <div><label>Customer</label><input id="f_customer" placeholder="e.g. BAJAJ AUTO TOOLS"></div>
+        <div><label>Model Variant</label>
+          <select id="f_model">${(models||[]).map(m=>`<option value="${m.id}">${esc(m.model_name)}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="row3">
+        <div><label>Start Date</label><input id="f_start" type="date"></div>
+        <div><label>Planned End Date</label><input id="f_end" type="date"></div>
+        <div><label>Delivery Date</label><input id="f_delivery" type="date"></div>
+      </div>
+      <label>Operations for this Job</label>
+      <div class="toggle-pair">
+        <button type="button" class="on" id="copyYesBtn">Copy Model's Operations</button>
+        <button type="button" id="copyNoBtn">Start Blank</button>
+      </div>
+      <div class="stat-line" style="margin-top:8px;">Copying pulls in the selected model's current operation list as a starting point — still fully editable per job afterward in Jobs / QR Labels. "Start Blank" leaves it empty for you to build from scratch (add manually, paste, or import).</div>
+      <button class="btn amber" id="createBtn">Create Job & Continue</button>
+    </div>
+  `;
+  let copyOps = true;
+  document.getElementById('copyYesBtn').onclick = ()=>{ copyOps=true; document.getElementById('copyYesBtn').classList.add('on'); document.getElementById('copyNoBtn').classList.remove('on'); };
+  document.getElementById('copyNoBtn').onclick = ()=>{ copyOps=false; document.getElementById('copyNoBtn').classList.add('on'); document.getElementById('copyYesBtn').classList.remove('on'); };
+  document.getElementById('createBtn').onclick = async ()=>{
+    const machine_no = document.getElementById('f_machine').value.trim().toUpperCase();
+    const customer = document.getElementById('f_customer').value.trim();
+    const model_id = document.getElementById('f_model').value;
+    const start_date = document.getElementById('f_start').value || null;
+    const planned_end_date = document.getElementById('f_end').value || null;
+    const delivery_date = document.getElementById('f_delivery').value || null;
+    if(!machine_no || !model_id) return toast('Machine No. and Model are required', true);
+
+    const { data: job, error } = await sb.from('jobs').insert({ machine_no, customer, model_id, start_date, planned_end_date, delivery_date }).select().single();
+    if(error) return toast(error.message, true);
+
+    if(copyOps){
+      const { data: modelOps } = await sb.from('model_operations').select('*').eq('model_id', model_id).order('sequence');
+      const rows = (modelOps||[]).map(o=>({ job_id: job.id, op_no:o.op_no, group_name:o.group_name, description:o.description, std_hours:o.std_hours, std_manpower:o.std_manpower, execution_mode:o.execution_mode||'Series', sequence:o.sequence }));
+      if(rows.length){
+        const { error: opErr } = await sb.from('job_operations').insert(rows);
+        if(opErr) toast('Job created, but copying operations failed: '+opErr.message, true);
+      }
+    }
+    toast('Job created'+(copyOps?'':' (blank operation list — add ops in Jobs / QR Labels)'));
+    view='jobs'; render();
+  };
+}
+
+/* ================= JOBS / QR LABELS ================= */
+async function renderJobsQr(app){
+  const { data: jobs, error } = await sb.from('jobs').select('*, models(model_name)').order('created_at', {ascending:false});
+  if(error){ app.innerHTML = `<div class="panel"><div class="empty">Error: ${esc(error.message)}</div></div>`; return; }
+  app.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">Jobs</div>
+      <div id="jobList"></div>
+    </div>
+    <div class="panel" id="opsPanel" style="display:none;"></div>
+    <div class="panel no-print">
+      <div class="panel-title">Label Sheet Builder <span class="sub">64×34mm · 24/sheet</span></div>
+      <div class="stat-line">Tick jobs below, click Build Sheet to preview, then pick the print profile matching whichever printer/browser you're using right now — different printers shift the start position on the sheet, these two profiles compensate for that.</div>
+      <div id="checkList"></div>
+      <button class="btn amber" id="buildBtn">Build Label Sheet</button>
+      <div class="print-profiles no-print" id="printProfiles" style="display:none;">
+        <div>
+          <button class="btn" id="printMethodBtn">Print — Method</button>
+          <div class="print-profile-cap">Your printer (Comet/Chrome)</div>
+        </div>
+        <div>
+          <button class="btn ghost" id="printMfgBtn">Print — MFG.</button>
+          <div class="print-profile-cap">Other printer (Edge) — 10mm higher</div>
+        </div>
+      </div>
+    </div>
+    <div id="printArea" style="display:none;"></div>
+  `;
+  const activeJobs = (jobs||[]).filter(j=>j.status==='Active');
+  document.getElementById('jobList').innerHTML = (jobs||[]).map(j=>`
+    <div class="op-row">
+      <span class="lamp ${j.status==='Active'?'green':'grey'}"></span>
+      <span class="desc"><b>${esc(j.machine_no)}</b> · ${esc(j.customer||'')} · ${esc(j.models?.model_name||'')}</span>
+      ${j.status==='Active' ? `<button data-edit="${j.id}" data-machine="${esc(j.machine_no)}" style="color:var(--graphite-950);font-weight:700;">Edit Ops</button><button data-close="${j.id}">Mark Completed</button>` : ''}
+    </div>`).join('') || '<div class="empty">No jobs yet — go to New Job to create one.</div>';
+
+  document.querySelectorAll('[data-close]').forEach(b=>{
+    b.onclick = async ()=>{
+      if(!confirm('Mark this job completed? Its QR code will stop working.')) return;
+      const { error } = await sb.from('jobs').update({ status:'Completed', closed_at:new Date().toISOString() }).eq('id', b.dataset.close);
+      if(error) return toast(error.message, true);
+      toast('Job closed'); renderJobsQr(app);
+    };
+  });
+
+  document.querySelectorAll('[data-edit]').forEach(b=>{
+    b.onclick = ()=> openOpsEditor({
+      title: 'Job Operations — ' + b.dataset.machine,
+      loadFn: async ()=> (await sb.from('job_operations').select('*').eq('job_id', b.dataset.edit).order('sequence')).data,
+      saveFn: async (list)=>{
+        await sb.from('job_operations').delete().eq('job_id', b.dataset.edit);
+        const rows = list.map((o,i)=>({ job_id:b.dataset.edit, op_no:o.op_no, group_name:o.group_name, description:o.description, std_hours:o.std_hours, std_manpower:o.std_manpower, execution_mode:o.execution_mode||'Series', sequence:i }));
+        if(rows.length) return sb.from('job_operations').insert(rows);
+        return {error:null};
+      },
+      filenamePrefix: b.dataset.machine
+    });
+  });
+
+  document.getElementById('checkList').innerHTML = activeJobs.map(j=>`
+    <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-weight:400;font-size:13px;color:var(--graphite-950);">
+      <input type="checkbox" class="jobChk" value="${j.id}" style="width:auto;"> ${esc(j.machine_no)} — ${esc(j.customer||'')} — ${esc(j.models?.model_name||'')}
+    </label>`).join('') || '<div class="empty">No active jobs to label.</div>';
+
+  document.getElementById('buildBtn').onclick = ()=>{
+    const chosen = [...document.querySelectorAll('.jobChk:checked')].map(c=>c.value);
+    if(chosen.length===0) return toast('Select at least one job', true);
+    buildLabelSheet(chosen, activeJobs);
+    document.getElementById('printProfiles').style.display='flex';
+    document.getElementById('printProfiles').scrollIntoView({behavior:'smooth'});
+  };
+  document.getElementById('printMethodBtn').onclick = ()=> handlePrint('method');
+  document.getElementById('printMfgBtn').onclick = ()=> handlePrint('mfg');
+}
+
+// Two print profiles — only the top margin differs (10mm less for "mfg"), because
+// different physical printer/browser combos shift where printing starts on the sheet.
+function handlePrint(profile){
+  const sheet = document.getElementById('sheet');
+  if(!sheet){ toast('Build the label sheet first', true); return; }
+  const topMargin = profile === 'mfg' ? '6.479mm' : '16.479mm';
+  sheet.style.paddingTop = topMargin;
+  const oldTitle = document.title;
+  document.title = 'QR_Labels_' + new Date().toISOString().slice(0,10);
+  window.print();
+  setTimeout(()=>{ document.title = oldTitle; }, 600);
+}
+
+function buildLabelSheet(jobIds, activeJobs){
+  const area = document.getElementById('printArea');
+  area.style.display='block';
+  area.innerHTML = `<div class="label-sheet" id="sheet"></div>`;
+  const sheet = document.getElementById('sheet');
+  const baseUrl = window.location.origin + window.location.pathname;
+  jobIds.forEach(id=>{
+    const j = activeJobs.find(x=>x.id===id);
+    if(!j) return;
+    const url = baseUrl + '?job=' + j.qr_token;
+    const cell = document.createElement('div');
+    cell.className='label';
+    const qrDiv = document.createElement('div'); qrDiv.className='qrbox';
+    cell.appendChild(qrDiv);
+    const info = document.createElement('div'); info.className='info';
+    info.innerHTML = `<b>${esc(j.machine_no)}</b>${esc(j.customer||'')}<br>${esc(j.models?.model_name||'')}`;
+    cell.appendChild(info);
+    sheet.appendChild(cell);
+    new QRCode(qrDiv, { text:url, width:96, height:96, colorDark:'#1a1e22', colorLight:'#ffffff' });
+  });
+}
+
+/* ================= OPERATOR SCAN ================= */
+async function renderScan(app, token){
+  const { data: job } = await sb.from('jobs').select('*, models(model_name)').eq('qr_token', token).single();
+  if(!job || job.status!=='Active'){
+    app.innerHTML = `<div class="panel"><div class="empty">${job ? 'This job is completed. QR is no longer active — check with your supervisor.' : 'Invalid QR code.'}</div></div>`;
+    return;
+  }
+  const { data: ops } = await sb.from('job_operations').select('*').eq('job_id', job.id).order('sequence');
+  const today = new Date().toISOString().slice(0,10);
+  let selectedStatus = 'Completed';
+
+  app.innerHTML = `
+    <div class="nameplate"><span class="rv2"></span><span class="rv3"></span>
+      <div class="np-row"><span>Machine No.</span><b>${esc(job.machine_no)}</b></div>
+      <div class="np-row"><span>Customer</span><b>${esc(job.customer||'—')}</b></div>
+      <div class="np-row"><span>Model</span><b>${esc(job.models?.model_name||'—')}</b></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Log Your Work</div>
+      <label>Your Name</label><input id="s_name" placeholder="Operator name">
+      <label>Operation</label>
+      <select id="s_op"><option value="">— Select —</option>
+        ${(ops||[]).map(o=>`<option value="${o.id}">${esc(o.op_no)} — ${esc(o.description)}${o.execution_mode==='Parallel'?' [Parallel]':''} (${o.std_hours}h std)</option>`).join('')}
+      </select>
+      <div class="row2">
+        <div><label>Activity Date</label><input id="s_date" type="date" value="${today}"></div>
+        <div></div>
+      </div>
+      <div class="row2">
+        <div><label>Start Time</label><input id="s_start" type="time"></div>
+        <div><label>End Time</label><input id="s_end" type="time"></div>
+      </div>
+      <label>Status</label>
+      <div class="seg" id="statusSeg">
+        <button type="button" class="on Completed" data-s="Completed"><span class="lamp green"></span>Completed</button>
+        <button type="button" class="Partial" data-s="Partial"><span class="lamp amber"></span>Partial</button>
+        <button type="button" class="Hold" data-s="Hold"><span class="lamp red"></span>Hold</button>
+      </div>
+      <input type="hidden" id="s_status" value="Completed">
+
+      <label>Issue / Delay Reason <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(required for Partial/Hold)</span></label>
+      <textarea id="s_issue" placeholder="e.g. wheel head not received, partial material only…"></textarea>
+
+      <label>Other operators helping (optional)</label>
+      <div id="extraOps"></div>
+      <button class="btn ghost small" id="addExtraBtn" type="button">+ Add another operator</button>
+
+      <button class="btn amber" id="s_submit" style="width:100%;text-align:center;margin-top:22px;">Submit Entry</button>
+    </div>
+  `;
+  document.querySelectorAll('#statusSeg button').forEach(b=>{
+    b.onclick = ()=>{
+      selectedStatus = b.dataset.s;
+      document.getElementById('s_status').value = selectedStatus;
+      document.querySelectorAll('#statusSeg button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+    };
+  });
+  document.getElementById('addExtraBtn').onclick = ()=>{
+    const row = document.createElement('div');
+    row.className='row2'; row.style.marginTop='6px';
+    row.innerHTML = `<div><input placeholder="Operator name" class="extraName"></div><div><input placeholder="Hours" class="extraHours"></div>`;
+    document.getElementById('extraOps').appendChild(row);
+  };
+  document.getElementById('s_submit').onclick = async ()=>{
+    const name=document.getElementById('s_name').value.trim();
+    const op_id=document.getElementById('s_op').value;
+    const date=document.getElementById('s_date').value;
+    const start=document.getElementById('s_start').value;
+    const end=document.getElementById('s_end').value;
+    const status=document.getElementById('s_status').value;
+    const issue=document.getElementById('s_issue').value.trim();
+    if(!name) return toast('Enter your name', true);
+    if(!op_id) return toast('Select an operation', true);
+    if(!date||!start||!end) return toast('Fill date, start and end time', true);
+    if((status==='Partial'||status==='Hold') && !issue) return toast('Issue/Delay reason is required for Partial/Hold', true);
+
+    const { data: entry, error } = await sb.from('entries').insert({
+      job_id: job.id, job_operation_id: op_id, primary_operator: name,
+      activity_date: date, start_time: start, end_time: end, status, issue_reason: issue||null
+    }).select().single();
+    if(error) return toast(error.message, true);
+
+    const extraRows = [...document.querySelectorAll('#extraOps .row2')].map(r=>({
+      entry_id: entry.id,
+      operator_name: r.querySelector('.extraName').value.trim(),
+      hours: parseFloat(r.querySelector('.extraHours').value)||0
+    })).filter(r=>r.operator_name);
+    if(extraRows.length) await sb.from('entry_operators').insert(extraRows);
+
+    app.innerHTML = `<div class="panel"><div class="empty"><span class="lamp green" style="width:16px;height:16px;"></span><br><br>Entry submitted for <b>${esc(job.machine_no)}</b>.<br><br>
+      <button class="btn amber" id="another">Log Another Entry</button></div></div>`;
+    document.getElementById('another').onclick=()=>renderScan(app, token);
+  };
+}
+
+/* ================= DASHBOARD ================= */
+async function renderDashboard(app){
+  const { data: entries, error } = await sb.from('entries')
+    .select('*, jobs(machine_no, customer), job_operations(op_no, description)')
+    .order('submitted_at', {ascending:false});
+  if(error){ app.innerHTML = `<div class="panel"><div class="empty">Error loading entries: ${esc(error.message)}</div></div>`; return; }
+  const { data: jobs } = await sb.from('jobs').select('id, machine_no, status').order('machine_no');
+
+  const approxBytes = JSON.stringify(entries||[]).length;
+  const sizeLabel = approxBytes > 1024*1024 ? (approxBytes/1024/1024).toFixed(2)+' MB' : (approxBytes/1024).toFixed(1)+' KB';
+
+  // Floor status strip: latest entry status per active machine
+  const activeMachines = (jobs||[]).filter(j=>j.status==='Active');
+  const latestByMachine = {};
+  (entries||[]).forEach(e=>{
+    const m = e.jobs?.machine_no;
+    if(m && !latestByMachine[m]) latestByMachine[m] = e.status; // entries already sorted newest-first
+  });
+
+  app.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">Floor Status <span class="sub">latest entry per active machine</span></div>
+      <div class="floor-strip" id="floorStrip"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Live Production Log</div>
+      <div class="stat-line">${(entries||[]).length} entries · approx. ${sizeLabel} · <button class="btn ghost small" id="exportBtn">Export to Excel</button></div>
+      <div class="row2" style="margin-bottom:10px;">
+        <div><label>Filter Machine</label><select id="filterM"><option value="">All</option>${(jobs||[]).map(j=>`<option value="${esc(j.machine_no)}">${esc(j.machine_no)}</option>`).join('')}</select></div>
+        <div><label>Filter Status</label><select id="filterS"><option value="">All</option><option>Completed</option><option>Partial</option><option>Hold</option></select></div>
+      </div>
+      <div style="overflow-x:auto;"><table class="entries" id="entryTable"></table></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Archive Old Entries</div>
+      <div class="stat-line">Exports everything before the date to Excel, then deletes it from the live table to keep things fast. Cannot be undone.</div>
+      <div class="row2">
+        <div><label>Delete entries logged before</label><input id="archiveDate" type="date"></div>
+        <div style="display:flex;align-items:flex-end;"><button class="btn red" id="archiveBtn" style="width:100%;">Export & Delete Before Date</button></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('floorStrip').innerHTML = activeMachines.map(j=>{
+    const st = latestByMachine[j.machine_no];
+    const cls = st ? lampClass(st) : 'grey';
+    const pulse = st==='Hold' ? ' pulse' : '';
+    return `<div class="floor-chip"><span class="lamp ${cls}${pulse}"></span>${esc(j.machine_no)}</div>`;
+  }).join('') || '<div class="empty">No active machines yet.</div>';
+
+  function paint(){
+    const fm = document.getElementById('filterM').value;
+    const fs = document.getElementById('filterS').value;
+    const rows = (entries||[]).filter(e => (!fm || e.jobs?.machine_no===fm) && (!fs || e.status===fs));
+    const table = document.getElementById('entryTable');
+    if(rows.length===0){ table.innerHTML=`<tr><td class="empty">No entries match this filter.</td></tr>`; return; }
+    table.innerHTML = `<tr><th>Machine</th><th>Op</th><th>Operator</th><th>Date</th><th>Time</th><th>Status</th><th>Issue</th><th>Logged</th></tr>
+      ${rows.map(e=>`<tr>
+        <td><b>${esc(e.jobs?.machine_no)}</b><br><span style="color:var(--steel-600);font-size:11px;">${esc(e.jobs?.customer||'')}</span></td>
+        <td class="mono">${esc(e.job_operations?.op_no)}<br><span style="color:var(--steel-600);font-size:11px;font-family:var(--font-body);">${esc(e.job_operations?.description)}</span></td>
+        <td>${esc(e.primary_operator)}</td>
+        <td class="mono">${esc(e.activity_date)}</td>
+        <td class="mono">${esc(e.start_time)}–${esc(e.end_time)}</td>
+        <td><span class="status-tag ${e.status}"><span class="lamp ${lampClass(e.status)}" style="width:8px;height:8px;"></span>${esc(e.status)}</span></td>
+        <td>${e.issue_reason ? '<span class="issue-flag">'+esc(e.issue_reason)+'</span>' : '—'}</td>
+        <td style="font-size:10.5px;color:var(--steel-600);" class="mono">${new Date(e.submitted_at).toLocaleString()}</td>
+      </tr>`).join('')}`;
+  }
+  paint();
+  document.getElementById('filterM').onchange = paint;
+  document.getElementById('filterS').onchange = paint;
+
+  function exportRows(rows, filename){
+    const ws = XLSX.utils.json_to_sheet(rows.map(e=>({
+      Machine:e.jobs?.machine_no, Customer:e.jobs?.customer, Op:e.job_operations?.op_no, Description:e.job_operations?.description,
+      Operator:e.primary_operator, Date:e.activity_date, Start:e.start_time, End:e.end_time, Status:e.status, Issue:e.issue_reason, LoggedAt:e.submitted_at
+    })));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Entries');
+    XLSX.writeFile(wb, filename);
+  }
+  document.getElementById('exportBtn').onclick = ()=> exportRows(entries||[], 'production_log_'+new Date().toISOString().slice(0,10)+'.xlsx');
+
+  document.getElementById('archiveBtn').onclick = async ()=>{
+    const cutoff = document.getElementById('archiveDate').value;
+    if(!cutoff) return toast('Pick a cutoff date', true);
+    const toArchive = (entries||[]).filter(e => e.activity_date < cutoff);
+    if(toArchive.length===0) return toast('No entries before that date', true);
+    if(!confirm(`This will export ${toArchive.length} entries and permanently delete them from the live dashboard. Continue?`)) return;
+    exportRows(toArchive, 'archive_before_'+cutoff+'.xlsx');
+    const ids = toArchive.map(e=>e.id);
+    const { error } = await sb.from('entries').delete().in('id', ids);
+    if(error) return toast('Delete failed: '+error.message, true);
+    toast('Archived and deleted '+ids.length+' entries');
+    renderDashboard(app);
+  };
+}
+
+boot();
+</script>
+</body>
+</html>
