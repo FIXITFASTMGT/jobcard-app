@@ -315,6 +315,10 @@
   .tv-col{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:16px 18px;}
   .tv-col-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--steel-300);margin-bottom:12px;}
   .tv-col-title.warn{color:var(--red-600);}
+  .tv-rank-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:13px;
+    border-top:1px solid rgba(255,255,255,.07);}
+  .tv-rank-row:first-child{border-top:none;}
+  .tv-rank-row span:last-child{color:var(--amber-500);font-family:var(--font-mono);white-space:nowrap;font-weight:600;}
   .tv-detail-op{font-size:16px;font-weight:700;margin-bottom:10px;}
   .tv-detail-row{margin-bottom:10px;}
   .tv-detail-row .k{font-size:10px;text-transform:uppercase;color:var(--steel-300);letter-spacing:.5px;margin-bottom:2px;}
@@ -1913,9 +1917,11 @@ async function renderStationCard(app, s, idx, total){
   }
   const isLate = s.delivery_date && s.estimated_delivery_date && s.estimated_delivery_date > s.delivery_date;
 
-  const [{data:ops}, {data:activity}] = await Promise.all([
+  const [{data:ops}, {data:activity}, {data:deptDelays}, {data:topReasons}] = await Promise.all([
     sb.rpc('get_job_operations_progress', {p_job_id: s.job_id}),
-    sb.rpc('get_job_recent_activity', {p_job_id: s.job_id, p_limit: 6})
+    sb.rpc('get_job_recent_activity', {p_job_id: s.job_id, p_limit: 6}),
+    sb.rpc('get_job_dept_delays', {p_job_id: s.job_id}),
+    sb.rpc('get_job_top_delay_reasons', {p_job_id: s.job_id})
   ]);
   const opList = ops || [];
   const activityList = activity || [];
@@ -2026,6 +2032,17 @@ async function renderStationCard(app, s, idx, total){
               </div>
             </div>
           `).join('') : `<div class="tv-activity-empty">No activity logged yet</div>`}
+        </div>
+      </div>
+
+      <div class="tv-cols" style="margin-top:14px;grid-template-columns:1fr 1fr;">
+        <div class="tv-col">
+          <div class="tv-col-title">Delay by Department</div>
+          ${(deptDelays && deptDelays.length) ? deptDelays.map(d=>`<div class="tv-rank-row"><span>${esc(d.responsibility)}</span><span>${Number(d.total_hours).toFixed(1)}h</span></div>`).join('') : `<div class="tv-activity-empty">No delays logged</div>`}
+        </div>
+        <div class="tv-col">
+          <div class="tv-col-title">Top Delay Reasons</div>
+          ${(topReasons && topReasons.length) ? topReasons.map(r=>`<div class="tv-rank-row"><span>${esc(r.reason)}</span><span>${Number(r.total_hours).toFixed(1)}h</span></div>`).join('') : `<div class="tv-activity-empty">No delays logged</div>`}
         </div>
       </div>
 
