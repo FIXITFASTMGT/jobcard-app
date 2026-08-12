@@ -286,7 +286,7 @@
   .label-sheet{width:210mm;min-height:297mm;padding:10mm 6.5mm;display:grid;grid-template-columns:repeat(3,64mm);
     grid-auto-rows:34mm;column-gap:2.5mm;row-gap:0mm;background:#fff;}
   .label{border:0.75pt solid #000;display:flex;align-items:center;padding:2mm;font-family:var(--font-body);overflow:hidden;}
-  .label .qrbox{width:27mm;height:27mm;flex-shrink:0;}
+  .label .qrbox{width:23mm;height:23mm;flex-shrink:0;}
   .label .info{padding-left:2mm;line-height:1.32;font-size:8pt;}
   .label .info b{font-family:var(--font-display);font-size:10pt;display:block;letter-spacing:.3px;}
   @media print{
@@ -841,6 +841,8 @@ async function renderJobsQr(app){
         <input type="checkbox" id="selectAllChk" style="width:auto;"> Select All
       </label>
       <div id="checkList"></div>
+      <label style="max-width:220px;">Start From Label # <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(1–24, for a sheet that's already partly used)</span></label>
+      <input id="startPosInput" type="number" min="1" max="24" value="1" style="max-width:120px;">
       <button class="btn amber" id="buildBtn">Build Label Sheet</button>
       <div class="print-profiles no-print" id="printProfiles" style="display:none;">
         <div>
@@ -923,7 +925,10 @@ async function renderJobsQr(app){
   document.getElementById('buildBtn').onclick = ()=>{
     const chosen = [...document.querySelectorAll('.jobChk:checked')].map(c=>c.value);
     if(chosen.length===0) return toast('Select at least one job', true);
-    buildLabelSheet(chosen, activeJobs);
+    let startPos = parseInt(document.getElementById('startPosInput').value) || 1;
+    if(startPos < 1) startPos = 1;
+    if(startPos > 24) startPos = 24;
+    buildLabelSheet(chosen, activeJobs, startPos);
     document.getElementById('printProfiles').style.display='flex';
     document.getElementById('printProfiles').scrollIntoView({behavior:'smooth'});
   };
@@ -942,7 +947,7 @@ async function renderJobsQr(app){
 function handlePrint(profile){
   const sheet = document.getElementById('sheet');
   if(!sheet){ toast('Build the label sheet first', true); return; }
-  const topMargin = profile === 'mfg' ? '6.479mm' : '16.479mm';
+  const topMargin = profile === 'mfg' ? '6.479mm' : '13.479mm';
   sheet.style.paddingTop = topMargin;
   localStorage.setItem('jobcard_print_profile', profile);
   const oldTitle = document.title;
@@ -951,12 +956,21 @@ function handlePrint(profile){
   setTimeout(()=>{ document.title = oldTitle; }, 600);
 }
 
-function buildLabelSheet(jobIds, activeJobs){
+function buildLabelSheet(jobIds, activeJobs, startPos){
   const area = document.getElementById('printArea');
   area.style.display='block';
   area.innerHTML = `<div class="label-sheet" id="sheet"></div>`;
   const sheet = document.getElementById('sheet');
   const baseUrl = window.location.origin + window.location.pathname;
+  // Leading blank cells so printing lands on an already-partly-used sheet at the right spot.
+  const skip = Math.max(0, (startPos||1) - 1);
+  for(let i=0;i<skip;i++){
+    const blank = document.createElement('div');
+    blank.className='label';
+    blank.style.visibility='hidden';
+    blank.style.border='none';
+    sheet.appendChild(blank);
+  }
   jobIds.forEach(id=>{
     const j = activeJobs.find(x=>x.id===id);
     if(!j) return;
@@ -969,7 +983,7 @@ function buildLabelSheet(jobIds, activeJobs){
     info.innerHTML = `<b>${esc(j.machine_no)}</b>${esc(j.customer||'')}<br>${esc(j.models?.model_name||'')}`;
     cell.appendChild(info);
     sheet.appendChild(cell);
-    new QRCode(qrDiv, { text:url, width:96, height:96, colorDark:'#1a1e22', colorLight:'#ffffff' });
+    new QRCode(qrDiv, { text:url, width:82, height:82, colorDark:'#1a1e22', colorLight:'#ffffff' });
   });
 }
 
