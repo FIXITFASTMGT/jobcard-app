@@ -222,6 +222,28 @@
   .print-profiles{display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;}
   .print-profile-cap{font-size:11px;color:var(--steel-600);margin-top:5px;max-width:220px;line-height:1.4;}
 
+  /* ---------- Station Display (rotating floor TV) ---------- */
+  body.tv-mode{background:var(--graphite-950);}
+  body.tv-mode .topbar{display:none;}
+  body.tv-mode .wrap{max-width:none;padding:0;}
+  .tv-card{
+    min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;
+    background:linear-gradient(160deg,var(--graphite-800) 0%,var(--graphite-950) 100%);color:#fff;
+    padding:40px 20px;text-align:center;box-sizing:border-box;
+  }
+  .tv-station-no{font-family:var(--font-mono);font-size:20px;color:var(--amber-500);letter-spacing:2px;margin-bottom:10px;}
+  .tv-progress{color:var(--steel-300);font-size:14px;margin-left:14px;}
+  .tv-machine{font-family:var(--font-display);font-size:min(14vw,88px);font-weight:700;letter-spacing:2px;line-height:1;}
+  .tv-sub{font-size:min(4vw,24px);color:var(--steel-200);margin-top:10px;}
+  .tv-status{font-size:min(4.5vw,28px);margin-top:22px;display:flex;align-items:center;gap:12px;justify-content:center;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
+  .tv-metrics{display:flex;gap:20px;margin-top:44px;flex-wrap:wrap;justify-content:center;}
+  .tv-metric{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:18px 26px;min-width:140px;}
+  .tv-metric-num{font-family:var(--font-display);font-size:min(6vw,38px);font-weight:700;}
+  .tv-metric.highlight .tv-metric-num{color:var(--amber-500);}
+  .tv-metric.warn .tv-metric-num{color:var(--red-600);}
+  .tv-metric-lbl{font-size:12px;text-transform:uppercase;color:var(--steel-300);letter-spacing:1px;margin-top:4px;}
+  .tv-empty{min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;background:var(--graphite-950);}
+
   /* ---------- segmented status control (operator entry) ---------- */
   .seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px;}
   .seg button{
@@ -323,6 +345,8 @@ function switchView(v){
 
 const params = new URLSearchParams(location.search);
 const scanToken = params.get('job');
+const tvDisplay = params.get('display') === 'tv';
+const tvInterval = parseInt(params.get('interval')) || 7; // seconds per station
 let view = 'dashboard';
 let session = null;
 
@@ -358,9 +382,9 @@ async function renderLogin(){
 /* ---------------- NAV ---------------- */
 function setNav(){
   const bar=document.getElementById('navBar');
-  if(scanToken){ bar.innerHTML=''; return; }
+  if(tvDisplay || scanToken){ bar.innerHTML=''; return; }
   if(!session){ bar.innerHTML=''; return; }
-  const items=[['dashboard','Dashboard'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels']];
+  const items=[['dashboard','Dashboard'],['issues','Delay / Issue Log'],['entries','Production Entries'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels']];
   bar.innerHTML = items.map(([id,l])=>`<button data-v="${id}" class="${view===id?'active':''}">${l}</button>`).join('')
     + `<button id="logoutBtn" class="small">Log Out</button>`;
   bar.querySelectorAll('button[data-v]').forEach(b=> b.onclick=()=> switchView(b.dataset.v));
@@ -370,6 +394,7 @@ function setNav(){
 
 /* ---------------- BOOT / ROUTER ---------------- */
 async function boot(){
+  if(tvDisplay) return render(); // public, no login needed at all
   await checkSession();
   if(scanToken) return render();
   if(!session) return renderLogin();
@@ -378,10 +403,13 @@ async function boot(){
 async function render(){
   setNav();
   const app=document.getElementById('app');
+  if(tvDisplay) return renderStationDisplay(app);
   if(scanToken) return renderScan(app, scanToken);
   if(view==='models') return renderModels(app);
   if(view==='newjob') return renderNewJob(app);
   if(view==='jobs') return renderJobsQr(app);
+  if(view==='issues') return renderIssueLog(app);
+  if(view==='entries') return renderProductionEntries(app);
   return renderDashboard(app);
 }
 
@@ -530,7 +558,7 @@ function openJobDetailsEditor(job, app){
     <div class="row3">
       <div><label>Machine No.</label><input id="ed_machine" value="${esc(job.machine_no)}"></div>
       <div><label>Customer</label><input id="ed_customer" value="${esc(job.customer||'')}"></div>
-      <div></div>
+      <div><label>Station No. <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(floor display order)</span></label><input id="ed_station" type="number" min="1" value="${job.station_no ?? ''}"></div>
     </div>
     <div class="row3">
       <div><label>Start Date</label><input id="ed_start" type="date" value="${job.start_date||''}"></div>
@@ -542,11 +570,12 @@ function openJobDetailsEditor(job, app){
   document.getElementById('saveDetailsBtn').onclick = async ()=>{
     const machine_no = document.getElementById('ed_machine').value.trim().toUpperCase();
     const customer = document.getElementById('ed_customer').value.trim();
+    const station_no = document.getElementById('ed_station').value ? parseInt(document.getElementById('ed_station').value) : null;
     const start_date = document.getElementById('ed_start').value || null;
     const planned_end_date = document.getElementById('ed_end').value || null;
     const delivery_date = document.getElementById('ed_delivery').value || null;
     if(!machine_no) return toast('Machine No. is required', true);
-    const { error } = await sb.from('jobs').update({ machine_no, customer, start_date, planned_end_date, delivery_date }).eq('id', job.id);
+    const { error } = await sb.from('jobs').update({ machine_no, customer, station_no, start_date, planned_end_date, delivery_date }).eq('id', job.id);
     if(error) return toast(error.message, true);
     toast('Job details updated');
     renderJobsQr(app);
@@ -723,6 +752,8 @@ async function renderNewJob(app){
         <div><label>Planned End Date</label><input id="f_end" type="date"></div>
         <div><label>Delivery Date</label><input id="f_delivery" type="date"></div>
       </div>
+      <label>Station No. <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional — sets its position on the rotating floor display)</span></label>
+      <input id="f_station" type="number" min="1" placeholder="e.g. 1" style="max-width:140px;">
       <label>Operations for this Job</label>
       <div class="toggle-pair">
         <button type="button" class="on" id="copyYesBtn">Copy Model's Operations</button>
@@ -758,6 +789,7 @@ async function renderNewJob(app){
     const start_date = document.getElementById('f_start').value || null;
     const planned_end_date = document.getElementById('f_end').value || null;
     const delivery_date = document.getElementById('f_delivery').value || null;
+    const station_no = document.getElementById('f_station').value ? parseInt(document.getElementById('f_station').value) : null;
     if(!machine_no || !model_id) { toast('Machine No. and Model are required', true); return; }
 
     const { data: existingActive } = await sb.from('jobs').select('id, customer, models(model_name)').eq('machine_no', machine_no).eq('status','Active');
@@ -766,7 +798,7 @@ async function renderNewJob(app){
       if(!confirm(`Machine ${machine_no} already has an active job (${ex.customer||'no customer'}, ${ex.models?.model_name||''}). Create another active job on the same machine number anyway?`)) return;
     }
 
-    const { data: job, error } = await sb.from('jobs').insert({ machine_no, customer, model_id, start_date, planned_end_date, delivery_date }).select().single();
+    const { data: job, error } = await sb.from('jobs').insert({ machine_no, customer, model_id, start_date, planned_end_date, delivery_date, station_no }).select().single();
     if(error) { toast(error.message, true); return; }
 
     if(copyOps){
@@ -1321,24 +1353,51 @@ function computeEfficiency(filteredEntries, jobOpsAll, entryOpsByEntry, jobsById
 }
 
 /* ================= DASHBOARD ================= */
+function rowsHtml(rows){
+  if(rows.length===0) return `<tr><td class="empty">No entries match this filter.</td></tr>`;
+  return `<tr><th>Machine</th><th>Op</th><th>Operator</th><th>Date</th><th>Time</th><th>Status</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th><th></th></tr>
+    ${rows.map(e=>`<tr class="${e.status==='Hold'?'hold-row':''}">
+      <td><b>${esc(e.jobs?.machine_no)}</b><br><span style="color:var(--steel-600);font-size:11px;">${esc(e.jobs?.customer||'')}</span></td>
+      <td class="mono">${esc(e.job_operations?.op_no)}<br><span style="color:var(--steel-600);font-size:11px;font-family:var(--font-body);">${esc(e.job_operations?.description)}</span></td>
+      <td>${esc(e.primary_operator)}</td>
+      <td class="mono">${esc(e.activity_date)}</td>
+      <td class="mono">${e.start_time ? esc(e.start_time)+'–'+esc(e.end_time) : '<span style="color:var(--steel-600);">not worked</span>'}</td>
+      <td><span class="status-tag ${e.status}"><span class="lamp ${lampClass(e.status)}" style="width:8px;height:8px;"></span>${esc(e.status)}</span></td>
+      <td>${e.issue_reason ? '<span class="issue-flag">'+esc(e.issue_reason)+'</span>' : '—'}</td>
+      <td class="mono">${e.delay_hours ?? '—'}</td>
+      <td>${e.responsibility ? esc(e.responsibility) : '—'}</td>
+      <td style="font-size:10.5px;color:var(--steel-600);" class="mono">${new Date(e.submitted_at).toLocaleString()}</td>
+      <td><button class="btn ghost small entryEditBtn" data-id="${e.id}">Edit</button></td>
+    </tr>`).join('')}`;
+}
+function wireEditButtons(container, entries, app){
+  container.querySelectorAll('.entryEditBtn').forEach(b=>{
+    b.onclick = ()=>{
+      const found = (entries||[]).find(e=>e.id===b.dataset.id);
+      if(found) openEntryEditor(found, app);
+    };
+  });
+}
+function exportRows(rows, filename){
+  const ws = XLSX.utils.json_to_sheet(rows.map(e=>({
+    Machine:e.jobs?.machine_no, Customer:e.jobs?.customer, Op:e.job_operations?.op_no, Description:e.job_operations?.description,
+    Operator:e.primary_operator, Date:e.activity_date, Start:e.start_time, End:e.end_time, Status:e.status, Issue:e.issue_reason,
+    DelayHours:e.delay_hours, Responsibility:e.responsibility, LoggedAt:e.submitted_at
+  })));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Entries');
+  XLSX.writeFile(wb, filename);
+}
+function setPresetOn(groupId, preset){
+  document.querySelectorAll('#'+groupId+' button').forEach(b=> b.classList.toggle('on', b.dataset.p===preset));
+}
+
+/* ================= DASHBOARD (Overview + Floor Status only) ================= */
 async function renderDashboard(app){
   const { data: entries, error } = await sb.from('entries')
-    .select('*, jobs(machine_no, customer), job_operations(op_no, description)')
+    .select('*, jobs(machine_no, customer)')
     .order('submitted_at', {ascending:false});
   if(error){ app.innerHTML = `<div class="panel"><div class="empty">Error loading entries: ${esc(error.message)}</div></div>`; return; }
-  const { data: jobs } = await sb.from('jobs').select('id, machine_no, customer, status, models(model_name)').order('machine_no');
-  const { data: respList } = await sb.from('responsibilities').select('*').order('name');
-  const { data: jobOpsAll } = await sb.from('job_operations').select('id, job_id, std_hours, is_completed');
-  const { data: entryOpsAll } = await sb.from('entry_operators').select('entry_id, operator_name, hours');
-
-  const jobsById = {}; (jobs||[]).forEach(j=> jobsById[j.id]=j);
-  const entryOpsByEntry = {}; (entryOpsAll||[]).forEach(x=>{ (entryOpsByEntry[x.entry_id]=entryOpsByEntry[x.entry_id]||[]).push(x); });
-
-  let issueChartResp=null, issueChartTrend=null;
-  let lastFilteredEntries=[], lastFilteredIssues=[], lastEffRows=[];
-
-  const approxBytes = JSON.stringify(entries||[]).length;
-  const sizeLabel = approxBytes > 1024*1024 ? (approxBytes/1024/1024).toFixed(2)+' MB' : (approxBytes/1024).toFixed(1)+' KB';
+  const { data: jobs } = await sb.from('jobs').select('id, machine_no, status').order('machine_no');
 
   const activeMachines = (jobs||[]).filter(j=>j.status==='Active');
   const latestByMachine = {};
@@ -1354,34 +1413,6 @@ async function renderDashboard(app){
   const onHoldNow = activeMachines.filter(j=> latestByMachine[j.machine_no] === 'Hold').length;
   const delayHoursThisWeek = (entries||[]).filter(e=> e.activity_date >= weekAgo).reduce((s,e)=> s + (parseFloat(e.delay_hours)||0), 0);
 
-  const issueEntries = (entries||[]).filter(e=> e.issue_reason);
-
-  function rowsHtml(rows){
-    if(rows.length===0) return `<tr><td class="empty">No entries match this filter.</td></tr>`;
-    return `<tr><th>Machine</th><th>Op</th><th>Operator</th><th>Date</th><th>Time</th><th>Status</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th><th></th></tr>
-      ${rows.map(e=>`<tr class="${e.status==='Hold'?'hold-row':''}">
-        <td><b>${esc(e.jobs?.machine_no)}</b><br><span style="color:var(--steel-600);font-size:11px;">${esc(e.jobs?.customer||'')}</span></td>
-        <td class="mono">${esc(e.job_operations?.op_no)}<br><span style="color:var(--steel-600);font-size:11px;font-family:var(--font-body);">${esc(e.job_operations?.description)}</span></td>
-        <td>${esc(e.primary_operator)}</td>
-        <td class="mono">${esc(e.activity_date)}</td>
-        <td class="mono">${e.start_time ? esc(e.start_time)+'–'+esc(e.end_time) : '<span style="color:var(--steel-600);">not worked</span>'}</td>
-        <td><span class="status-tag ${e.status}"><span class="lamp ${lampClass(e.status)}" style="width:8px;height:8px;"></span>${esc(e.status)}</span></td>
-        <td>${e.issue_reason ? '<span class="issue-flag">'+esc(e.issue_reason)+'</span>' : '—'}</td>
-        <td class="mono">${e.delay_hours ?? '—'}</td>
-        <td>${e.responsibility ? esc(e.responsibility) : '—'}</td>
-        <td style="font-size:10.5px;color:var(--steel-600);" class="mono">${new Date(e.submitted_at).toLocaleString()}</td>
-        <td><button class="btn ghost small entryEditBtn" data-id="${e.id}">Edit</button></td>
-      </tr>`).join('')}`;
-  }
-  function wireEditButtons(container){
-    container.querySelectorAll('.entryEditBtn').forEach(b=>{
-      b.onclick = ()=>{
-        const found = (entries||[]).find(e=>e.id===b.dataset.id);
-        if(found) openEntryEditor(found, app);
-      };
-    });
-  }
-
   app.innerHTML = `
     <div class="panel">
       <div class="panel-title">Overview</div>
@@ -1396,7 +1427,29 @@ async function renderDashboard(app){
       <div class="panel-title">Floor Status <span class="sub">latest entry per active machine</span></div>
       <div class="floor-strip" id="floorStrip"></div>
     </div>
+  `;
 
+  document.getElementById('floorStrip').innerHTML = activeMachines.map(j=>{
+    const st = latestByMachine[j.machine_no];
+    const cls = st ? lampClass(st) : 'grey';
+    const pulse = st==='Hold' ? ' pulse' : '';
+    return `<div class="floor-chip"><span class="lamp ${cls}${pulse}"></span>${esc(j.machine_no)}</div>`;
+  }).join('') || '<div class="empty">No active machines yet.</div>';
+}
+
+/* ================= DELAY / ISSUE LOG (own tab) ================= */
+async function renderIssueLog(app){
+  const { data: entries, error } = await sb.from('entries')
+    .select('*, jobs(machine_no, customer), job_operations(op_no, description)')
+    .order('submitted_at', {ascending:false});
+  if(error){ app.innerHTML = `<div class="panel"><div class="empty">Error loading entries: ${esc(error.message)}</div></div>`; return; }
+  const { data: jobs } = await sb.from('jobs').select('id, machine_no').order('machine_no');
+  const { data: respList } = await sb.from('responsibilities').select('*').order('name');
+
+  const issueEntries = (entries||[]).filter(e=> e.issue_reason);
+  let issueChartResp=null, issueChartTrend=null;
+
+  app.innerHTML = `
     <div class="panel">
       <div class="panel-title">Delay / Issue Log <span class="sub">${issueEntries.length} entries with a reason logged</span></div>
       <div class="section-header">
@@ -1421,7 +1474,90 @@ async function renderDashboard(app){
       </div>
       <div class="table-scroll"><table class="entries" id="issueTable"></table></div>
     </div>
+  `;
 
+  function paintIssues(){
+    const fm = document.getElementById('iFilterM').value;
+    const fr = document.getElementById('iFilterR').value;
+    const ff = document.getElementById('iFilterFrom').value;
+    const ft = document.getElementById('iFilterTo').value;
+    const rows = issueEntries.filter(e =>
+      (!fm || e.jobs?.machine_no===fm) && (!fr || e.responsibility===fr) &&
+      (!ff || e.activity_date >= ff) && (!ft || e.activity_date <= ft)
+    );
+
+    const totalDelayHrs = rows.reduce((s,e)=> s+(parseFloat(e.delay_hours)||0),0);
+    const uniqueMachines = new Set(rows.map(e=>e.jobs?.machine_no)).size;
+    document.getElementById('issueMiniKpis').innerHTML = `
+      <div class="mini-kpi"><div class="num">${rows.length}</div><div class="lbl">Issue Entries</div></div>
+      <div class="mini-kpi"><div class="num">${totalDelayHrs.toFixed(1)}h</div><div class="lbl">Total Delay Hours</div></div>
+      <div class="mini-kpi"><div class="num">${uniqueMachines}</div><div class="lbl">Machines Affected</div></div>
+      <div class="mini-kpi"><div class="num">${rows.length ? (totalDelayHrs/rows.length).toFixed(1) : '0'}h</div><div class="lbl">Avg Delay / Entry</div></div>
+    `;
+
+    const respData = {};
+    rows.forEach(e=>{ if(e.responsibility) respData[e.responsibility] = (respData[e.responsibility]||0) + (parseFloat(e.delay_hours)||0); });
+    const respLabels = Object.keys(respData);
+    if(issueChartResp) issueChartResp.destroy();
+    issueChartResp = new Chart(document.getElementById('respChart'), {
+      type:'bar',
+      data:{ labels:respLabels, datasets:[{ label:'Delay Hours', data:respLabels.map(k=>respData[k]), backgroundColor:'#e0a300' }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+    });
+    document.getElementById('topRespList').innerHTML = Object.entries(respData).sort((a,b)=>b[1]-a[1])
+      .map(([k,v])=>`<div class="ranked-row"><span>${esc(k)}</span><b>${v.toFixed(1)}h</b></div>`).join('') || '<div class="empty">No data.</div>';
+
+    const trendData = {};
+    rows.forEach(e=>{ trendData[e.activity_date] = (trendData[e.activity_date]||0) + (parseFloat(e.delay_hours)||0); });
+    const trendDates = Object.keys(trendData).sort();
+    if(issueChartTrend) issueChartTrend.destroy();
+    issueChartTrend = new Chart(document.getElementById('trendChart'), {
+      type:'line',
+      data:{ labels:trendDates, datasets:[{ label:'Delay Hrs/Day', data:trendDates.map(d=>trendData[d]), borderColor:'#c0392b', backgroundColor:'rgba(192,57,43,0.15)', fill:true, tension:.2 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+    });
+
+    const machData = {};
+    rows.forEach(e=>{ const m=e.jobs?.machine_no; if(m) machData[m] = (machData[m]||0) + (parseFloat(e.delay_hours)||0); });
+    document.getElementById('topMachineList').innerHTML = Object.entries(machData).sort((a,b)=>b[1]-a[1]).slice(0,10)
+      .map(([m,h])=>`<div class="ranked-row"><span>${esc(m)}</span><b>${h.toFixed(1)}h</b></div>`).join('') || '<div class="empty">No data.</div>';
+
+    const table = document.getElementById('issueTable');
+    table.innerHTML = rowsHtml(rows);
+    wireEditButtons(table, entries, app);
+  }
+  paintIssues();
+  document.getElementById('iFilterM').onchange = paintIssues;
+  document.getElementById('iFilterR').onchange = paintIssues;
+  document.getElementById('iFilterFrom').onchange = ()=>{ setPresetOn('iDatePresets','custom'); paintIssues(); };
+  document.getElementById('iFilterTo').onchange = ()=>{ setPresetOn('iDatePresets','custom'); paintIssues(); };
+  document.querySelectorAll('#iDatePresets button').forEach(b=>{
+    b.onclick = ()=>{
+      setPresetOn('iDatePresets', b.dataset.p);
+      applyDatePreset(b.dataset.p, document.getElementById('iFilterFrom'), document.getElementById('iFilterTo'));
+      paintIssues();
+    };
+  });
+}
+
+/* ================= ALL PRODUCTION ENTRIES (own tab) ================= */
+async function renderProductionEntries(app){
+  const { data: entries, error } = await sb.from('entries')
+    .select('*, jobs(machine_no, customer), job_operations(op_no, description)')
+    .order('submitted_at', {ascending:false});
+  if(error){ app.innerHTML = `<div class="panel"><div class="empty">Error loading entries: ${esc(error.message)}</div></div>`; return; }
+  const { data: jobs } = await sb.from('jobs').select('id, machine_no, customer, status, models(model_name)').order('machine_no');
+  const { data: jobOpsAll } = await sb.from('job_operations').select('id, job_id, std_hours, is_completed');
+  const { data: entryOpsAll } = await sb.from('entry_operators').select('entry_id, operator_name, hours');
+
+  const jobsById = {}; (jobs||[]).forEach(j=> jobsById[j.id]=j);
+  const entryOpsByEntry = {}; (entryOpsAll||[]).forEach(x=>{ (entryOpsByEntry[x.entry_id]=entryOpsByEntry[x.entry_id]||[]).push(x); });
+  let lastFilteredEntries=[], lastEffRows=[];
+
+  const approxBytes = JSON.stringify(entries||[]).length;
+  const sizeLabel = approxBytes > 1024*1024 ? (approxBytes/1024/1024).toFixed(2)+' MB' : (approxBytes/1024).toFixed(1)+' KB';
+
+  app.innerHTML = `
     <div class="panel">
       <div class="panel-title">All Production Entries</div>
       <div class="section-header">
@@ -1463,81 +1599,6 @@ async function renderDashboard(app){
     </div>
   `;
 
-  document.getElementById('floorStrip').innerHTML = activeMachines.map(j=>{
-    const st = latestByMachine[j.machine_no];
-    const cls = st ? lampClass(st) : 'grey';
-    const pulse = st==='Hold' ? ' pulse' : '';
-    return `<div class="floor-chip"><span class="lamp ${cls}${pulse}"></span>${esc(j.machine_no)}</div>`;
-  }).join('') || '<div class="empty">No active machines yet.</div>';
-
-  function paintIssues(){
-    const fm = document.getElementById('iFilterM').value;
-    const fr = document.getElementById('iFilterR').value;
-    const ff = document.getElementById('iFilterFrom').value;
-    const ft = document.getElementById('iFilterTo').value;
-    const rows = issueEntries.filter(e =>
-      (!fm || e.jobs?.machine_no===fm) && (!fr || e.responsibility===fr) &&
-      (!ff || e.activity_date >= ff) && (!ft || e.activity_date <= ft)
-    );
-    lastFilteredIssues = rows;
-
-    const totalDelayHrs = rows.reduce((s,e)=> s+(parseFloat(e.delay_hours)||0),0);
-    const uniqueMachines = new Set(rows.map(e=>e.jobs?.machine_no)).size;
-    document.getElementById('issueMiniKpis').innerHTML = `
-      <div class="mini-kpi"><div class="num">${rows.length}</div><div class="lbl">Issue Entries</div></div>
-      <div class="mini-kpi"><div class="num">${totalDelayHrs.toFixed(1)}h</div><div class="lbl">Total Delay Hours</div></div>
-      <div class="mini-kpi"><div class="num">${uniqueMachines}</div><div class="lbl">Machines Affected</div></div>
-      <div class="mini-kpi"><div class="num">${rows.length ? (totalDelayHrs/rows.length).toFixed(1) : '0'}h</div><div class="lbl">Avg Delay / Entry</div></div>
-    `;
-
-    const respData = {};
-    rows.forEach(e=>{ if(e.responsibility) respData[e.responsibility] = (respData[e.responsibility]||0) + (parseFloat(e.delay_hours)||0); });
-    const respLabels = Object.keys(respData);
-    if(issueChartResp) issueChartResp.destroy();
-    issueChartResp = new Chart(document.getElementById('respChart'), {
-      type:'bar',
-      data:{ labels:respLabels, datasets:[{ label:'Delay Hours', data:respLabels.map(k=>respData[k]), backgroundColor:'#e0a300' }] },
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
-    });
-    document.getElementById('topRespList').innerHTML = Object.entries(respData).sort((a,b)=>b[1]-a[1])
-      .map(([k,v])=>`<div class="ranked-row"><span>${esc(k)}</span><b>${v.toFixed(1)}h</b></div>`).join('') || '<div class="empty">No data.</div>';
-
-    const trendData = {};
-    rows.forEach(e=>{ trendData[e.activity_date] = (trendData[e.activity_date]||0) + (parseFloat(e.delay_hours)||0); });
-    const trendDates = Object.keys(trendData).sort();
-    if(issueChartTrend) issueChartTrend.destroy();
-    issueChartTrend = new Chart(document.getElementById('trendChart'), {
-      type:'line',
-      data:{ labels:trendDates, datasets:[{ label:'Delay Hrs/Day', data:trendDates.map(d=>trendData[d]), borderColor:'#c0392b', backgroundColor:'rgba(192,57,43,0.15)', fill:true, tension:.2 }] },
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
-    });
-
-    const machData = {};
-    rows.forEach(e=>{ const m=e.jobs?.machine_no; if(m) machData[m] = (machData[m]||0) + (parseFloat(e.delay_hours)||0); });
-    document.getElementById('topMachineList').innerHTML = Object.entries(machData).sort((a,b)=>b[1]-a[1]).slice(0,10)
-      .map(([m,h])=>`<div class="ranked-row"><span>${esc(m)}</span><b>${h.toFixed(1)}h</b></div>`).join('') || '<div class="empty">No data.</div>';
-
-    const table = document.getElementById('issueTable');
-    table.innerHTML = rowsHtml(rows);
-    wireEditButtons(table);
-  }
-  paintIssues();
-  document.getElementById('iFilterM').onchange = paintIssues;
-  document.getElementById('iFilterR').onchange = paintIssues;
-  document.getElementById('iFilterFrom').onchange = ()=>{ setPresetOn('iDatePresets','custom'); paintIssues(); };
-  document.getElementById('iFilterTo').onchange = ()=>{ setPresetOn('iDatePresets','custom'); paintIssues(); };
-
-  function setPresetOn(groupId, preset){
-    document.querySelectorAll('#'+groupId+' button').forEach(b=> b.classList.toggle('on', b.dataset.p===preset));
-  }
-  document.querySelectorAll('#iDatePresets button').forEach(b=>{
-    b.onclick = ()=>{
-      setPresetOn('iDatePresets', b.dataset.p);
-      applyDatePreset(b.dataset.p, document.getElementById('iFilterFrom'), document.getElementById('iFilterTo'));
-      paintIssues();
-    };
-  });
-
   function paint(){
     const fm = document.getElementById('filterM').value;
     const fs = document.getElementById('filterS').value;
@@ -1575,7 +1636,7 @@ async function renderDashboard(app){
 
     const table = document.getElementById('entryTable');
     table.innerHTML = rowsHtml(rows);
-    wireEditButtons(table);
+    wireEditButtons(table, entries, app);
   }
   paint();
   document.getElementById('filterM').onchange = paint;
@@ -1597,37 +1658,26 @@ async function renderDashboard(app){
     const resultsEl = document.getElementById('bulkResults');
     if(rows.length===0){ toast('No valid rows found in pasted text', true); return; }
     const anyAdded = await bulkAddEntries(rows, resultsEl);
-    if(anyAdded){ document.getElementById('bulkPaste').value=''; renderDashboard(app); }
+    if(anyAdded){ document.getElementById('bulkPaste').value=''; renderProductionEntries(app); }
   });
 
-  function exportRows(rows, filename){
-    const ws = XLSX.utils.json_to_sheet(rows.map(e=>({
-      Machine:e.jobs?.machine_no, Customer:e.jobs?.customer, Op:e.job_operations?.op_no, Description:e.job_operations?.description,
-      Operator:e.primary_operator, Date:e.activity_date, Start:e.start_time, End:e.end_time, Status:e.status, Issue:e.issue_reason,
-      DelayHours:e.delay_hours, Responsibility:e.responsibility, LoggedAt:e.submitted_at
-    })));
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Entries');
-    XLSX.writeFile(wb, filename);
-  }
   document.getElementById('exportBtn').onclick = ()=> exportRows(entries||[], 'production_log_'+new Date().toISOString().slice(0,10)+'.xlsx');
 
-  document.getElementById('exportSummaryBtn').onclick = ()=>{
+  document.getElementById('exportSummaryBtn').onclick = async ()=>{
+    const { data: issueEntriesFull } = await sb.from('entries').select('*, jobs(machine_no)').not('issue_reason','is',null);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([
-      { Metric:'Entries Today', Value:entriesToday },
-      { Metric:'Entries This Week', Value:entriesThisWeek },
-      { Metric:'Machines On Hold Now', Value:onHoldNow },
-      { Metric:'Delay Hours This Week', Value:delayHoursThisWeek.toFixed(1) },
-      { Metric:'Note', Value:'Efficiency / Delay sheets below reflect whichever filters are currently applied on the dashboard' }
+      { Metric:'Total Entries (current filter)', Value:lastFilteredEntries.length },
+      { Metric:'Note', Value:'Efficiency sheet reflects whichever filters are currently applied on this page. Delay sheets reflect the Delay/Issue Log tab all-time data.' }
     ]), 'Overview');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastEffRows.map(r=>({
       Machine:r.machine_no, Customer:r.customer, Model:r.model_name,
       StdHours:r.stdHours.toFixed(1), ActualHours:r.actualHours.toFixed(1), LabourHours:r.actualLabourHours.toFixed(1),
       EarnedHours:r.earnedHours.toFixed(1), EfficiencyPct: r.effPct===null?'':r.effPct.toFixed(1)
     }))), 'Efficiency by Machine');
-    const respMap={}; lastFilteredIssues.forEach(e=>{ if(e.responsibility) respMap[e.responsibility]=(respMap[e.responsibility]||0)+(parseFloat(e.delay_hours)||0); });
+    const respMap={}; (issueEntriesFull||[]).forEach(e=>{ if(e.responsibility) respMap[e.responsibility]=(respMap[e.responsibility]||0)+(parseFloat(e.delay_hours)||0); });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(respMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({Responsibility:k, DelayHours:v.toFixed(1)}))), 'Delay by Responsibility');
-    const machMap={}; lastFilteredIssues.forEach(e=>{ const m=e.jobs?.machine_no; if(m) machMap[m]=(machMap[m]||0)+(parseFloat(e.delay_hours)||0); });
+    const machMap={}; (issueEntriesFull||[]).forEach(e=>{ const m=e.jobs?.machine_no; if(m) machMap[m]=(machMap[m]||0)+(parseFloat(e.delay_hours)||0); });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(machMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({Machine:k, DelayHours:v.toFixed(1)}))), 'Delay by Machine');
     XLSX.writeFile(wb, 'summary_report_'+new Date().toISOString().slice(0,10)+'.xlsx');
   };
@@ -1643,8 +1693,60 @@ async function renderDashboard(app){
     const { error: delErr } = await sb.from('entries').delete().in('id', ids);
     if(delErr) { toast('Delete failed: '+delErr.message, true); return; }
     toast('Archived and deleted '+ids.length+' entries');
-    renderDashboard(app);
+    renderProductionEntries(app);
   });
+}
+
+/* ================= STATION DISPLAY (rotating floor TV — public, no login) ================= */
+let tvRotateTimer=null, tvRefreshTimer=null, tvStations=[], tvIndex=0;
+
+async function fetchStations(){
+  const { data, error } = await sb.rpc('get_station_summary');
+  if(error){ console.error(error); return []; }
+  return data || [];
+}
+function renderStationCard(app, s, idx, total){
+  if(!s){
+    app.innerHTML = `<div class="tv-empty">No active stations right now.</div>`;
+    return;
+  }
+  const lamp = lampClass(s.latest_status);
+  app.innerHTML = `
+    <div class="tv-card">
+      <div class="tv-station-no">STATION ${s.station_no ?? '—'}<span class="tv-progress">${idx+1} / ${total}</span></div>
+      <div class="tv-machine">${esc(s.machine_no)}</div>
+      <div class="tv-sub">${esc(s.customer||'')} · ${esc(s.model_name||'')}</div>
+      <div class="tv-status"><span class="lamp ${lamp}" style="width:22px;height:22px;"></span> ${esc(s.latest_status)}</div>
+      <div class="tv-metrics">
+        <div class="tv-metric"><div class="tv-metric-num">${(s.std_hours||0).toFixed(1)}h</div><div class="tv-metric-lbl">Std Hours</div></div>
+        <div class="tv-metric"><div class="tv-metric-num">${(s.actual_hours||0).toFixed(1)}h</div><div class="tv-metric-lbl">Actual Hours</div></div>
+        <div class="tv-metric"><div class="tv-metric-num">${(s.earned_hours||0).toFixed(1)}h</div><div class="tv-metric-lbl">Earned Hours</div></div>
+        <div class="tv-metric highlight"><div class="tv-metric-num">${s.efficiency_pct===null?'—':s.efficiency_pct+'%'}</div><div class="tv-metric-lbl">Efficiency</div></div>
+        <div class="tv-metric ${s.delay_hours_total>0?'warn':''}"><div class="tv-metric-num">${(s.delay_hours_total||0).toFixed(1)}h</div><div class="tv-metric-lbl">Delay Hours</div></div>
+      </div>
+    </div>
+  `;
+}
+async function renderStationDisplay(app){
+  document.body.classList.add('tv-mode');
+  if(tvRotateTimer) clearInterval(tvRotateTimer);
+  if(tvRefreshTimer) clearInterval(tvRefreshTimer);
+
+  tvStations = await fetchStations();
+  tvIndex = 0;
+  renderStationCard(app, tvStations[0], 0, tvStations.length);
+
+  tvRotateTimer = setInterval(()=>{
+    if(tvStations.length===0) return;
+    tvIndex = (tvIndex+1) % tvStations.length;
+    renderStationCard(app, tvStations[tvIndex], tvIndex, tvStations.length);
+  }, tvInterval*1000);
+
+  tvRefreshTimer = setInterval(async ()=>{
+    tvStations = await fetchStations();
+    if(tvIndex >= tvStations.length) tvIndex = 0;
+    renderStationCard(app, tvStations[tvIndex], tvIndex, tvStations.length);
+  }, 60000); // re-pull fresh data every 60s regardless of rotation
 }
 
 boot();
