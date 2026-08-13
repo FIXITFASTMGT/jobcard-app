@@ -116,6 +116,7 @@
   .status-tag.Completed{background:var(--green-100);color:var(--green-600);}
   .status-tag.Partial{background:var(--amber-100);color:var(--amber-700);}
   .status-tag.Hold{background:var(--red-100);color:var(--red-600);}
+  .status-tag.NotStarted{background:var(--plate-100);color:var(--steel-600);}
 
   /* ---------- nameplate (signature identity element) ---------- */
   .nameplate{
@@ -273,9 +274,18 @@
   .tv-pause-btn.resume:hover{background:#347a54;}
   .tv-pause-btn .dot{width:10px;height:10px;border-radius:50%;background:#fff;}
 
+  /* rotation pause/resume — fixed at top of TV screen, independent of the rotating card */
+  .tv-rotate-bar{position:fixed;top:12px;right:14px;z-index:500;}
+  .tv-rotate-pause-btn{border:none;border-radius:5px;padding:9px 16px;font-family:var(--font-body);font-weight:700;
+    font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;
+    background:rgba(255,255,255,.12);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+  .tv-rotate-pause-btn:hover{background:rgba(255,255,255,.2);}
+  .tv-rotate-pause-btn.paused{background:var(--amber-500);color:var(--graphite-950);}
+
   /* metric strip */
-  .tv-metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px;}
-  @media(max-width:900px){.tv-metrics{grid-template-columns:repeat(2,1fr);}}
+  .tv-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:18px;}
+  @media(max-width:1100px){.tv-metrics{grid-template-columns:repeat(3,1fr);}}
+  @media(max-width:640px){.tv-metrics{grid-template-columns:repeat(2,1fr);}}
   .tv-metric{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:14px 16px;}
   .tv-metric-lbl{font-size:10.5px;text-transform:uppercase;color:var(--steel-300);letter-spacing:.8px;display:flex;align-items:center;gap:7px;}
   .tv-metric-num{font-family:var(--font-display);font-size:26px;font-weight:700;margin-top:6px;}
@@ -309,8 +319,8 @@
   .tv-legend .bar{width:120px;height:6px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;}
   .tv-legend .bar i{display:block;height:100%;background:var(--amber-500);}
 
-  /* three-column footer */
-  .tv-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  /* footer columns */
+  .tv-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
   @media(max-width:900px){.tv-cols{grid-template-columns:1fr;}}
   .tv-col{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:16px 18px;}
   .tv-col-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--steel-300);margin-bottom:12px;}
@@ -432,7 +442,8 @@ function toast(msg, isErr){
   setTimeout(()=>t.remove(),2800);
 }
 function esc(s){ return (s||'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function lampClass(status){ return status==='Completed'?'green':status==='Partial'?'amber':status==='Hold'?'red':'grey'; }
+function lampClass(status){ return status==='Completed'?'green':status==='Partial'?'amber':status==='Hold'?'red':status==='Not Started'?'grey':'grey'; }
+function statusCss(status){ return (status||'').replace(/\s+/g,''); } // css-safe class name for statuses like "Not Started"
 
 // Reusable two-choice modal. Returns a promise resolving 'a' or 'b' depending which button was clicked.
 function showChoiceModal({title, body, choiceA, choiceB}){
@@ -476,7 +487,7 @@ function switchView(v){
 const params = new URLSearchParams(location.search);
 const scanToken = params.get('job');
 const tvDisplay = params.get('display') === 'tv';
-const tvInterval = parseInt(params.get('interval')) || 7; // seconds per station
+const tvInterval = parseInt(params.get('interval')) || 30; // seconds per station
 let view = 'dashboard';
 let session = null;
 
@@ -680,9 +691,42 @@ async function renderResponsibilityMaster(){
 }
 
 /* ================= JOB DETAILS EDITOR (machine no, customer, dates) ================= */
-function openJobDetailsEditor(job, app){
+async function openJobDetailsEditor(job, app){
   const panel = document.getElementById('opsPanel');
   panel.style.display='block';
+  const { data: ops } = await sb.from('job_operations').select('std_hours, is_completed').eq('job_id', job.id);
+  const opList = ops || [];
+  const totalStdHours = opList.reduce((s,o)=> s + (parseFloat(o.std_hours)||0), 0);
+  const doneStdHours = opList.filter(o=>o.is_completed).reduce((s,o)=> s + (parseFloat(o.std_hours)||0), 0);
+  const remainingStdHours = Math.max(0, totalStdHours - doneStdHours);
+  const shiftCount = job.shift_count || 1;
+  const hoursPerShift = job.hours_per_shift || 7.5;
+
+  function renderCalc(){
+    const sc = parseFloat(document.getElementById('ed_shifts').value)||1;
+    const hs = parseFloat(document.getElementById('ed_hrsday').value)||7.5;
+    const startForTarget = job.actual_start_date || job.start_date;
+    const targetDate = startForTarget ? computeTargetDate(startForTarget, totalStdHours, sc, hs) : null;
+    const tomorrow = addDaysStr(new Date().toISOString().slice(0,10), 1);
+    const estDeliveryDate = remainingStdHours>0 ? computeTargetDate(tomorrow, remainingStdHours, sc, hs) : tomorrow;
+    const risk = deliveryRiskLevel(estDeliveryDate, job.delivery_date);
+    const riskLabel = risk==='green' ? '✓ ON / BEFORE SO DATE' : risk==='yellow' ? '⚠ LATE (WITHIN BUFFER)' : risk==='red' ? '✕ LATE (BEYOND BUFFER)' : '—';
+    const riskColor = risk==='green' ? 'var(--green-600)' : risk==='yellow' ? 'var(--amber-signal)' : risk==='red' ? 'var(--red-600)' : 'var(--steel-600)';
+    document.getElementById('calcOut').innerHTML = `
+      <div class="row3">
+        <div><label style="margin-top:0;">Assembly Target Date <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(gantt, ${totalStdHours.toFixed(1)}h total, from ${startForTarget?fmtDate(startForTarget):'—'})</span></label>
+          <div class="tv-plan-chip" style="background:var(--plate-50);border-color:var(--plate-100);color:var(--graphite-950);"><b style="color:var(--graphite-950);">${targetDate?fmtDate(targetDate):'Set a start date first'}</b></div>
+        </div>
+        <div><label style="margin-top:0;">Est. Delivery Date <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(from tomorrow, ${remainingStdHours.toFixed(1)}h remaining, assumes material available)</span></label>
+          <div class="tv-plan-chip" style="background:var(--plate-50);border-color:var(--plate-100);color:var(--graphite-950);"><b style="color:var(--graphite-950);">${fmtDate(estDeliveryDate)}</b></div>
+        </div>
+        <div><label style="margin-top:0;">Delivery Health</label>
+          <div class="tv-plan-chip" style="background:var(--plate-50);border-color:var(--plate-100);"><b style="color:${riskColor};">${riskLabel}</b></div>
+        </div>
+      </div>
+    `;
+  }
+
   panel.innerHTML = `
     <div class="panel-title">Edit Job Details — ${esc(job.machine_no)}</div>
     <div class="row3">
@@ -697,11 +741,21 @@ function openJobDetailsEditor(job, app){
     </div>
     <div class="row3">
       <div><label>Actual Start Date <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(fill once work actually begins)</span></label><input id="ed_actualstart" type="date" value="${job.actual_start_date||''}"></div>
-      <div></div>
-      <div></div>
+      <div><label>Shift(s) / Day</label>
+        <select id="ed_shifts"><option value="1" ${shiftCount==1?'selected':''}>1</option><option value="2" ${shiftCount==2?'selected':''}>2</option><option value="3" ${shiftCount==3?'selected':''}>3</option></select>
+      </div>
+      <div><label>Hours / Shift</label><input id="ed_hrsday" type="number" step="0.5" min="0.5" value="${hoursPerShift}"></div>
+    </div>
+    <div class="panel" style="background:var(--plate-50);margin:10px 0 0;padding:14px 16px;">
+      <div class="panel-title" style="font-size:11px;border:none;padding:0;margin:0 0 8px;">Assembly Scheduling Calculator <span class="sub">Mon–Sat, Sunday off</span></div>
+      <div id="calcOut"></div>
     </div>
     <button class="btn amber" id="saveDetailsBtn">Save Details</button>
   `;
+  document.getElementById('ed_shifts').onchange = renderCalc;
+  document.getElementById('ed_hrsday').oninput = renderCalc;
+  renderCalc();
+
   document.getElementById('saveDetailsBtn').onclick = async ()=>{
     const machine_no = document.getElementById('ed_machine').value.trim().toUpperCase();
     const customer = document.getElementById('ed_customer').value.trim();
@@ -710,8 +764,10 @@ function openJobDetailsEditor(job, app){
     const planned_end_date = document.getElementById('ed_end').value || null;
     const delivery_date = document.getElementById('ed_delivery').value || null;
     const actual_start_date = document.getElementById('ed_actualstart').value || null;
+    const shift_count = parseInt(document.getElementById('ed_shifts').value) || 1;
+    const hours_per_shift = parseFloat(document.getElementById('ed_hrsday').value) || 7.5;
     if(!machine_no) return toast('Machine No. is required', true);
-    const { error } = await sb.from('jobs').update({ machine_no, customer, station_no, start_date, planned_end_date, delivery_date, actual_start_date }).eq('id', job.id);
+    const { error } = await sb.from('jobs').update({ machine_no, customer, station_no, start_date, planned_end_date, delivery_date, actual_start_date, shift_count, hours_per_shift }).eq('id', job.id);
     if(error) return toast(error.message, true);
     toast('Job details updated');
     renderJobsQr(app);
@@ -890,8 +946,8 @@ async function renderNewJob(app){
       </div>
       <div class="row3">
         <div><label>Actual Start Date <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(fill once work actually begins)</span></label><input id="f_actualstart" type="date"></div>
-        <div></div>
-        <div></div>
+        <div><label>Shift(s) / Day</label><select id="f_shifts"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select></div>
+        <div><label>Hours / Shift</label><input id="f_hrsday" type="number" step="0.5" min="0.5" value="7.5"></div>
       </div>
       <label>Station No. <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional — sets its position on the rotating floor display)</span></label>
       <input id="f_station" type="number" min="1" placeholder="e.g. 1" style="max-width:140px;">
@@ -931,6 +987,8 @@ async function renderNewJob(app){
     const planned_end_date = document.getElementById('f_end').value || null;
     const delivery_date = document.getElementById('f_delivery').value || null;
     const actual_start_date = document.getElementById('f_actualstart').value || null;
+    const shift_count = parseInt(document.getElementById('f_shifts').value) || 1;
+    const hours_per_shift = parseFloat(document.getElementById('f_hrsday').value) || 7.5;
     const station_no = document.getElementById('f_station').value ? parseInt(document.getElementById('f_station').value) : null;
     if(!machine_no || !model_id) { toast('Machine No. and Model are required', true); return; }
 
@@ -940,7 +998,7 @@ async function renderNewJob(app){
       if(!confirm(`Machine ${machine_no} already has an active job (${ex.customer||'no customer'}, ${ex.models?.model_name||''}). Create another active job on the same machine number anyway?`)) return;
     }
 
-    const { data: job, error } = await sb.from('jobs').insert({ machine_no, customer, model_id, start_date, planned_end_date, delivery_date, actual_start_date, station_no }).select().single();
+    const { data: job, error } = await sb.from('jobs').insert({ machine_no, customer, model_id, start_date, planned_end_date, delivery_date, actual_start_date, station_no, shift_count, hours_per_shift }).select().single();
     if(error) { toast(error.message, true); return; }
 
     if(copyOps){
@@ -1140,6 +1198,9 @@ async function renderScan(app, token){
   const { data: resp } = await sb.from('responsibilities').select('*').order('name');
   const today = new Date().toISOString().slice(0,10);
 
+  const sortedOps = (ops||[]).slice().sort((a,b)=>a.sequence-b.sequence);
+  const suggestedOp = sortedOps.find(o=>!o.is_completed) || null;
+
   app.innerHTML = `
     <div class="nameplate"><span class="rv2"></span><span class="rv3"></span>
       <div class="np-row"><span>Machine No.</span><b>${esc(job.machine_no)}</b></div>
@@ -1149,9 +1210,9 @@ async function renderScan(app, token){
     <div class="panel">
       <div class="panel-title">Log Your Work</div>
       <label>Your Name</label><input id="s_name" name="operator_name" autocomplete="name" placeholder="Your name">
-      <label>Operation</label>
+      <label>Operation ${suggestedOp ? '<span style="color:var(--green-600);text-transform:none;font-weight:400;">(next operation pre-selected — change if different)</span>' : ''}</label>
       <select id="s_op"><option value="">— Select —</option>
-        ${(ops||[]).map(o=>`<option value="${o.id}">${o.is_completed?'✓ ':''}${esc(o.op_no)} — ${esc(o.description)}${o.execution_mode==='Parallel'?' [Parallel]':''} (${o.std_hours}h std)</option>`).join('')}
+        ${sortedOps.map(o=>`<option value="${o.id}" ${suggestedOp && o.id===suggestedOp.id?'selected':''}>${o.is_completed?'✓ ':''}${esc(o.op_no)} — ${esc(o.description)}${o.execution_mode==='Parallel'?' [Parallel]':''} (${o.std_hours}h std)</option>`).join('')}
       </select>
       ${ops && ops.some(o=>o.is_completed) ? '<div class="stat-line">✓ = already logged as Completed at least once</div>' : ''}
       ${(!ops || ops.length===0) ? '<div class="stat-line" style="color:var(--red-600);">No operations are set up for this job yet — tell your supervisor before submitting.</div>' : ''}
@@ -1167,9 +1228,10 @@ async function renderScan(app, token){
         <div></div>
       </div>
       <div class="row2" id="timeRow">
-        <div><label>Start Time</label><input id="s_start" type="time"></div>
-        <div><label>End Time</label><input id="s_end" type="time"></div>
+        <div><label>Start Time <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(defaults to shift start — edit if different)</span></label><input id="s_start" type="time" value="09:00"></div>
+        <div><label>End Time <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(defaults to shift end — edit if different)</span></label><input id="s_end" type="time" value="17:30"></div>
       </div>
+      <div class="stat-line" id="netHoursLine" style="margin-top:-6px;"></div>
       <div id="statusBlock">
         <label>Status</label>
         <div class="seg" id="statusSeg">
@@ -1182,6 +1244,10 @@ async function renderScan(app, token){
       <input type="hidden" id="s_workstarted" value="yes">
 
       <div id="delayFields" style="display:none;">
+        <div class="toggle-pair" id="noWorkStatusToggle" style="display:none;margin-bottom:6px;">
+          <button type="button" id="nwsNotStartedBtn">Not Yet Started</button>
+          <button type="button" class="on" id="nwsHoldBtn">Hold</button>
+        </div>
         <label id="issueLabel">Issue / Delay Reason</label>
         <textarea id="s_issue" placeholder="e.g. wheel head not received, partial material only…"></textarea>
         <div class="row2">
@@ -1211,17 +1277,26 @@ async function renderScan(app, token){
     const status = document.getElementById('s_status').value;
     if(workStarted === 'no'){
       document.getElementById('timeRow').style.display = 'none';
+      document.getElementById('netHoursLine').textContent = '';
       document.getElementById('statusBlock').style.display = 'none';
       document.getElementById('extraOpsSection').style.display = 'none';
       document.getElementById('delayFields').style.display = 'block';
-      document.getElementById('issueLabel').innerHTML = 'Issue / Delay Reason <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
-      document.getElementById('delayHrsLabel').innerHTML = 'Hours Lost <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
-      document.getElementById('respLabel').innerHTML = 'Responsibility <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
+      document.getElementById('noWorkStatusToggle').style.display = 'flex';
+      if(status === 'Not Started'){
+        document.getElementById('issueLabel').innerHTML = 'Reason <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional — why hasn\'t it started yet)</span>';
+        document.getElementById('delayHrsLabel').innerHTML = 'Hours Lost <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span>';
+        document.getElementById('respLabel').innerHTML = 'Responsibility <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span>';
+      } else {
+        document.getElementById('issueLabel').innerHTML = 'Issue / Delay Reason <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
+        document.getElementById('delayHrsLabel').innerHTML = 'Hours Lost <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
+        document.getElementById('respLabel').innerHTML = 'Responsibility <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
+      }
     } else {
       document.getElementById('timeRow').style.display = 'grid';
       document.getElementById('statusBlock').style.display = 'block';
       document.getElementById('extraOpsSection').style.display = 'block';
       document.getElementById('delayFields').style.display = 'block';
+      document.getElementById('noWorkStatusToggle').style.display = 'none';
       if(status === 'Hold'){
         document.getElementById('issueLabel').innerHTML = 'Issue / Delay Reason <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
         document.getElementById('delayHrsLabel').innerHTML = 'Delay Hours <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
@@ -1237,12 +1312,26 @@ async function renderScan(app, token){
   document.getElementById('workYesBtn').onclick = ()=>{
     workStarted='yes'; document.getElementById('s_workstarted').value='yes';
     document.getElementById('workYesBtn').classList.add('on'); document.getElementById('workNoBtn').classList.remove('on');
+    document.getElementById('s_status').value = 'Completed';
+    document.querySelectorAll('#statusSeg button').forEach(x=>x.classList.toggle('on', x.dataset.s==='Completed'));
     updateFieldVisibility();
+    refreshNetHours();
   };
   document.getElementById('workNoBtn').onclick = ()=>{
     workStarted='no'; document.getElementById('s_workstarted').value='no';
     document.getElementById('workNoBtn').classList.add('on'); document.getElementById('workYesBtn').classList.remove('on');
     document.getElementById('s_status').value = 'Hold';
+    document.getElementById('nwsHoldBtn').classList.add('on'); document.getElementById('nwsNotStartedBtn').classList.remove('on');
+    updateFieldVisibility();
+  };
+  document.getElementById('nwsNotStartedBtn').onclick = ()=>{
+    document.getElementById('s_status').value = 'Not Started';
+    document.getElementById('nwsNotStartedBtn').classList.add('on'); document.getElementById('nwsHoldBtn').classList.remove('on');
+    updateFieldVisibility();
+  };
+  document.getElementById('nwsHoldBtn').onclick = ()=>{
+    document.getElementById('s_status').value = 'Hold';
+    document.getElementById('nwsHoldBtn').classList.add('on'); document.getElementById('nwsNotStartedBtn').classList.remove('on');
     updateFieldVisibility();
   };
   document.querySelectorAll('#statusSeg button').forEach(b=>{
@@ -1255,6 +1344,16 @@ async function renderScan(app, token){
   });
   updateFieldVisibility();
 
+  function refreshNetHours(){
+    const startEl = document.getElementById('s_start'), endEl = document.getElementById('s_end'), lineEl = document.getElementById('netHoursLine');
+    if(!startEl || !endEl || !lineEl || workStarted==='no'){ if(lineEl) lineEl.textContent=''; return; }
+    const net = toHours(startEl.value, endEl.value);
+    lineEl.textContent = (startEl.value && endEl.value) ? `Net working time: ${net.toFixed(2)} h (fixed breaks deducted automatically)` : '';
+  }
+  document.getElementById('s_start').addEventListener('input', refreshNetHours);
+  document.getElementById('s_end').addEventListener('input', refreshNetHours);
+  refreshNetHours();
+
   document.getElementById('addExtraBtn').onclick = ()=>{
     const row = document.createElement('div');
     row.className='row2'; row.style.marginTop='6px';
@@ -1265,7 +1364,7 @@ async function renderScan(app, token){
   // Stage-skip guard: if the selected op has an earlier Series-mode op that isn't
   // marked complete yet, ask the operator whether they meant to log that one instead.
   const opSelect = document.getElementById('s_op');
-  let lastConfirmedOpId = '';
+  let lastConfirmedOpId = suggestedOp ? suggestedOp.id : '';
   opSelect.addEventListener('change', async ()=>{
     const selectedId = opSelect.value;
     if(!selectedId || selectedId === lastConfirmedOpId) return;
@@ -1304,9 +1403,11 @@ async function renderScan(app, token){
     if(!date) { toast('Fill the activity date', true); return; }
 
     if(workStarted === 'no'){
-      if(!issue) { toast('Issue/Delay reason is required', true); return; }
-      if(!delayHrs) { toast('Enter hours lost', true); return; }
-      if(!resp) { toast('Select Responsibility', true); return; }
+      if(status === 'Hold'){
+        if(!issue) { toast('Issue/Delay reason is required', true); return; }
+        if(!delayHrs) { toast('Enter hours lost', true); return; }
+        if(!resp) { toast('Select Responsibility', true); return; }
+      }
     } else {
       if(!start||!end) { toast('Fill start and end time', true); return; }
       if(status==='Hold'){
@@ -1480,15 +1581,73 @@ async function bulkAddEntries(rows, resultsEl){
 }
 
 /* ================= EFFICIENCY / CHART HELPERS ================= */
-function toHours(start, end){
-  if(!start || !end) return 0;
-  const [sh,sm] = start.split(':').map(Number);
-  const [eh,em] = end.split(':').map(Number);
-  if(isNaN(sh)||isNaN(sm)||isNaN(eh)||isNaN(em)) return 0;
-  let mins = (eh*60+em) - (sh*60+sm);
-  if(mins < 0) mins += 24*60; // overnight shift
-  return mins/60;
+// Fixed daily breaks — used to compute NET working hours automatically from any start/end time.
+const SHIFT_BREAKS = [
+  ['09:00','09:15'], // tea break
+  ['11:00','11:15'], // tea break
+  ['13:00','13:30'], // lunch
+  ['15:00','15:30'], // tea break
+  ['17:15','17:30'], // closing / tea break
+];
+function timeToMins(t){
+  const [h,m] = (t||'').split(':').map(Number);
+  if(isNaN(h)||isNaN(m)) return null;
+  return h*60+m;
 }
+// Minutes of overlap between [aStart,aEnd) and [bStart,bEnd), all in same-day minute space.
+function overlapMins(aStart,aEnd,bStart,bEnd){
+  return Math.max(0, Math.min(aEnd,bEnd) - Math.max(aStart,bStart));
+}
+// Net working hours between a start/end clock time, automatically deducting any of the
+// fixed breaks (9:00-9:15, 11:00-11:15, 1:00-1:30, 3:00-3:30, 5:15-5:30) that fall inside the span.
+function toHours(start, end){
+  const sm = timeToMins(start), em0 = timeToMins(end);
+  if(sm===null || em0===null) return 0;
+  let em = em0;
+  if(em < sm) em += 24*60; // overnight shift
+  let grossMins = em - sm;
+  let breakMins = 0;
+  SHIFT_BREAKS.forEach(([bs,be])=>{
+    const bsM = timeToMins(bs), beM = timeToMins(be);
+    breakMins += overlapMins(sm, em, bsM, beM);
+    breakMins += overlapMins(sm, em, bsM+24*60, beM+24*60); // in case span crosses midnight into next day's breaks
+  });
+  return Math.max(0, (grossMins - breakMins) / 60);
+}
+/* ================= SCHEDULING ENGINE (Assembly Target Date / Est. Delivery Date) ================= */
+// Working-day calculator: given a start date, a daily capacity (shifts/day × hours/shift),
+// and a quantity of std hours still to complete, walks forward day by day — skipping Sundays —
+// until cumulative capacity meets the required hours, and returns that calendar date.
+function computeTargetDate(startDateStr, totalHours, shiftsPerDay, hoursPerShift){
+  if(!startDateStr || !totalHours || totalHours<=0) return startDateStr || null;
+  const dailyCapacity = Math.max(0.1, (parseFloat(shiftsPerDay)||1) * (parseFloat(hoursPerShift)||7.5));
+  let cum = 0;
+  let d = new Date(startDateStr + 'T00:00:00');
+  let guard = 0;
+  while(guard < 3650){
+    if(d.getDay() !== 0){ // Sunday = day off
+      cum += dailyCapacity;
+      if(cum >= totalHours - 1e-9) return d.toISOString().slice(0,10);
+    }
+    d.setDate(d.getDate()+1);
+    guard++;
+  }
+  return d.toISOString().slice(0,10);
+}
+function addDaysStr(dateStr, days){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate()+days);
+  return d.toISOString().slice(0,10);
+}
+// Green = on/before SO delivery date · Yellow = late but within a 3-day buffer · Red = beyond buffer
+function deliveryRiskLevel(estDateStr, soDateStr, bufferDays){
+  if(!estDateStr || !soDateStr) return null;
+  bufferDays = bufferDays==null ? 3 : bufferDays;
+  if(estDateStr <= soDateStr) return 'green';
+  if(estDateStr <= addDaysStr(soDateStr, bufferDays)) return 'yellow';
+  return 'red';
+}
+
 function applyDatePreset(preset, fromEl, toEl){
   const fmt = d => d.toISOString().slice(0,10);
   const today = new Date();
@@ -1502,9 +1661,10 @@ function applyDatePreset(preset, fromEl, toEl){
     fromEl.value = fmt(first); toEl.value = fmt(today);
   } else { fromEl.value=''; toEl.value=''; }
 }
-// Earned Hours method: a Completed operation earns its full Std Hours regardless of
+// Cumulative Std Hours method: a Completed operation earns its full Std Hours regardless of
 // actual time taken; an operation not yet Completed earns exactly the actual hours
-// logged against it so far. Efficiency % = Earned Hours ÷ Actual Hours × 100.
+// logged against it so far (this running total is "Cumulative Std Hours").
+// Efficiency % = Cumulative Std Hours ÷ Machine Hours × 100.
 function computeEfficiency(filteredEntries, jobOpsAll, entryOpsByEntry, jobsById){
   const byJob = {};
   filteredEntries.forEach(e=>{ if(e.job_id) (byJob[e.job_id] = byJob[e.job_id] || []).push(e); });
@@ -1538,22 +1698,30 @@ function computeEfficiency(filteredEntries, jobOpsAll, entryOpsByEntry, jobsById
 }
 
 /* ================= DASHBOARD ================= */
-function rowsHtml(rows){
+function rowsHtml(rows, entryOpsByEntry){
+  entryOpsByEntry = entryOpsByEntry || {};
   if(rows.length===0) return `<tr><td class="empty">No entries match this filter.</td></tr>`;
-  return `<tr><th>Machine</th><th>Op</th><th>Operator</th><th>Date</th><th>Time</th><th>Status</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th><th></th></tr>
-    ${rows.map(e=>`<tr class="${e.status==='Hold'?'hold-row':''}">
+  return `<tr><th>Machine</th><th>Op</th><th>Operator</th><th>Date</th><th>Time</th><th>Status</th><th>Labor Hours</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th><th></th></tr>
+    ${rows.map(e=>{
+      const machineHrs = toHours(e.start_time, e.end_time);
+      const extraOps = entryOpsByEntry[e.id] || [];
+      const extraHrs = extraOps.reduce((s,x)=> s + (parseFloat(x.hours)||0), 0);
+      const manHrs = machineHrs + extraHrs;
+      const laborCell = e.start_time ? `${machineHrs.toFixed(1)}h machine<br><span style="color:var(--steel-600);font-size:11px;">${manHrs.toFixed(1)}h man${extraOps.length?' ('+(1+extraOps.length)+' ops)':''}</span>` : '—';
+      return `<tr class="${e.status==='Hold'?'hold-row':''}">
       <td><b>${esc(e.jobs?.machine_no)}</b><br><span style="color:var(--steel-600);font-size:11px;">${esc(e.jobs?.customer||'')}</span></td>
       <td class="mono">${esc(e.job_operations?.op_no)}<br><span style="color:var(--steel-600);font-size:11px;font-family:var(--font-body);">${esc(e.job_operations?.description)}</span></td>
       <td>${esc(e.primary_operator)}</td>
       <td class="mono">${esc(e.activity_date)}</td>
       <td class="mono">${e.start_time ? esc(e.start_time)+'–'+esc(e.end_time) : '<span style="color:var(--steel-600);">not worked</span>'}</td>
-      <td><span class="status-tag ${e.status}"><span class="lamp ${lampClass(e.status)}" style="width:8px;height:8px;"></span>${esc(e.status)}</span></td>
+      <td><span class="status-tag ${statusCss(e.status)}"><span class="lamp ${lampClass(e.status)}" style="width:8px;height:8px;"></span>${esc(e.status)}</span></td>
+      <td class="mono" style="font-size:11.5px;">${laborCell}</td>
       <td>${e.issue_reason ? '<span class="issue-flag">'+esc(e.issue_reason)+'</span>' : '—'}</td>
       <td class="mono">${e.delay_hours ?? '—'}</td>
       <td>${e.responsibility ? esc(e.responsibility) : '—'}</td>
       <td style="font-size:10.5px;color:var(--steel-600);" class="mono">${new Date(e.submitted_at).toLocaleString()}</td>
       <td><button class="btn ghost small entryEditBtn" data-id="${e.id}">Edit</button></td>
-    </tr>`).join('')}`;
+    </tr>`;}).join('')}`;
 }
 function wireEditButtons(container, entries, app){
   container.querySelectorAll('.entryEditBtn').forEach(b=>{
@@ -1750,7 +1918,7 @@ async function renderProductionEntries(app){
           <button data-p="today">Today</button><button data-p="week">This Week</button><button data-p="month">This Month</button><button data-p="custom" class="on">Custom</button>
         </div>
         <div class="mini-kpi-row" id="prodMiniKpis"></div>
-        <b style="font-size:12px;display:block;margin:10px 0 4px;">Efficiency by Machine <span style="font-weight:400;color:var(--steel-600);">— Earned Hours method</span></b>
+        <b style="font-size:12px;display:block;margin:10px 0 4px;">Efficiency by Machine <span style="font-weight:400;color:var(--steel-600);">— Cumulative Std Hours method</span></b>
         <div style="overflow-x:auto;"><table class="eff" id="effTable"></table></div>
       </div>
       <div class="stat-line">${(entries||[]).length} entries · approx. ${sizeLabel} · <button class="btn ghost small" id="exportBtn">Export to Excel</button> · <button class="btn ghost small" id="exportSummaryBtn">Export Summary Report</button></div>
@@ -1811,7 +1979,7 @@ async function renderProductionEntries(app){
 
     const effRows = computeEfficiency(rows, jobOpsAll||[], entryOpsByEntry, jobsById);
     lastEffRows = effRows;
-    document.getElementById('effTable').innerHTML = `<tr><th>Machine</th><th>Customer</th><th>Std Hrs</th><th>Actual Hrs</th><th>Labour Hrs</th><th>Earned Hrs</th><th>Eff %</th></tr>` +
+    document.getElementById('effTable').innerHTML = `<tr><th>Machine</th><th>Customer</th><th>Total Std Hrs</th><th>Machine Hrs</th><th>Man-Hrs</th><th>Cumulative Std Hrs</th><th>Eff %</th></tr>` +
       (effRows.length ? effRows.map(r=>`<tr>
         <td><b>${esc(r.machine_no)}</b></td><td>${esc(r.customer||'')}</td>
         <td class="mono">${r.stdHours.toFixed(1)}</td><td class="mono">${r.actualHours.toFixed(1)}</td>
@@ -1820,7 +1988,7 @@ async function renderProductionEntries(app){
       </tr>`).join('') : `<tr><td class="empty" colspan="7">No data for current filters.</td></tr>`);
 
     const table = document.getElementById('entryTable');
-    table.innerHTML = rowsHtml(rows);
+    table.innerHTML = rowsHtml(rows, entryOpsByEntry);
     wireEditButtons(table, entries, app);
   }
   paint();
@@ -1857,8 +2025,8 @@ async function renderProductionEntries(app){
     ]), 'Overview');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastEffRows.map(r=>({
       Machine:r.machine_no, Customer:r.customer, Model:r.model_name,
-      StdHours:r.stdHours.toFixed(1), ActualHours:r.actualHours.toFixed(1), LabourHours:r.actualLabourHours.toFixed(1),
-      EarnedHours:r.earnedHours.toFixed(1), EfficiencyPct: r.effPct===null?'':r.effPct.toFixed(1)
+      TotalStdHours:r.stdHours.toFixed(1), MachineHours:r.actualHours.toFixed(1), ManHours:r.actualLabourHours.toFixed(1),
+      CumulativeStdHours:r.earnedHours.toFixed(1), EfficiencyPct: r.effPct===null?'':r.effPct.toFixed(1)
     }))), 'Efficiency by Machine');
     const respMap={}; (issueEntriesFull||[]).forEach(e=>{ if(e.responsibility) respMap[e.responsibility]=(respMap[e.responsibility]||0)+(parseFloat(e.delay_hours)||0); });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(respMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({Responsibility:k, DelayHours:v.toFixed(1)}))), 'Delay by Responsibility');
@@ -1883,7 +2051,7 @@ async function renderProductionEntries(app){
 }
 
 /* ================= STATION DISPLAY (rotating floor TV — public, no login) ================= */
-let tvRotateTimer=null, tvRefreshTimer=null, tvStations=[], tvIndex=0, tvResponsibilities=null;
+let tvRotateTimer=null, tvRefreshTimer=null, tvStations=[], tvIndex=0, tvResponsibilities=null, tvPaused=false;
 
 async function fetchStations(){
   const { data, error } = await sb.rpc('get_station_summary');
@@ -1939,6 +2107,7 @@ async function renderStationCard(app, s, idx, total){
   const overallPct = stdTotal>0 ? Math.round((stdDone/stdTotal)*100) : 0;
   // Remaining = std hours minus what's already been earned minus hours already lost to delay
   const remainingHours = Math.max(0, (s.std_hours||0) - (s.earned_hours||0) - (s.delay_hours_total||0));
+  const effPct = (s.actual_hours||0) > 0 ? ((s.earned_hours||0) / s.actual_hours * 100) : null;
 
   const deliveryAtRisk = isOnHold || isLate;
   const lastActivityTs = activityList.length ? activityList[0].created_at : null;
@@ -1973,9 +2142,10 @@ async function renderStationCard(app, s, idx, total){
       </div>
 
       <div class="tv-metrics">
-        <div class="tv-metric"><div class="tv-metric-lbl">Std Hours</div><div class="tv-metric-num">${(s.std_hours||0).toFixed(1)}h</div></div>
+        <div class="tv-metric"><div class="tv-metric-lbl">Total Std Hours</div><div class="tv-metric-num">${(s.std_hours||0).toFixed(1)}h</div></div>
         <div class="tv-metric"><div class="tv-metric-lbl">Actual Hours</div><div class="tv-metric-num">${(s.actual_hours||0).toFixed(1)}h</div></div>
-        <div class="tv-metric"><div class="tv-metric-lbl">Earned Hours</div><div class="tv-metric-num">${(s.earned_hours||0).toFixed(1)}h</div></div>
+        <div class="tv-metric"><div class="tv-metric-lbl">Cumulative Std Hours</div><div class="tv-metric-num">${(s.earned_hours||0).toFixed(1)}h</div></div>
+        <div class="tv-metric ${effPct!==null && effPct<100?'warn':''}"><div class="tv-metric-lbl">Efficiency %</div><div class="tv-metric-num">${effPct===null?'—':effPct.toFixed(0)+'%'}</div></div>
         <div class="tv-metric ${s.delay_hours_total>0?'warn':''}"><div class="tv-metric-lbl">Delay Hours</div><div class="tv-metric-num">${(s.delay_hours_total||0).toFixed(1)}h</div></div>
         <div class="tv-metric highlight"><div class="tv-metric-lbl">Remaining Hours</div><div class="tv-metric-num">${remainingHours.toFixed(1)}h</div></div>
       </div>
@@ -2019,19 +2189,6 @@ async function renderStationCard(app, s, idx, total){
           <div class="tv-plan-chip ${isLate?'late':''}">EST. DELIVERY<b>${s.estimated_delivery_date ? fmtDate(s.estimated_delivery_date) : 'TBD'}</b></div>
           <div class="tv-health ${deliveryAtRisk?'risk':'ok'}">${deliveryAtRisk?'⚠ AT RISK':'✓ ON TRACK'}</div>
           <div class="tv-health-note">${isOnHold ? 'Delay risk due to current hold.' : (isLate ? 'Estimated delivery is later than SO delivery.' : 'No active risk factors.')}</div>
-        </div>
-
-        <div class="tv-col">
-          <div class="tv-col-title">Recent Activity</div>
-          ${activityList.length ? activityList.map(a=>`
-            <div class="tv-activity-row">
-              <div class="tv-activity-time">${fmtClock(a.created_at)}</div>
-              <div class="tv-activity-body">
-                <b>${esc(a.status)} <span style="color:var(--steel-300);font-weight:400;">— ${esc(a.responsibility||a.primary_operator||'')}</span></b>
-                <span>${esc(a.issue_reason || (a.op_no ? a.op_no+' — '+a.description : ''))}</span>
-              </div>
-            </div>
-          `).join('') : `<div class="tv-activity-empty">No activity logged yet</div>`}
         </div>
       </div>
 
@@ -2114,18 +2271,31 @@ async function renderStationDisplay(app){
   document.body.classList.add('tv-mode');
   if(tvRotateTimer) clearInterval(tvRotateTimer);
   if(tvRefreshTimer) clearInterval(tvRefreshTimer);
+  tvPaused = false;
+
+  // Fixed pause/resume control pinned to the top of the screen — freezes rotation without
+  // affecting the per-station Hold button or the rest of the card content.
+  let bar = document.getElementById('tvRotateBar');
+  if(!bar){ bar = document.createElement('div'); bar.id = 'tvRotateBar'; bar.className = 'tv-rotate-bar'; document.body.appendChild(bar); }
+  function paintRotateBar(){
+    bar.innerHTML = `<button class="tv-rotate-pause-btn ${tvPaused?'paused':''}" id="tvRotatePauseBtn">${tvPaused ? '▶ Resume Rotation' : '⏸ Pause Rotation'}</button>`;
+    document.getElementById('tvRotatePauseBtn').onclick = ()=>{ tvPaused = !tvPaused; paintRotateBar(); };
+  }
+  paintRotateBar();
 
   tvStations = await fetchStations();
   tvIndex = 0;
   await renderStationCard(app, tvStations[0], 0, tvStations.length);
 
   tvRotateTimer = setInterval(async ()=>{
+    if(tvPaused) return;
     if(tvStations.length===0) return;
     tvIndex = (tvIndex+1) % tvStations.length;
     await renderStationCard(app, tvStations[tvIndex], tvIndex, tvStations.length);
   }, tvInterval*1000);
 
   tvRefreshTimer = setInterval(async ()=>{
+    if(tvPaused) return;
     tvStations = await fetchStations();
     if(tvIndex >= tvStations.length) tvIndex = 0;
     await renderStationCard(app, tvStations[tvIndex], tvIndex, tvStations.length);
