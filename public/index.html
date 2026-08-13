@@ -355,6 +355,24 @@
 
   .tv-rotate-pause-btn.paused{background:var(--amber-500);color:var(--graphite-950);}
 
+  /* ===== one-page fit-ups (v3) ===== */
+  /* the fixed Pause/Resume Rotation button sat on top of the delivery panel title */
+  .tv-delivery{padding-top:46px;}
+  /* top-5 reason rows: fixed value column so hours stay next to the label */
+  .tv-reason{display:grid !important;grid-template-columns:12px minmax(0,1fr) 96px;gap:9px;align-items:center;padding:3px 0;}
+  .tv-reason-val{text-align:right;white-space:nowrap;}
+  .tv-reason-val small{display:inline;margin-left:5px;color:#9cabb7;font-family:var(--font-body);}
+  .tv-reason-list{gap:4px;}
+  /* keep the whole card inside one screen */
+  .tv-card{min-height:0;height:100vh;overflow:hidden;padding-bottom:6px;}
+  .tv-bottom{align-items:start;}
+  .tv-panel{padding:10px 14px 12px;}
+  .tv-bar-row{padding:3px 0;}
+  .tv-total-delay{margin-top:8px;}
+  .tv-donut{width:132px;height:132px;}
+  .tv-footer{padding:4px 0 0;}
+  @media(max-width:1050px){.tv-delivery{padding-top:15px;}.tv-card{height:auto;overflow:visible;}}
+
 
   /* hold modal */
   .tv-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;}
@@ -2296,14 +2314,28 @@ function relTime(iso){
 async function renderStationCard(app, s, idx, total){
   if(!s){ app.innerHTML = '<div class="tv-empty">No active stations right now.</div>'; return; }
 
-  const [deptRes, progressRes, eventsRes, projRes] = await Promise.all([
+  const [deptRes, progressRes, eventsRes, projRes, entryRes] = await Promise.all([
     sb.rpc('get_job_dept_delays', {p_job_id: s.job_id}),
     sb.rpc('get_job_operations_progress', {p_job_id: s.job_id}),
     sb.rpc('get_job_recent_events', {p_job_id: s.job_id, p_limit: 6}),
-    sb.rpc('get_job_delivery_projection', {p_job_id: s.job_id})
+    sb.rpc('get_job_delivery_projection', {p_job_id: s.job_id}),
+    // read delay entries straight from the table: get_job_recent_events does not
+    // return issue_reason / responsibility, and is capped at a few rows
+    sb.from('entries').select('*, job_operations(op_no, description)')
+      .eq('job_id', s.job_id).order('submitted_at', {ascending:false})
   ]);
-  const deptDelays = deptRes.data || [], ops = progressRes.data || [], events = eventsRes.data || [];
+  const deptDelays = deptRes.data || [], ops = progressRes.data || [];
   const projection = (projRes.data || [])[0] || null;
+  // normalise the raw entries into the shape the rest of this screen expects
+  const events = (entryRes.data || []).map(e => ({
+    op_no: e.job_operations ? e.job_operations.op_no : null,
+    op_description: e.job_operations ? e.job_operations.description : null,
+    status: e.status,
+    issue_reason: e.issue_reason,
+    responsibility: e.responsibility,
+    delay_hours: e.delay_hours,
+    submitted_at: e.submitted_at || (e.activity_date ? e.activity_date + 'T00:00:00' : null)
+  }));
 
   const doneCt = ops.filter(o=>o.is_completed).length;
   const isOnHold = s.latest_status === 'Hold';
@@ -2523,7 +2555,8 @@ async function openTvHoldModal(app, s, idx, total, isOnHold, holdHrs){
     if(isOnHold){
       payload = {
         job_id: s.job_id, job_operation_id: opId, primary_operator: name,
-        activity_date: today, status: 'Partial', issue_reason: 'Resumed work',
+        activity_date: today, status: 'Partial', issue_reason: (holdStartEvent && holdStartEvent.issue_reason) || 'Resumed work',
+        responsibility: (holdStartEvent && holdStartEvent.responsibility) || null,
         delay_hours: Number(holdHrs.toFixed(1))
       };
     } else {
@@ -2533,7 +2566,8 @@ async function openTvHoldModal(app, s, idx, total, isOnHold, holdHrs){
       if(!resp){ toast('Select a department', true); return; }
       payload = {
         job_id: s.job_id, job_operation_id: opId, primary_operator: name,
-        activity_date: today, status: 'Hold', issue_reason: reason, responsibility: resp
+        activity_date: today, status: 'Hold', issue_reason: reason, responsibility: resp,
+        delay_hours: 0
       };
     }
     const { error } = await sb.from('entries').insert(payload);
