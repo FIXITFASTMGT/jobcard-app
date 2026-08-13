@@ -294,6 +294,67 @@
     font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;
     background:rgba(255,255,255,.12);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3);}
   .tv-rotate-pause-btn:hover{background:rgba(255,255,255,.2);}
+
+  /* ===== revised floor dashboard (v2): 7 metric tiles with formula sub-lines, per-operation
+     table with std / actual / delay / progress, three delivery dates, latest-issue-only
+     panel, and a formula legend. Loaded after the base .tv-* rules so it wins. ===== */
+  .tv-card{grid-template-rows:auto auto auto auto auto;}
+  .tv-metrics{grid-template-columns:repeat(7,minmax(0,1fr));}
+  .tv-metric{padding:10px 11px;}
+  .tv-metric-num{font-size:23px;}
+  .tv-metric-sub{font-family:var(--font-mono);font-size:8.5px;color:#8496a2;margin-top:4px;line-height:1.3;}
+  .tv-metric:nth-child(7)::before{background:#32d34b;}
+  .tv-delivery-note{font-size:9.5px;color:#8496a2;margin-top:3px;line-height:1.35;}
+  .tv-delivery-value.amber{color:#f5b313;}
+  .tv-delivery-item{padding:11px 0;}
+  .tv-curstats{display:flex;flex-wrap:wrap;gap:16px;margin-top:11px;padding:9px 13px;border:1px solid rgba(90,130,150,.24);border-radius:8px;background:rgba(5,17,25,.75);}
+  .tv-curstats .st{min-width:70px;}
+  .tv-curstats .lbl{font-size:8.5px;text-transform:uppercase;letter-spacing:.6px;color:#9cabb7;font-weight:700;}
+  .tv-curstats .val{font-family:var(--font-display);font-size:18px;font-weight:800;margin-top:3px;}
+  .tv-curstats .val.blue{color:#4aa3ff;}
+  .tv-curstats .val.orange{color:#ff8a52;}
+  .tv-optable{width:100%;border-collapse:collapse;margin-top:9px;font-family:var(--font-mono);font-size:11px;}
+  .tv-optable th{font-family:var(--font-body);font-size:8.5px;text-transform:uppercase;letter-spacing:.6px;color:#8997a2;font-weight:700;text-align:center;padding:0 6px 6px;border-bottom:1px solid rgba(120,150,170,.22);vertical-align:bottom;}
+  .tv-optable th.l,.tv-optable td.l{text-align:left;}
+  .tv-optable td{padding:5px 6px;text-align:center;border-bottom:1px solid rgba(120,150,170,.1);color:#dbe4ea;}
+  .tv-optable td.name{font-family:var(--font-body);font-size:11.5px;font-weight:600;}
+  .tv-optable td.grp{font-family:var(--font-body);font-size:10px;color:#8997a2;}
+  .tv-optable tr.done td{color:#cfd9e0;}
+  .tv-optable tr.done td.l:first-child{color:#32d34b;}
+  .tv-optable tr.pending td{color:#8997a2;}
+  .tv-optable tr.current td{background:rgba(20,60,100,.35);color:#7cc0ff;}
+  .tv-optable td.delay{color:#ff8a52;}
+  .tv-optable tr.total td{border-top:1px solid rgba(120,150,170,.32);border-bottom:none;padding-top:8px;font-size:12px;font-weight:700;color:#fff;}
+  .tv-optable tr.total td.delay{color:#ff4a42;}
+  .tv-optable .pcell{display:flex;align-items:center;gap:7px;}
+  .tv-optable .ptrack{flex:1;height:8px;border-radius:5px;background:rgba(120,150,170,.22);overflow:hidden;}
+  .tv-optable .pfill{height:100%;border-radius:5px;}
+  .tv-op-skip{font-family:var(--font-body);font-size:10px;color:#8997a2;}
+  .tv-machine-progress{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:#9cabb7;font-weight:700;}
+  .tv-machine-progress b{font-family:var(--font-display);font-size:20px;color:#4aa3ff;margin-left:6px;letter-spacing:0;}
+  .tv-issue-latest{font-size:15px;font-weight:700;line-height:1.35;margin:12px 0 6px;color:#fff;}
+  .tv-issue-meta{font-family:var(--font-mono);font-size:10px;color:#a9b7c2;line-height:1.5;}
+  .tv-formulas{grid-column:2;grid-row:4;border:1px solid rgba(90,130,150,.2);border-radius:8px;background:rgba(4,13,19,.5);padding:10px 14px;min-width:0;}
+  .tv-formulas .ttl{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;font-weight:800;color:#93a4b1;}
+  .tv-formulas .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px 20px;margin-top:6px;font-size:10px;line-height:1.45;color:#a9b7c2;}
+  .tv-formulas b{color:#dceaf3;}
+  .tv-bottom{grid-column:1 / -1;grid-row:5;grid-template-columns:1fr 1.6fr;}
+  .tv-bar-val{width:70px;}
+  .tv-bar-val small{color:#9cabb7;margin-left:4px;font-family:var(--font-body);}
+  @media(max-width:1050px){
+    .tv-metrics{grid-column:2;grid-row:3;grid-template-columns:repeat(3,1fr);}
+    .tv-progress-panel{grid-column:2;grid-row:4;}
+    .tv-issue{grid-column:2;grid-row:5;}
+    .tv-formulas{grid-column:2;grid-row:6;}
+    .tv-formulas .grid{grid-template-columns:1fr;}
+    .tv-bottom{grid-column:2;grid-row:7;grid-template-columns:1fr;}
+    .tv-optable{font-size:10px;}
+  }
+  @media(max-width:700px){
+    .tv-metrics{grid-template-columns:1fr 1fr;}
+    .tv-optable td.grp,.tv-optable th:nth-child(3){display:none;}
+  }
+
   .tv-rotate-pause-btn.paused{background:var(--amber-500);color:var(--graphite-950);}
 
 
@@ -2247,92 +2308,192 @@ async function renderStationCard(app, s, idx, total){
   const projection = (projRes.data || [])[0] || null;
 
   const doneCt = ops.filter(o=>o.is_completed).length;
-  const currentCt = s.current_op_no && ops.some(o=>o.op_no===s.current_op_no && !o.is_completed) ? 1 : 0;
   const isOnHold = s.latest_status === 'Hold';
+  const currentCt = s.current_op_no && ops.some(o=>o.op_no===s.current_op_no && !o.is_completed) ? 1 : 0;
   const holdCt = isOnHold ? 1 : 0;
   const pendingCt = Math.max(0, ops.length - doneCt - currentCt - holdCt);
 
-  const remainingHours = projection ? Number(projection.remaining_hours||0) : Math.max(0, (s.std_hours||0) - (s.earned_hours||0));
-  const estDate = projection?.estimated_delivery || null;
-  const risk = projection?.delivery_status==='COMFORTABLE' ? 'ontrack' : projection?.delivery_status==='AT RISK' ? 'atrisk' : projection?.delivery_status==='DELAYED' ? 'delayed' : '';
+  /* ---------- HOUR DEFINITIONS (single source of truth for this screen) ----------
+     Actual hours        = clocked time on operator confirmations, fixed shift breaks
+                           already deducted (toHours()).
+     Delay / loss hours  = hours entered on Hold / Partial confirmations with a
+                           responsibility. They are reported SEPARATELY — they are NOT
+                           subtracted from actual hours. So "actual 162h, delay 150h"
+                           does NOT mean 12h of work; it means 162h were clocked on the
+                           machine and 150h of loss were logged against departments.
+     Cumulative std hrs  = std hours of every completed operation + hours clocked on the
+                           operation currently running ("earned hours").
+     Efficiency %        = cumulative std hours / actual hours x 100.
+     Machine progress %  = cumulative std hours / total std hours x 100.
+     Remaining std hrs   = total std hours - cumulative std hours.
+     Est. delivery        = tomorrow + remaining std hours / daily capacity, Sundays off,
+                           assuming material available and zero rework.
+     Planned delivery     = last day of the assembly Gantt plan (jobs.planned_end_date).
+  ------------------------------------------------------------------------------- */
+  const num = v => Number(v || 0);
+  const opStd = o => num(o.std_hours);
+  const opAct = o => num(o.actual_hours != null ? o.actual_hours : (o.act_hours != null ? o.act_hours : o.hours));
+  const opDelay = o => num(o.delay_hours);
+
+  const totalStd    = num(s.std_hours) || ops.reduce((a,o)=>a+opStd(o), 0);
+  const actualHours = num(s.actual_hours);
+  const earnedHours = num(s.earned_hours);
+  const delayTotal  = num(s.delay_hours_total);
+  const effPct      = s.efficiency_pct == null ? (actualHours>0 ? earnedHours/actualHours*100 : null) : Number(s.efficiency_pct);
+  const machinePct  = totalStd>0 ? Math.round(earnedHours/totalStd*100) : 0;
+
+  const remainingHours = projection ? num(projection.remaining_hours) : Math.max(0, totalStd - earnedHours);
+  const shiftsPerDay = num(s.shift_count) || 1;
+  const hoursPerShift = num(s.hours_per_shift) || 7.5;
+  const dailyCap = Math.max(0.5, shiftsPerDay * hoursPerShift);
+  const workDaysLeft = Math.ceil(remainingHours / dailyCap);
+
+  const estDate = projection ? projection.estimated_delivery : null;
+  const plannedDate = s.planned_end_date || (projection ? projection.planned_delivery : null) || null;
+  const risk = projection && projection.delivery_status==='COMFORTABLE' ? 'ontrack' : projection && projection.delivery_status==='AT RISK' ? 'atrisk' : projection && projection.delivery_status==='DELAYED' ? 'delayed' : '';
   const riskLabel = risk==='ontrack' ? 'ON TRACK' : risk==='atrisk' ? 'AT RISK' : risk==='delayed' ? 'DELAYED' : 'STATUS UNKNOWN';
-  const bufferDays = projection?.buffer_days!=null ? Number(projection.buffer_days) : null;
+  const bufferDays = projection && projection.buffer_days!=null ? Number(projection.buffer_days) : null;
   const comfortPct = bufferDays===null ? 20 : Math.max(8, Math.min(100, Math.round((bufferDays/7)*100)));
-  const opProgressPct = s.current_op_std_hours>0 ? Math.min(100, Math.round((s.current_op_actual_hours||0)/s.current_op_std_hours*100)) : 0;
 
   // most recent Hold event on this job — used for the on-hold duration shown in the Hold modal
   const holdStartEvent = events.find(e=>e.status==='Hold') || null;
   const holdHrs = isOnHold && holdStartEvent ? hoursSince(holdStartEvent.submitted_at) : 0;
 
-  const delayEntries = deptDelays; // department rows already carry total_hours; reason breakdown comes from events/issue_reason below
-  const latestDelayEvent = events.find(e=>Number(e.delay_hours||0)>0) || null;
-  const mainReason = latestDelayEvent?.issue_reason || (s.delay_hours_total>0 ? 'No specific reason recorded' : 'No active issue');
-  const responsibility = latestDelayEvent?.responsibility || deptDelays[0]?.responsibility || 'Not assigned';
+  // ---- CURRENT ISSUE: the latest issue only ----
+  const latestDelayEvent = events.find(e=>Number(e.delay_hours||0)>0 || e.status==='Hold') || null;
+  const issueOpNo = (latestDelayEvent && latestDelayEvent.op_no) || s.current_op_no || null;
+  const issueOpRow = ops.find(o=>o.op_no===issueOpNo) || null;
+  const issueReason = (latestDelayEvent && latestDelayEvent.issue_reason) || (delayTotal>0 ? 'No specific reason recorded' : 'No active issue');
+  const responsibility = (latestDelayEvent && latestDelayEvent.responsibility) || (deptDelays[0] && deptDelays[0].responsibility) || 'Not assigned';
+  const stageLossFromEvents = events.filter(e=>e.op_no===issueOpNo).reduce((a,e)=>a+num(e.delay_hours), 0);
+  const stageLoss = issueOpRow && opDelay(issueOpRow) ? opDelay(issueOpRow) : stageLossFromEvents;
+  const issueOpLabel = issueOpNo ? issueOpNo + ' — ' + ((issueOpRow && issueOpRow.description) || (latestDelayEvent && latestDelayEvent.op_description) || s.current_op_description || '') : '—';
 
+  // ---- TOP 5 DELAY REASONS (share of total delay; remainder shown as one grey slice) ----
   const reasonMap = {};
   events.forEach(e=>{ if(Number(e.delay_hours||0)>0){ const k=(e.issue_reason||'Reason not specified').trim(); reasonMap[k]=(reasonMap[k]||0)+Number(e.delay_hours||0); } });
   const reasonRows = Object.entries(reasonMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  const reasonTotal = reasonRows.reduce((a,[,v])=>a+v, 0) || (s.delay_hours_total||0);
+  const top5Total = reasonRows.reduce((a,r)=>a+r[1], 0);
+  const reasonTotal = delayTotal || top5Total;
+  const slices = reasonRows.slice();
+  if(reasonTotal - top5Total > 0.05) slices.push(['All other reasons', reasonTotal - top5Total]);
   let rp = 0;
-  const donutStops = reasonRows.map(([,v],i)=>{ const st = reasonTotal ? rp/reasonTotal*100 : 0; rp += v; const en = reasonTotal ? rp/reasonTotal*100 : 0; return `${TV_REASON_COLORS[i]} ${st.toFixed(1)}% ${en.toFixed(1)}%`; });
-  const donutBg = donutStops.length ? `conic-gradient(${donutStops.join(',')})` : '#263640';
+  const donutStops = slices.map((row,i)=>{ const st = reasonTotal ? rp/reasonTotal*100 : 0; rp += row[1]; const en = reasonTotal ? rp/reasonTotal*100 : 0; const col = i<5 ? TV_REASON_COLORS[i] : '#4a5a66'; return col+' '+st.toFixed(1)+'% '+en.toFixed(1)+'%'; });
+  const donutBg = donutStops.length ? 'conic-gradient('+donutStops.join(',')+')' : '#263640';
   const maxDept = Math.max(1, ...deptDelays.map(d=>Number(d.total_hours)||0));
 
   const fmtDateFull = d => d ? new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—';
   const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
-  const eventClass = st => st==='Completed' ? 'completed' : (st==='Hold' ? 'delay' : 'started');
-  const eventText = st => st==='Completed' ? 'COMPLETED' : st==='Hold' ? 'DELAY' : st==='Partial' ? 'STARTED' : (st||'UPDATE').toUpperCase();
+  const h1 = n => n.toFixed(1)+'h';
+
+  // ---- OPERATION PROGRESS TABLE: window around the running operation ----
+  const curIdx = Math.max(0, ops.findIndex(o=>o.op_no===s.current_op_no));
+  const winFrom = ops.length<=10 ? 0 : Math.max(0, curIdx-4);
+  const winTo   = ops.length<=10 ? ops.length : Math.min(ops.length, winFrom+9);
+  const winOps  = ops.slice(winFrom, winTo);
+  const skippedStd = ops.slice(0, winFrom).reduce((a,o)=>a+opStd(o), 0);
+  const opPct = o => o.is_completed ? 100 : (opStd(o)>0 ? Math.min(100, Math.round(opAct(o)/opStd(o)*100)) : 0);
+  const opState = o => o.is_completed ? 'done' : (o.op_no===s.current_op_no ? 'current' : 'pending');
+  const opStatusText = o => o.is_completed ? 'Completed' : (o.op_no===s.current_op_no ? (isOnHold ? 'Hold' : 'In Progress') : 'Pending');
+  const opBarColor = o => o.is_completed ? '#32d34b' : (o.op_no===s.current_op_no ? '#1688ff' : 'rgba(120,150,170,.3)');
+
+  const curStd = num(s.current_op_std_hours);
+  const curAct = num(s.current_op_actual_hours);
+  const curDelay = s.current_op_no && issueOpNo===s.current_op_no ? stageLoss : (ops.find(o=>o.op_no===s.current_op_no) ? opDelay(ops.find(o=>o.op_no===s.current_op_no)) : 0);
+  const opProgressPct = curStd>0 ? Math.min(100, Math.round(curAct/curStd*100)) : 0;
 
   app.innerHTML = `
   <div class="tv-card">
     <aside class="tv-left">
       <div class="tv-station-label">STATION</div><div class="tv-station-value">${s.station_no ?? '—'} / ${total||'—'}</div>
       <div class="tv-machine">${esc(s.machine_no)}</div><div class="tv-model">${esc(s.model_name||'')}</div><div class="tv-customer">${esc(s.customer||'')}</div>
-      <div class="tv-side-rule"></div><div class="tv-side-label">LAST UPDATED</div><div class="tv-side-value">${events[0]?.submitted_at ? fmtDateFull(events[0].submitted_at.slice(0,10))+' | '+fmtTime(events[0].submitted_at) : 'No entries yet'}</div>
+      <div class="tv-side-rule"></div>
+      <div class="tv-side-label">DAILY CAPACITY</div><div class="tv-side-value">${shiftsPerDay} shift × ${hoursPerShift}h = ${dailyCap.toFixed(1)}h/day</div>
+      <div class="tv-side-label">LAST UPDATED</div><div class="tv-side-value">${events[0]?.submitted_at ? fmtDateFull(events[0].submitted_at.slice(0,10))+' | '+fmtTime(events[0].submitted_at) : 'No entries yet'}</div>
       ${s.current_op_no ? `<button class="tv-hold-btn ${isOnHold?'resume':'hold'}" id="tvHoldBtn">${isOnHold?'▶ RESUME':'⏸ HOLD'}</button>` : ''}
     </aside>
 
     <section class="tv-main-head">
       <div style="min-width:0;flex:1;"><div class="tv-current-label">CURRENT OPERATION</div><div class="tv-current-title"><span class="opno">${esc(s.current_op_no||'—')}</span> — ${esc(s.current_op_description||'No active operation')}</div>
-      <div class="tv-live-row"><span class="tv-live-pill">◆ ${isOnHold?'ON HOLD':(s.latest_status==='Completed'?'COMPLETED':'IN PROGRESS')}</span><span>${s.current_op_actual_hours>0?'Active operation':'Awaiting confirmation'}</span></div></div>
+      <div class="tv-live-row"><span class="tv-live-pill">◆ ${isOnHold?'ON HOLD':(s.latest_status==='Completed'?'COMPLETED':'IN PROGRESS')}</span><span>${curAct>0?'Active operation':'Awaiting confirmation'}</span></div>
+      ${s.current_op_no ? `<div class="tv-curstats">
+        <div class="st"><div class="lbl">Operation No.</div><div class="val">${esc(s.current_op_no)}</div></div>
+        <div class="st"><div class="lbl">Planned (Std) Hours</div><div class="val">${h1(curStd)}</div></div>
+        <div class="st"><div class="lbl">Actual Hours (clocked)</div><div class="val blue">${h1(curAct)}</div></div>
+        <div class="st"><div class="lbl">Delay in this Op</div><div class="val orange">${h1(curDelay)}</div></div>
+        <div class="st"><div class="lbl">Progress</div><div class="val">${opProgressPct}%</div></div>
+        <div class="st"><div class="lbl">Status / Group</div><div class="val" style="font-size:13px;">${esc(s.latest_status||'—')} · ${esc(s.current_op_group||'—')}</div></div>
+      </div>` : ''}</div>
       <div class="tv-status-banner ${risk}"><div class="label">OVERALL STATUS</div><div class="value">${riskLabel}</div><div class="status-sub">${risk==='ontrack'?'We are comfortably meeting the target delivery.':risk==='atrisk'?'Delivery needs close monitoring.':risk==='delayed'?'Delivery is at risk based on current projection.':''}</div></div>
     </section>
 
     <aside class="tv-delivery"><div class="tv-panel-title">DELIVERY INFORMATION</div>
-      <div class="tv-delivery-item"><div class="tv-delivery-icon">▣</div><div><div class="tv-delivery-label">Target Delivery (SO)</div><div class="tv-delivery-value">${fmtDateFull(s.delivery_date)}</div></div></div>
-      <div class="tv-delivery-item"><div class="tv-delivery-icon">▣</div><div><div class="tv-delivery-label">Est. Delivery</div><div class="tv-delivery-value good">${fmtDateFull(estDate)}</div></div></div>
-      <div class="tv-comfort"><div class="tv-comfort-label">Comfort Level</div><div class="tv-comfort-track"><div class="tv-comfort-fill" style="width:${comfortPct}%"></div></div><div class="tv-comfort-status">${projection?.delivery_status||'UNKNOWN'}${bufferDays!==null?' · '+Math.abs(bufferDays)+' DAY'+(Math.abs(bufferDays)===1?'':'S')+(bufferDays>=0?' BUFFER':' LATE'):''}</div></div>
+      <div class="tv-delivery-item"><div class="tv-delivery-icon">▣</div><div><div class="tv-delivery-label">Target Delivery (SO)</div><div class="tv-delivery-value">${fmtDateFull(s.delivery_date)}</div><div class="tv-delivery-note">Sales order commitment</div></div></div>
+      <div class="tv-delivery-item"><div class="tv-delivery-icon">▣</div><div><div class="tv-delivery-label">Planned Delivery (Assy Gantt)</div><div class="tv-delivery-value amber">${fmtDateFull(plannedDate)}</div><div class="tv-delivery-note">Last day of the assembly plan</div></div></div>
+      <div class="tv-delivery-item"><div class="tv-delivery-icon">▣</div><div><div class="tv-delivery-label">Est. Delivery (Projected)</div><div class="tv-delivery-value good">${fmtDateFull(estDate)}</div><div class="tv-delivery-note">${h1(remainingHours)} remaining ÷ ${dailyCap.toFixed(1)}h/day, Sundays off, zero rework</div></div></div>
+      <div class="tv-comfort"><div class="tv-comfort-label">Comfort Level</div><div class="tv-comfort-track"><div class="tv-comfort-fill" style="width:${comfortPct}%"></div></div><div class="tv-comfort-status">${(projection && projection.delivery_status)||'UNKNOWN'}${bufferDays!==null?' · '+Math.abs(bufferDays)+' DAY'+(Math.abs(bufferDays)===1?'':'S')+(bufferDays>=0?' BUFFER':' LATE'):''}</div></div>
     </aside>
 
     <section class="tv-metrics">
-      <div class="tv-metric"><div class="tv-metric-num">${(s.std_hours||0).toFixed(1)}h</div><div class="tv-metric-lbl">Total Std Hours</div></div>
-      <div class="tv-metric"><div class="tv-metric-num">${(s.actual_hours||0).toFixed(1)}h</div><div class="tv-metric-lbl">Actual Hours</div></div>
-      <div class="tv-metric"><div class="tv-metric-num">${(s.earned_hours||0).toFixed(1)}h</div><div class="tv-metric-lbl">Cumulative Std Hours</div></div>
-      <div class="tv-metric highlight"><div class="tv-metric-num">${s.efficiency_pct==null?'—':(s.efficiency_pct>300?'300%+':Number(s.efficiency_pct).toFixed(0)+'%')}</div><div class="tv-metric-lbl">Efficiency %</div></div>
-      <div class="tv-metric ${s.delay_hours_total>0?'warn':''}"><div class="tv-metric-num">${(s.delay_hours_total||0).toFixed(1)}h</div><div class="tv-metric-lbl">Delay Hours</div></div>
-      <div class="tv-metric"><div class="tv-metric-num">${remainingHours.toFixed(1)}h</div><div class="tv-metric-lbl">Remaining Hours</div></div>
+      <div class="tv-metric"><div class="tv-metric-num">${h1(totalStd)}</div><div class="tv-metric-lbl">Total Std Hours</div><div class="tv-metric-sub">${ops.length} operations</div></div>
+      <div class="tv-metric"><div class="tv-metric-num">${h1(actualHours)}</div><div class="tv-metric-lbl">Actual Hours (clocked)</div><div class="tv-metric-sub">confirmed time, breaks deducted</div></div>
+      <div class="tv-metric"><div class="tv-metric-num">${h1(earnedHours)}</div><div class="tv-metric-lbl">Cumulative Std Hours</div><div class="tv-metric-sub">std of completed + clocked of current</div></div>
+      <div class="tv-metric highlight"><div class="tv-metric-num">${effPct==null?'—':(effPct>300?'300%+':effPct.toFixed(0)+'%')}</div><div class="tv-metric-lbl">Efficiency %</div><div class="tv-metric-sub">${h1(earnedHours)} ÷ ${h1(actualHours)}</div></div>
+      <div class="tv-metric ${delayTotal>0?'warn':''}"><div class="tv-metric-num">${h1(delayTotal)}</div><div class="tv-metric-lbl">Delay / Loss Hours</div><div class="tv-metric-sub">logged separately — NOT deducted from clocked</div></div>
+      <div class="tv-metric"><div class="tv-metric-num">${h1(remainingHours)}</div><div class="tv-metric-lbl">Remaining Std Hours</div><div class="tv-metric-sub">${h1(totalStd)} − ${h1(earnedHours)}</div></div>
+      <div class="tv-metric"><div class="tv-metric-num">${workDaysLeft}d</div><div class="tv-metric-lbl">Working Days Left</div><div class="tv-metric-sub">${h1(remainingHours)} ÷ ${dailyCap.toFixed(1)}h/day, Sundays off</div></div>
     </section>
 
-    <section class="tv-progress-panel"><div class="tv-progress-head"><div class="title">OPERATION PROGRESS <span class="count">(${ops.length} OPERATIONS)</span></div><div class="tv-progress-summary"><span style="color:#32d34b">● Completed (${doneCt})</span><span style="color:#1688ff">● In Progress (${currentCt})</span><span style="color:#ff4139">● Hold (${holdCt})</span><span style="color:#7f8f9b">● Pending (${pendingCt})</span></div></div>
-      <div class="tv-progress-track">${ops.map(o=>`<div class="tv-op-node ${o.is_completed?'done':(o.op_no===s.current_op_no?'current':'pending')}"><div class="tv-op-dot ${o.is_completed?'done':(o.op_no===s.current_op_no?'current':'pending')}">${o.is_completed?'✓':esc(o.op_no)}</div><div class="tv-op-no">${esc(o.op_no)}</div></div>`).join('') || '<div class="tv-table-empty">No operations set up yet</div>'}</div>
-      <div class="tv-progress-legend"><span class="done">COMPLETED</span><span class="current">IN PROGRESS</span><span class="pending">PENDING</span></div>
+    <section class="tv-progress-panel">
+      <div class="tv-progress-head">
+        <div class="title">OPERATION PROGRESS <span class="count">(${ops.length} OPERATIONS · ${doneCt} COMPLETED · ${currentCt+holdCt} RUNNING · ${pendingCt} PENDING)</span></div>
+        <div class="tv-machine-progress">TOTAL MACHINE PROGRESS <b>${machinePct}%</b></div>
+      </div>
+      ${ops.length ? `<table class="tv-optable">
+        <thead><tr><th class="l">Operation No.</th><th class="l">Operation Name</th><th class="l">Group</th><th>Std Hours</th><th>Actual Hours<br>(clocked)</th><th>Delay Hours</th><th style="min-width:120px;">Progress %</th><th>Status</th></tr></thead>
+        <tbody>
+        ${winFrom>0 ? `<tr><td class="l tv-op-skip" colspan="8">⋮ ${winFrom} earlier operation${winFrom===1?'':'s'} completed (${h1(skippedStd)} std)</td></tr>` : ''}
+        ${winOps.map(o=>`<tr class="${opState(o)}">
+          <td class="l">${o.is_completed?'✓ ':''}${esc(o.op_no)}</td>
+          <td class="l name">${esc(o.description||'')}</td>
+          <td class="l grp">${esc(o.group_name||'')}</td>
+          <td>${h1(opStd(o))}</td>
+          <td>${opAct(o).toFixed(2)}h</td>
+          <td class="${opDelay(o)>0?'delay':''}">${opDelay(o).toFixed(2)}h</td>
+          <td><div class="pcell"><div class="ptrack"><div class="pfill" style="width:${opPct(o)}%;background:${opBarColor(o)}"></div></div><span>${opPct(o)}%</span></div></td>
+          <td>${opStatusText(o)}</td></tr>`).join('')}
+        ${winTo<ops.length ? `<tr><td class="l tv-op-skip" colspan="8">+ ${ops.length-winTo} later operation${ops.length-winTo===1?'':'s'} pending</td></tr>` : ''}
+        <tr class="total"><td class="l">TOTAL</td><td class="l" style="font-family:var(--font-body);font-size:10px;color:#8997a2;font-weight:600;">All ${ops.length} operations</td><td></td><td>${h1(totalStd)}</td><td>${h1(actualHours)}</td><td class="delay">${h1(delayTotal)}</td><td style="text-align:right;padding-right:34px;">${machinePct}%</td><td></td></tr>
+        </tbody></table>` : '<div class="tv-table-empty">No operations set up yet</div>'}
     </section>
 
-    <aside class="tv-issue"><div class="tv-issue-title">CURRENT ISSUE</div><div class="tv-issue-main"><span class="tv-issue-icon">⚠</span><span>${s.delay_hours_total>0?'DELAY IMPACTING':'NO ACTIVE ISSUE'}</span></div>
-      <div class="tv-issue-grid"><div class="tv-issue-item"><div class="tv-issue-label">Delay Hours</div><div class="tv-issue-value big">${(s.delay_hours_total||0).toFixed(1)}h</div></div><div></div>
-      <div class="tv-issue-item full"><div class="tv-issue-label">Main Reason</div><div class="tv-issue-value">${esc(mainReason)}</div></div>
-      <div class="tv-issue-item"><div class="tv-issue-label">Department</div><div class="tv-issue-value">${esc(deptDelays[0]?.responsibility||'—')}</div></div><div class="tv-issue-item"><div class="tv-issue-label">Responsibility</div><div class="tv-issue-value">${esc(responsibility)}</div></div>
-      <div class="tv-issue-item full"><div class="tv-issue-label">Since</div><div class="tv-issue-value">${latestDelayEvent?.submitted_at ? fmtDateFull(latestDelayEvent.submitted_at.slice(0,10))+' | '+fmtTime(latestDelayEvent.submitted_at) : '—'}</div></div></div>
+    <aside class="tv-issue"><div class="tv-issue-title">⚠ CURRENT ISSUE <span style="color:#a9b7c2;">(LATEST ONLY)</span></div>
+      <div class="tv-issue-latest">${esc(issueReason)}</div>
+      <div class="tv-issue-meta">${esc(issueOpLabel)}<br>${latestDelayEvent?.submitted_at ? fmtDateFull(latestDelayEvent.submitted_at.slice(0,10))+' | '+fmtTime(latestDelayEvent.submitted_at)+' · '+esc(latestDelayEvent.status||'') : '—'}</div>
+      <div class="tv-issue-grid" style="margin-top:14px;">
+        <div class="tv-issue-item"><div class="tv-issue-label">Responsibility</div><div class="tv-issue-value" style="font-family:var(--font-display);font-size:19px;">${esc(responsibility)}</div></div>
+        <div class="tv-issue-item"><div class="tv-issue-label">Total Loss Hours (this stage)</div><div class="tv-issue-value big" style="color:#ff4a42;">${h1(stageLoss)}</div></div>
+        <div class="tv-issue-item full"><div class="tv-issue-label">Total Loss Hours (this machine)</div><div class="tv-issue-value">${h1(delayTotal)} across all operations</div></div>
+      </div>
     </aside>
 
-    ${s.current_op_no ? `<section class="tv-current-op"><div class="op-main"><div class="op-kicker">OPERATION ${esc(s.current_op_no)}</div><div class="op-title">${esc(s.current_op_description||'')}</div><div class="op-desc">${esc(s.current_op_group||'')} · Current stage progress based on latest confirmations.</div></div><div class="op-stat">PLANNED HOURS<b>${(s.current_op_std_hours||0).toFixed(1)}h</b></div><div class="op-stat">ACTUAL HOURS<b>${(s.current_op_actual_hours||0).toFixed(1)}h</b></div><div class="op-stat">PROGRESS<div class="op-progress" style="--pct:${opProgressPct}%"><span>${opProgressPct}%</span></div></div><div class="tv-assigned"><div class="label">STATUS / GROUP</div><div class="value">${esc(s.latest_status||'—')}</div><div class="sub">${esc(s.current_op_group||'—')}</div></div></section>` : ''}
+    <section class="tv-formulas">
+      <div class="ttl">HOW THESE NUMBERS ARE CALCULATED</div>
+      <div class="grid">
+        <div><b>Actual hours</b> = clocked time on confirmations, fixed breaks deducted</div>
+        <div><b>Delay hours</b> = loss hours logged on Hold / Partial confirmations, with responsibility (not deducted from actual)</div>
+        <div><b>Cumulative std hours</b> = std hours of completed ops + clocked hours of the running op</div>
+        <div><b>Efficiency %</b> = cumulative std hours ÷ actual hours × 100</div>
+        <div><b>Total machine progress %</b> = cumulative std hours ÷ total std hours × 100</div>
+        <div><b>Est. delivery</b> = tomorrow + remaining std hours ÷ ${dailyCap.toFixed(1)}h/day (Sundays off, material available, zero rework)</div>
+      </div>
+    </section>
 
     <section class="tv-bottom">
-      <div class="tv-panel"><div class="tv-panel-title">DELAY BY DEPARTMENT <span style="color:#8997a2">(HOURS)</span></div>${deptDelays.length?deptDelays.slice(0,5).map((d,i)=>`<div class="tv-bar-row"><div class="tv-bar-label">${esc(d.responsibility)}</div><div class="tv-bar-track"><div class="tv-bar-fill" style="width:${Math.round(Number(d.total_hours)/maxDept*100)}%;background:${TV_DEPT_COLORS[i%5]}"></div></div><div class="tv-bar-val">${Number(d.total_hours).toFixed(1)}h</div></div>`).join(''):'<div class="tv-table-empty">No delays logged</div>'}<div class="tv-total-delay">TOTAL DELAY HOURS: <b>${(s.delay_hours_total||0).toFixed(1)}h</b></div></div>
-      <div class="tv-panel"><div class="tv-panel-title">TOP DELAY REASONS <span style="color:#8997a2">(HOURS)</span></div><div class="tv-reasons"><div class="tv-donut" style="background:${donutBg}"><div class="tv-donut-center">${(s.delay_hours_total||0).toFixed(1)}h<span>TOTAL DELAY</span></div></div><div class="tv-reason-list">${reasonRows.length?reasonRows.map(([reason,h],i)=>`<div class="tv-reason"><span class="tv-reason-dot" style="background:${TV_REASON_COLORS[i]}"></span><span>${esc(reason)}</span><span class="tv-reason-val">${h.toFixed(1)}h<small>${reasonTotal?((h/reasonTotal)*100).toFixed(1):'0.0'}%</small></span></div>`).join(''):'<div class="tv-table-empty">No delay reasons logged</div>'}</div></div></div>
-      <div class="tv-panel"><div class="tv-panel-title">RECENT EVENTS</div><div class="tv-events">${events.length?events.map(e=>`<div class="tv-event-row"><span class="tv-event-time">${fmtTime(e.submitted_at)}</span><span class="lamp ${lampClass(e.status)}" style="width:11px;height:11px;justify-self:center;"></span><span class="tv-event-status ${eventClass(e.status)}">${eventText(e.status)}</span><span class="tv-event-desc">${esc(e.op_description||e.op_no||'Update')}${e.responsibility?' · '+esc(e.responsibility):''}</span><span class="tv-event-hours ${Number(e.delay_hours||0)>0?'delay':''}">${Number(e.delay_hours||0)>0?Number(e.delay_hours).toFixed(1)+'h':'—'}</span></div>`).join(''):'<div class="tv-table-empty">No activity yet</div>'}</div></div>
+      <div class="tv-panel"><div class="tv-panel-title">DELAY BY DEPARTMENT <span style="color:#8997a2">(HOURS)</span></div>${deptDelays.length?deptDelays.slice(0,5).map((d,i)=>`<div class="tv-bar-row"><div class="tv-bar-label">${esc(d.responsibility)}</div><div class="tv-bar-track"><div class="tv-bar-fill" style="width:${Math.round(Number(d.total_hours)/maxDept*100)}%;background:${TV_DEPT_COLORS[i%5]}"></div></div><div class="tv-bar-val">${Number(d.total_hours).toFixed(1)}h<small>${delayTotal?((Number(d.total_hours)/delayTotal)*100).toFixed(1):'0.0'}%</small></div></div>`).join(''):'<div class="tv-table-empty">No delays logged</div>'}<div class="tv-total-delay">TOTAL DELAY HOURS: <b>${h1(delayTotal)}</b></div></div>
+      <div class="tv-panel"><div class="tv-panel-title">TOP 5 DELAY REASONS <span style="color:#8997a2">(HOURS · SHARE OF ${h1(delayTotal)} TOTAL)</span></div><div class="tv-reasons"><div class="tv-donut" style="background:${donutBg}"><div class="tv-donut-center">${h1(delayTotal)}<span>TOTAL DELAY</span></div></div><div class="tv-reason-list">${slices.length?slices.map((row,i)=>`<div class="tv-reason"><span class="tv-reason-dot" style="background:${i<5?TV_REASON_COLORS[i]:'#4a5a66'}"></span><span${i>=5?' style="color:#8997a2;"':''}>${esc(row[0])}</span><span class="tv-reason-val">${row[1].toFixed(1)}h<small>${reasonTotal?((row[1]/reasonTotal)*100).toFixed(1):'0.0'}%</small></span></div>`).join(''):'<div class="tv-table-empty">No delay reasons logged</div>'}</div></div></div>
     </section>
-    <div class="tv-footer">ⓘ &nbsp; Progress and hours are updated based on the latest confirmations.</div>
+    <div class="tv-footer">ⓘ &nbsp; Hours come from operator confirmations (net of fixed shift breaks). Delay hours are logged separately on Hold / Partial confirmations and are not subtracted from clocked hours.</div>
   </div>`;
 
   const holdBtn = document.getElementById('tvHoldBtn');
