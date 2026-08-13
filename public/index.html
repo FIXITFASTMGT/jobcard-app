@@ -298,7 +298,7 @@
   /* ===== revised floor dashboard (v2): 7 metric tiles with formula sub-lines, per-operation
      table with std / actual / delay / progress, three delivery dates, latest-issue-only
      panel, and a formula legend. Loaded after the base .tv-* rules so it wins. ===== */
-  .tv-card{grid-template-rows:auto auto auto auto auto;}
+  .tv-card{grid-template-rows:auto auto auto auto;}
   .tv-metrics{grid-template-columns:repeat(7,minmax(0,1fr));}
   .tv-metric{padding:10px 11px;}
   .tv-metric-num{font-size:23px;}
@@ -307,7 +307,7 @@
   .tv-delivery-note{font-size:9.5px;color:#8496a2;margin-top:3px;line-height:1.35;}
   .tv-delivery-value.amber{color:#f5b313;}
   .tv-delivery-item{padding:11px 0;}
-  .tv-curstats{display:flex;flex-wrap:wrap;gap:16px;margin-top:11px;padding:9px 13px;border:1px solid rgba(90,130,150,.24);border-radius:8px;background:rgba(5,17,25,.75);}
+  .tv-curstats{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;padding:8px 13px;border:1px solid rgba(90,130,150,.24);border-radius:8px;background:rgba(5,17,25,.75);}
   .tv-curstats .st{min-width:70px;}
   .tv-curstats .lbl{font-size:8.5px;text-transform:uppercase;letter-spacing:.6px;color:#9cabb7;font-weight:700;}
   .tv-curstats .val{font-family:var(--font-display);font-size:18px;font-weight:800;margin-top:3px;}
@@ -316,7 +316,7 @@
   .tv-optable{width:100%;border-collapse:collapse;margin-top:9px;font-family:var(--font-mono);font-size:11px;}
   .tv-optable th{font-family:var(--font-body);font-size:8.5px;text-transform:uppercase;letter-spacing:.6px;color:#8997a2;font-weight:700;text-align:center;padding:0 6px 6px;border-bottom:1px solid rgba(120,150,170,.22);vertical-align:bottom;}
   .tv-optable th.l,.tv-optable td.l{text-align:left;}
-  .tv-optable td{padding:5px 6px;text-align:center;border-bottom:1px solid rgba(120,150,170,.1);color:#dbe4ea;}
+  .tv-optable td{padding:4px 6px;text-align:center;border-bottom:1px solid rgba(120,150,170,.1);color:#dbe4ea;}
   .tv-optable td.name{font-family:var(--font-body);font-size:11.5px;font-weight:600;}
   .tv-optable td.grp{font-family:var(--font-body);font-size:10px;color:#8997a2;}
   .tv-optable tr.done td{color:#cfd9e0;}
@@ -338,16 +338,14 @@
   .tv-formulas .ttl{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;font-weight:800;color:#93a4b1;}
   .tv-formulas .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px 20px;margin-top:6px;font-size:10px;line-height:1.45;color:#a9b7c2;}
   .tv-formulas b{color:#dceaf3;}
-  .tv-bottom{grid-column:1 / -1;grid-row:5;grid-template-columns:1fr 1.6fr;}
+  .tv-bottom{grid-column:1 / -1;grid-row:4;grid-template-columns:1fr 1.6fr;}
   .tv-bar-val{width:70px;}
   .tv-bar-val small{color:#9cabb7;margin-left:4px;font-family:var(--font-body);}
   @media(max-width:1050px){
     .tv-metrics{grid-column:2;grid-row:3;grid-template-columns:repeat(3,1fr);}
     .tv-progress-panel{grid-column:2;grid-row:4;}
     .tv-issue{grid-column:2;grid-row:5;}
-    .tv-formulas{grid-column:2;grid-row:6;}
-    .tv-formulas .grid{grid-template-columns:1fr;}
-    .tv-bottom{grid-column:2;grid-row:7;grid-template-columns:1fr;}
+    .tv-bottom{grid-column:2;grid-row:6;grid-template-columns:1fr;}
     .tv-optable{font-size:10px;}
   }
   @media(max-width:700px){
@@ -2476,18 +2474,6 @@ async function renderStationCard(app, s, idx, total){
         <div class="tv-issue-item full"><div class="tv-issue-label">Total Loss Hours (this machine)</div><div class="tv-issue-value">${h1(delayTotal)} across all operations</div></div>
       </div>
     </aside>
-
-    <section class="tv-formulas">
-      <div class="ttl">HOW THESE NUMBERS ARE CALCULATED</div>
-      <div class="grid">
-        <div><b>Actual hours</b> = clocked time on confirmations, fixed breaks deducted</div>
-        <div><b>Delay hours</b> = loss hours logged on Hold / Partial confirmations, with responsibility (not deducted from actual)</div>
-        <div><b>Cumulative std hours</b> = std hours of completed ops + clocked hours of the running op</div>
-        <div><b>Efficiency %</b> = cumulative std hours ÷ actual hours × 100</div>
-        <div><b>Total machine progress %</b> = cumulative std hours ÷ total std hours × 100</div>
-        <div><b>Est. delivery</b> = tomorrow + remaining std hours ÷ ${dailyCap.toFixed(1)}h/day (Sundays off, material available, zero rework)</div>
-      </div>
-    </section>
 
     <section class="tv-bottom">
       <div class="tv-panel"><div class="tv-panel-title">DELAY BY DEPARTMENT <span style="color:#8997a2">(HOURS)</span></div>${deptDelays.length?deptDelays.slice(0,5).map((d,i)=>`<div class="tv-bar-row"><div class="tv-bar-label">${esc(d.responsibility)}</div><div class="tv-bar-track"><div class="tv-bar-fill" style="width:${Math.round(Number(d.total_hours)/maxDept*100)}%;background:${TV_DEPT_COLORS[i%5]}"></div></div><div class="tv-bar-val">${Number(d.total_hours).toFixed(1)}h<small>${delayTotal?((Number(d.total_hours)/delayTotal)*100).toFixed(1):'0.0'}%</small></div></div>`).join(''):'<div class="tv-table-empty">No delays logged</div>'}<div class="tv-total-delay">TOTAL DELAY HOURS: <b>${h1(delayTotal)}</b></div></div>
