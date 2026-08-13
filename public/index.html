@@ -94,14 +94,13 @@
   .btn.ghost{background:transparent;color:var(--graphite-950);border:1.5px solid var(--graphite-950);}
   .btn.red{background:var(--red-600);color:#fff;}
   .btn.small{padding:8px 13px;font-size:11px;margin-top:0;}
-  .btn:focus-visible{outline:2px solid var(--amber-500);outline-offset:2px;}
-  .btn:disabled{opacity:.4;cursor:not-allowed;}
-
   .modal-overlay{position:fixed;inset:0;background:rgba(26,30,34,0.72);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;}
   .modal-box{background:#fff;border-radius:10px;max-width:420px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.35);}
-  .modal-box h3{margin:0 0 10px;font-family:var(--font-display);font-size:16px;color:var(--graphite-950);}
+  .modal-box h3{margin:0 0 10px;font-family:var(--font-head);font-size:16px;color:var(--graphite-950);}
   .modal-box p{margin:0 0 20px;font-size:13.5px;line-height:1.5;color:var(--steel-700);}
   .modal-box .modal-actions{display:flex;flex-direction:column;gap:8px;}
+  .btn:focus-visible{outline:2px solid var(--amber-500);outline-offset:2px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
 
   /* ---------- andon lamp (signature status element) ---------- */
   .lamp{width:11px;height:11px;border-radius:50%;flex-shrink:0;display:inline-block;position:relative;}
@@ -117,6 +116,7 @@
   .status-tag.Completed{background:var(--green-100);color:var(--green-600);}
   .status-tag.Partial{background:var(--amber-100);color:var(--amber-700);}
   .status-tag.Hold{background:var(--red-100);color:var(--red-600);}
+  .status-tag.NotStarted{background:var(--plate-100);color:var(--steel-600);}
 
   /* ---------- nameplate (signature identity element) ---------- */
   .nameplate{
@@ -224,79 +224,94 @@
     cursor:pointer;color:var(--steel-600);}
   .toggle-pair button.on{border-color:var(--graphite-950);background:var(--graphite-950);color:#fff;}
 
+  /* ---------- Gantt Chart tab ---------- */
+  .gantt-meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px 18px;padding:10px 2px;font-size:12.5px;
+    color:var(--steel-600);border-bottom:1px solid var(--plate-100);margin-bottom:10px;}
+  .gantt-meta b{color:var(--graphite-950);font-family:var(--font-display);font-size:14px;}
+  .gantt-meta-right{display:flex;gap:16px;flex-wrap:wrap;font-family:var(--font-mono);font-size:11.5px;align-items:center;}
+  .gantt-legend{display:flex;gap:14px;align-items:center;font-size:11px;color:var(--steel-600);}
+  .gantt-legend .sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px;}
+  .gantt-legend .sw.plan{background:var(--amber-500);}
+  .gantt-legend .sw.actual{background:var(--steel-700);}
+
+  .gantt-scroll{max-height:72vh;overflow:auto;border:1px solid var(--plate-100);position:relative;}
+  table.gantt-table{border-collapse:separate;border-spacing:0;font-size:11px;font-family:var(--font-body);}
+  table.gantt-table th,table.gantt-table td{border:1px solid var(--plate-100);padding:0;box-sizing:border-box;}
+  table.gantt-table thead th{background:var(--graphite-950);color:#fff;position:sticky;top:0;z-index:3;
+    font-size:9.5px;text-transform:uppercase;letter-spacing:.3px;padding:7px 4px;text-align:center;white-space:nowrap;}
+  table.gantt-table thead th.gday.off{background:var(--steel-700);}
+  table.gantt-table tbody td{padding:4px 6px;font-size:11px;color:var(--graphite-950);background:#fff;white-space:nowrap;}
+  table.gantt-table tbody tr:nth-child(even) td{background:var(--plate-50);}
+
+  .gfrz{position:sticky;z-index:2;background:inherit;}
+  .gfrz-sno{left:0;width:34px;min-width:34px;text-align:center;}
+  .gfrz-opno{left:34px;width:54px;min-width:54px;font-family:var(--font-mono);}
+  .gfrz-group{left:88px;width:84px;min-width:84px;font-size:10px;color:var(--steel-600);overflow:hidden;text-overflow:ellipsis;}
+  .gfrz-desc{left:172px;width:200px;min-width:200px;white-space:normal;line-height:1.3;}
+  .gfrz-std{left:372px;width:48px;min-width:48px;text-align:center;font-family:var(--font-mono);}
+  .gfrz-act{left:420px;width:56px;min-width:56px;text-align:center;font-family:var(--font-mono);}
+  thead .gfrz{z-index:4;background:var(--graphite-950);}
+  tbody .gfrz{background:#fff;}
+  tbody tr:nth-child(even) .gfrz{background:var(--plate-50);}
+  tr.gantt-milestone td{background:var(--amber-100) !important;}
+
+  .gday{width:27px;min-width:27px;height:32px;text-align:center;position:relative;}
+  thead th.gday{width:27px;min-width:27px;}
+  .gday.off{background:repeating-linear-gradient(45deg,var(--plate-100) 0 4px,#fff 4px 8px);}
+  .gbar{position:absolute;left:2px;right:2px;border-radius:2px;}
+  .gbar.plan{top:5px;bottom:5px;background:var(--amber-500);}
+  .gbar.plan.milestone{background:var(--amber-700);}
+  .gbar.plan.half{top:3px;bottom:auto;height:11px;}
+  .gbar.actual.half{bottom:3px;top:auto;height:11px;background:var(--steel-700);}
+
   /* ---------- print profile buttons ---------- */
   .print-profiles{display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;}
   .print-profile-cap{font-size:11px;color:var(--steel-600);margin-top:5px;max-width:220px;line-height:1.4;}
 
-  /* ---------- Station Display (rotating floor TV) ---------- */
-  body.tv-mode{background:var(--graphite-950);}
-  body.tv-mode .topbar{display:none;}
-  body.tv-mode .wrap{max-width:none;padding:0;}
-  .tv-card{
-    min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;
-    background:linear-gradient(160deg,var(--graphite-800) 0%,var(--graphite-950) 100%);color:#fff;
-    padding:40px 20px;text-align:center;box-sizing:border-box;
-  }
-  .tv-station-no{font-family:var(--font-mono);font-size:20px;color:var(--amber-500);letter-spacing:2px;margin-bottom:10px;}
-  .tv-progress{color:var(--steel-300);font-size:14px;margin-left:14px;}
-  .tv-machine{font-family:var(--font-display);font-size:min(14vw,88px);font-weight:700;letter-spacing:2px;line-height:1;}
-  .tv-sub{font-size:min(4vw,24px);color:var(--steel-200);margin-top:10px;}
-  .tv-status{font-size:min(4.5vw,28px);margin-top:22px;display:flex;align-items:center;gap:12px;justify-content:center;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
-  .tv-stage{font-size:min(3.2vw,18px);color:var(--amber-500);margin-top:12px;letter-spacing:.5px;}
-  .tv-plan{display:flex;gap:14px;margin-top:18px;flex-wrap:wrap;justify-content:center;}
-  .tv-plan-chip{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:8px 14px;font-size:12px;color:var(--steel-200);}
-  .tv-plan-chip b{display:block;font-size:14px;color:#fff;margin-top:2px;}
-  .tv-plan-chip.late b{color:var(--red-600);}
-  .tv-tables{display:flex;gap:20px;margin-top:34px;flex-wrap:wrap;justify-content:center;max-width:900px;}
-  .tv-table{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:16px 22px;min-width:260px;text-align:left;}
-  .tv-table-title{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--steel-300);margin-bottom:10px;}
-  .tv-table-row{display:flex;justify-content:space-between;gap:16px;padding:5px 0;font-size:13.5px;color:#fff;border-top:1px solid rgba(255,255,255,.07);}
-  .tv-table-row:first-child{border-top:none;}
-  .tv-table-row span:last-child{color:var(--amber-500);font-family:var(--font-mono);white-space:nowrap;}
-  .tv-table-empty{font-size:12.5px;color:var(--steel-300);padding:5px 0;}
-  .tv-bar-row{display:flex;align-items:center;gap:10px;padding:6px 0;}
-  .tv-bar-label{width:90px;font-size:12px;color:var(--steel-200);flex-shrink:0;text-align:right;}
-  .tv-bar-track{flex:1;background:rgba(255,255,255,.08);border-radius:4px;height:16px;overflow:hidden;}
-  .tv-bar-fill{height:100%;border-radius:4px;}
-  .tv-bar-val{width:52px;font-family:var(--font-mono);font-size:12px;color:#fff;flex-shrink:0;}
+  /* ---------- Station Display (rotating floor TV) — Executive Dashboard design ---------- */
+  body.tv-mode{background:#050b10;color:#fff;overflow-x:hidden;}
+  body.tv-mode .topbar{display:none;} body.tv-mode .wrap{max-width:none;padding:0;}
+  .tv-empty{min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;background:#050b10;}
+  .tv-card{min-height:100vh;box-sizing:border-box;padding:16px 18px 10px;background:radial-gradient(circle at 60% 5%,rgba(0,125,180,.06),transparent 30%),linear-gradient(135deg,#061018,#03080d);color:#fff;display:grid;grid-template-columns:185px minmax(0,1fr) 272px;grid-template-rows:auto auto auto auto auto;gap:10px 14px;align-content:start;text-align:left;}
+  .tv-left{grid-column:1;grid-row:1 / span 4;border-right:1px solid rgba(120,150,170,.18);padding:4px 16px 0 6px;min-width:0;}
+  .tv-station-label{font-size:13px;font-weight:800;color:#f5b313;text-transform:uppercase;letter-spacing:.7px;}.tv-station-value{font-family:var(--font-display);font-size:18px;font-weight:800;margin-top:3px;}.tv-machine{font-family:var(--font-display);font-size:48px;font-weight:800;letter-spacing:1px;line-height:.98;margin-top:12px;white-space:nowrap;}.tv-model{font-family:var(--font-display);font-size:19px;color:#f5b313;font-weight:800;margin-top:12px;}.tv-customer{font-size:12px;line-height:1.35;color:#d3dce3;text-transform:uppercase;margin-top:8px;max-width:160px;}.tv-side-rule{height:1px;background:rgba(120,150,170,.2);margin:17px 0 14px;}.tv-side-label{font-size:10px;color:#9cabb7;text-transform:uppercase;letter-spacing:.8px;margin-top:12px;}.tv-side-value{font-size:12px;font-weight:700;color:#fff;margin-top:4px;line-height:1.35;}.tv-details-btn{margin-top:18px;width:100%;border:1px solid rgba(130,160,180,.2);background:linear-gradient(180deg,#12202b,#0b151e);color:#fff;border-radius:7px;padding:10px 12px;font-size:11px;font-weight:700;cursor:pointer;}
+  .tv-hold-btn{margin-top:8px;width:100%;border:none;border-radius:7px;padding:11px 12px;font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;cursor:pointer;}
+  .tv-hold-btn.hold{background:#9b2727;color:#fff;}
+  .tv-hold-btn.resume{background:#1a7a3a;color:#fff;}
+  .tv-main-head{grid-column:2;grid-row:1;min-width:0;padding:4px 0 0;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;}.tv-current-label{font-size:12px;color:#a9b7c2;text-transform:uppercase;letter-spacing:1px;font-weight:700;}.tv-current-title{font-family:var(--font-display);font-size:30px;font-weight:800;line-height:1.1;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.tv-current-title .opno{color:#f5a800;}.tv-live-row{display:flex;align-items:center;gap:10px;margin-top:9px;font-size:12px;color:#d5dde4;}.tv-live-pill{border:1px solid #1688ff;background:rgba(0,115,255,.1);color:#1688ff;border-radius:5px;padding:6px 10px;font-weight:800;}.tv-status-banner{border-radius:10px;padding:12px 18px;text-align:center;min-width:215px;box-sizing:border-box;}.tv-status-banner.ontrack{background:rgba(39,184,76,.055);border:1px solid #11762b;}.tv-status-banner.atrisk{background:rgba(245,163,15,.055);border:1px solid #9a6c0b;}.tv-status-banner.delayed{background:rgba(239,68,68,.055);border:1px solid #9b2727;}.tv-status-banner .label{font-size:11px;letter-spacing:.8px;color:#a9b7c2;text-transform:uppercase;font-weight:800;}.tv-status-banner .value{font-family:var(--font-display);font-size:24px;font-weight:800;margin-top:5px;}.tv-status-banner.ontrack .value{color:#49d45c;}.tv-status-banner.atrisk .value{color:#f5b313;}.tv-status-banner.delayed .value{color:#ff4a42;}.tv-status-banner .status-sub{font-size:10px;line-height:1.25;margin-top:4px;color:#79e184;}
+  .tv-delivery{grid-column:3;grid-row:1 / span 2;border:1px solid rgba(100,145,170,.22);border-radius:9px;background:rgba(4,13,20,.55);padding:15px 18px;min-width:0;}.tv-panel-title{font-size:12px;text-transform:uppercase;letter-spacing:.8px;font-weight:800;color:#f4f7f9;}.tv-delivery-item{display:grid;grid-template-columns:36px 1fr;gap:8px;padding:14px 0;border-bottom:1px solid rgba(120,150,170,.15);}.tv-delivery-icon{font-size:25px;line-height:1;color:#e8f0f5;text-align:center;}.tv-delivery-label{font-size:10px;color:#9cabb7;text-transform:uppercase;letter-spacing:.5px;}.tv-delivery-value{font-family:var(--font-display);font-size:22px;font-weight:800;margin-top:4px;}.tv-delivery-value.good{color:#49d45c;}.tv-comfort{padding-top:12px;}.tv-comfort-label{font-size:10px;color:#9cabb7;text-transform:uppercase;letter-spacing:.5px;}.tv-comfort-track{height:9px;background:#1b2831;border-radius:999px;margin-top:7px;overflow:hidden;}.tv-comfort-fill{height:100%;background:linear-gradient(90deg,#40cf4d,#53dc64);border-radius:999px;}.tv-comfort-status{text-align:center;color:#49d45c;font-size:11px;font-weight:800;margin-top:7px;text-transform:uppercase;}
+  .tv-metrics{grid-column:2;grid-row:2;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:0;}.tv-metric{background:linear-gradient(180deg,rgba(11,24,34,.9),rgba(4,13,19,.92));border:1px solid rgba(90,130,150,.22);border-radius:7px;padding:11px 12px;min-width:0;box-sizing:border-box;}.tv-metric::before{content:'';display:block;width:20px;height:3px;border-radius:4px;background:#178cff;margin-bottom:7px;}.tv-metric:nth-child(3)::before{background:#32d34b;}.tv-metric:nth-child(4)::before{background:#f5a800;}.tv-metric:nth-child(5)::before{background:#ff4139;}.tv-metric:nth-child(6)::before{background:#f5a800;}.tv-metric-num{font-family:var(--font-display);font-size:26px;font-weight:800;white-space:nowrap;}.tv-metric.highlight .tv-metric-num{color:#f5a800;}.tv-metric.warn .tv-metric-num{color:#ff4a42;}.tv-metric-lbl{font-size:9px;text-transform:uppercase;color:#9cabb7;letter-spacing:.7px;margin-top:3px;}
+  .tv-progress-panel{grid-column:2;grid-row:3;border:1px solid rgba(90,130,150,.22);border-radius:8px;background:rgba(4,13,19,.62);padding:12px 16px 8px;min-width:0;}.tv-progress-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}.tv-progress-head .title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;}.tv-progress-head .count{color:#9cabb7;font-weight:500;}.tv-progress-summary{display:flex;gap:16px;justify-content:flex-end;font-size:10px;color:#b9c4cc;flex-wrap:wrap;}.tv-progress-summary span{white-space:nowrap;}.tv-progress-track{display:flex;align-items:center;gap:0;margin-top:14px;overflow:hidden;padding:2px 4px 7px;}.tv-op-node{position:relative;display:flex;align-items:center;flex:1;min-width:24px;}.tv-op-node::after{content:'';height:2px;background:#41515e;position:absolute;left:50%;right:-50%;top:15px;z-index:0;}.tv-op-node:last-child::after{display:none;}.tv-op-node.done::after{background:#24a73d;}.tv-op-dot{position:relative;z-index:1;width:29px;height:29px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-family:var(--font-mono);font-weight:800;box-sizing:border-box;margin:auto;background:#08141d;color:#8b9aa6;border:1px solid #526372;}.tv-op-dot.done{background:#239c3b;color:#fff;border-color:#239c3b;box-shadow:0 0 8px rgba(35,156,59,.25);}.tv-op-dot.current{width:40px;height:40px;margin:-5px auto;background:#0a263e;border:2px solid #1688ff;color:#fff;font-size:10px;box-shadow:0 0 0 3px rgba(22,136,255,.12),0 0 16px rgba(22,136,255,.45);}.tv-op-dot.pending{background:#08131b;border-color:#465866;color:#b4c0c8;}.tv-op-no{position:absolute;top:34px;left:50%;transform:translateX(-50%);font-family:var(--font-mono);font-size:8px;color:#7f8f9b;white-space:nowrap;}.tv-op-node.done .tv-op-no{color:#d5e1d8;}.tv-op-node.current .tv-op-no{color:#1688ff;font-weight:800;}.tv-progress-legend{display:flex;justify-content:center;gap:80px;margin-top:16px;font-size:10px;color:#aab6be;text-transform:uppercase;}.tv-progress-legend .done{color:#32d34b;}.tv-progress-legend .current{color:#1688ff;}.tv-progress-legend .pending{color:#8c9aa6;}
+  .tv-issue{grid-column:3;grid-row:3 / span 2;border:1px solid #8f2828;border-radius:8px;background:linear-gradient(180deg,rgba(35,7,8,.36),rgba(7,10,13,.7));padding:14px 16px;min-width:0;}.tv-issue-title{color:#ff4a42;font-size:12px;text-transform:uppercase;letter-spacing:.7px;font-weight:800;}.tv-issue-main{display:flex;align-items:center;gap:10px;margin:14px 0 16px;color:#ff4a42;font-family:var(--font-display);font-size:18px;font-weight:800;}.tv-issue-icon{font-size:22px;}.tv-issue-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 16px;}.tv-issue-item.full{grid-column:1/-1;}.tv-issue-label{font-size:9px;color:#9cabb7;text-transform:uppercase;letter-spacing:.6px;}.tv-issue-value{font-size:11px;color:#fff;font-weight:700;margin-top:4px;line-height:1.35;}.tv-issue-value.big{font-family:var(--font-display);font-size:23px;text-align:right;}
+  .tv-current-op{grid-column:2;grid-row:4;background:rgba(5,17,25,.85);border:1px solid rgba(90,130,150,.24);border-radius:8px;padding:13px 18px;margin:0;max-width:none;width:auto;text-align:left;display:grid;grid-template-columns:minmax(240px,1.8fr) repeat(2,minmax(90px,.7fr)) 110px 1.1fr;gap:12px;align-items:center;}.tv-current-op .op-main{min-width:0;}.tv-current-op .op-kicker{font-size:10px;color:#9cabb7;text-transform:uppercase;letter-spacing:.7px;}.tv-current-op .op-title{font-family:var(--font-display);font-size:18px;font-weight:800;color:#fff;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.tv-current-op .op-desc{font-size:11px;color:#c3cdd4;margin-top:5px;line-height:1.3;}.tv-current-op .op-stat{border-left:1px solid rgba(110,145,160,.18);padding-left:14px;font-size:9px;color:#9cabb7;text-transform:uppercase;letter-spacing:.5px;}.tv-current-op .op-stat b{display:block;font-family:var(--font-display);font-size:17px;color:#fff;margin-top:5px;}.tv-current-op .op-progress{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:4px;background:conic-gradient(#1688ff var(--pct),#263640 0);position:relative;font-family:var(--font-mono);font-size:11px;font-weight:800;}.tv-current-op .op-progress::after{content:'';position:absolute;inset:6px;border-radius:50%;background:#07131c;}.tv-current-op .op-progress span{position:relative;z-index:1;}.tv-assigned{border-left:1px solid rgba(110,145,160,.18);padding-left:14px;min-width:0;}.tv-assigned .label{font-size:9px;color:#9cabb7;text-transform:uppercase;}.tv-assigned .value{font-size:12px;font-weight:800;color:#fff;margin-top:5px;}.tv-assigned .sub{font-size:10px;color:#b7c3cb;margin-top:3px;}
+  .tv-bottom{grid-column:1 / -1;grid-row:5;display:grid;grid-template-columns:1fr 1.08fr 1.35fr;gap:10px;min-width:0;}.tv-panel{border:1px solid rgba(90,130,150,.22);border-radius:8px;background:rgba(4,13,19,.62);padding:13px 16px;min-width:0;box-sizing:border-box;}.tv-panel .tv-panel-title{margin-bottom:12px;}.tv-bar-row{display:flex;align-items:center;gap:9px;padding:5px 0;}.tv-bar-label{width:64px;font-size:10px;color:#d2dbe1;flex-shrink:0;text-align:left;}.tv-bar-track{flex:1;background:#101c24;border-radius:2px;height:13px;overflow:hidden;}.tv-bar-fill{height:100%;border-radius:2px;}.tv-bar-val{width:48px;font-family:var(--font-mono);font-size:10px;color:#e7edf1;flex-shrink:0;text-align:right;}.tv-total-delay{text-align:center;margin-top:12px;font-size:10px;color:#c4cdd3;text-transform:uppercase;letter-spacing:.5px;}.tv-total-delay b{color:#ff4a42;font-size:14px;font-family:var(--font-mono);margin-left:5px;}.tv-reasons{display:grid;grid-template-columns:145px 1fr;gap:14px;align-items:center;}.tv-donut{width:120px;height:120px;border-radius:50%;margin:auto;position:relative;}.tv-donut::after{content:'';position:absolute;inset:25px;border-radius:50%;background:#07131b;border:1px solid rgba(100,145,170,.15);}.tv-donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1;font-family:var(--font-display);font-weight:800;font-size:19px;}.tv-donut-center span{font-family:var(--font-body);font-size:8px;color:#9cabb7;text-transform:uppercase;margin-top:2px;}.tv-reason-list{display:flex;flex-direction:column;gap:8px;}.tv-reason{display:grid;grid-template-columns:10px 1fr auto;gap:6px;align-items:start;font-size:9.5px;color:#d3dce2;line-height:1.25;}.tv-reason-dot{width:8px;height:8px;border-radius:50%;margin-top:2px;}.tv-reason-val{text-align:right;font-family:var(--font-mono);white-space:nowrap;font-size:10px;color:#fff;}.tv-reason-val small{display:block;color:#9cabb7;font-family:var(--font-body);font-size:8px;margin-top:1px;}.tv-events{max-height:180px;overflow:hidden;text-align:left;}.tv-event-row{display:grid;grid-template-columns:52px 18px 70px 1fr 60px;gap:7px;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.07);font-size:10px;}.tv-event-row:first-child{border-top:none;}.tv-event-time{color:#d8e0e5;font-family:var(--font-mono);font-size:9px;}.tv-event-status{font-weight:800;text-transform:uppercase;font-size:9px;}.tv-event-status.delay{color:#ff4a42;}.tv-event-status.started{color:#39a0ff;}.tv-event-status.completed{color:#49d45c;}.tv-event-desc{color:#d3dce2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.tv-event-dept{color:#aebbc4;text-transform:uppercase;font-size:8px;}.tv-event-hours{text-align:right;font-family:var(--font-mono);color:#fff;}.tv-event-hours.delay{color:#ff4a42;font-weight:800;}.tv-view-all{text-align:center;color:#1688ff;font-size:10px;font-weight:800;margin-top:8px;text-transform:uppercase;}.tv-footer{grid-column:1/-1;font-size:9px;color:#9cabb7;border-top:1px solid rgba(100,145,170,.15);padding:8px 0 0;}
+  @media(max-width:1050px){.tv-card{grid-template-columns:150px minmax(0,1fr);}.tv-left{grid-row:1/span 7;}.tv-main-head{grid-column:2;grid-row:1;}.tv-delivery{grid-column:2;grid-row:2;}.tv-metrics{grid-column:2;grid-row:3;grid-template-columns:repeat(3,1fr);}.tv-progress-panel{grid-column:2;grid-row:4;}.tv-current-op{grid-column:2;grid-row:5;}.tv-issue{grid-column:2;grid-row:6;}.tv-bottom{grid-column:2;grid-row:7;grid-template-columns:1fr;}.tv-footer{grid-column:1/-1;}.tv-current-op{grid-template-columns:1fr 1fr 1fr;}.tv-assigned{border-left:none;padding-left:0;}}
+  @media(max-width:700px){.tv-card{display:block;padding:12px;}.tv-left{border-right:none;border-bottom:1px solid rgba(120,150,170,.18);padding:0 0 12px;margin-bottom:12px;}.tv-machine{font-size:42px;}.tv-main-head{display:block;}.tv-status-banner{margin-top:12px;}.tv-delivery,.tv-metrics,.tv-progress-panel,.tv-issue,.tv-current-op,.tv-bottom{margin-top:10px;}.tv-metrics{grid-template-columns:1fr 1fr;}.tv-current-op{display:block;}.tv-current-op .op-stat,.tv-assigned{border-left:none;border-top:1px solid rgba(110,145,160,.18);padding:9px 0 0;margin-top:9px;}.tv-reasons{grid-template-columns:1fr;}.tv-donut{margin-bottom:6px;}.tv-event-row{grid-template-columns:45px 14px 60px 1fr 48px;}.tv-current-title{font-size:24px;}.tv-progress-legend{gap:20px;}}
 
-  .tv-topbar{display:flex;justify-content:space-between;align-items:flex-start;width:100%;max-width:1300px;gap:20px;flex-wrap:wrap;}
-  .tv-status-banner{border-radius:10px;padding:12px 24px;text-align:center;min-width:200px;}
-  .tv-status-banner.ontrack{background:rgba(63,143,99,.14);border:1.5px solid var(--green-600);}
-  .tv-status-banner.atrisk{background:rgba(224,163,0,.14);border:1.5px solid var(--amber-signal);}
-  .tv-status-banner.delayed{background:rgba(192,57,43,.14);border:1.5px solid var(--red-600);}
-  .tv-status-banner .label{font-size:10.5px;letter-spacing:1.5px;color:var(--steel-300);text-transform:uppercase;}
-  .tv-status-banner .value{font-family:var(--font-display);font-size:20px;font-weight:700;margin-top:3px;}
-  .tv-status-banner.ontrack .value{color:var(--green-600);}
-  .tv-status-banner.atrisk .value{color:var(--amber-signal);}
-  .tv-status-banner.delayed .value{color:var(--red-600);}
+  /* rotation pause/resume — fixed at top of TV screen, independent of the per-station Hold button */
+  .tv-rotate-bar{position:fixed;top:12px;right:14px;z-index:500;}
+  .tv-rotate-pause-btn{border:none;border-radius:5px;padding:9px 16px;font-family:var(--font-body);font-weight:700;
+    font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;
+    background:rgba(255,255,255,.12);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+  .tv-rotate-pause-btn:hover{background:rgba(255,255,255,.2);}
+  .tv-rotate-pause-btn.paused{background:var(--amber-500);color:var(--graphite-950);}
 
-  .tv-progress-wrap{max-width:1100px;margin-top:30px;width:100%;}
-  .tv-progress-summary{display:flex;gap:18px;justify-content:center;font-size:11.5px;color:var(--steel-300);margin-bottom:12px;flex-wrap:wrap;}
-  .tv-progress-track{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;}
-  .tv-op-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:var(--font-mono);font-weight:700;}
-  .tv-op-dot.done{background:var(--green-600);color:#fff;}
-  .tv-op-dot.current{background:transparent;border:2.5px solid var(--amber-500);color:var(--amber-500);box-shadow:0 0 8px rgba(242,163,15,.5);}
-  .tv-op-dot.pending{background:rgba(255,255,255,.07);color:var(--steel-300);border:1px solid rgba(255,255,255,.14);}
 
-  .tv-current-op{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:16px 22px;margin-top:22px;max-width:640px;width:100%;text-align:left;}
-  .tv-current-op .op-title{font-family:var(--font-display);font-size:18px;font-weight:700;color:#fff;}
-  .tv-current-op .op-sub{font-size:11px;color:var(--steel-300);margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
-  .tv-current-op .op-stats{display:flex;gap:22px;margin-top:10px;flex-wrap:wrap;}
-  .tv-current-op .op-stat{font-size:12px;color:var(--steel-200);}
-  .tv-current-op .op-stat b{display:block;font-size:16px;color:#fff;font-family:var(--font-mono);}
-
-  .tv-events{max-height:230px;overflow-y:auto;text-align:left;}
-  .tv-event-row{display:flex;gap:10px;align-items:baseline;padding:5px 0;border-top:1px solid rgba(255,255,255,.07);font-size:12px;}
-  .tv-event-row:first-child{border-top:none;}
-  .tv-event-time{color:var(--steel-300);font-family:var(--font-mono);min-width:60px;font-size:10.5px;}
-  .tv-metrics{display:flex;gap:20px;margin-top:44px;flex-wrap:wrap;justify-content:center;}
-  .tv-metric{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:18px 26px;min-width:140px;}
-  .tv-metric-num{font-family:var(--font-display);font-size:min(6vw,38px);font-weight:700;}
-  .tv-metric.highlight .tv-metric-num{color:var(--amber-500);}
-  .tv-metric.warn .tv-metric-num{color:var(--red-600);}
-  .tv-metric-lbl{font-size:12px;text-transform:uppercase;color:var(--steel-300);letter-spacing:1px;margin-top:4px;}
-  .tv-empty{min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;background:var(--graphite-950);}
+  /* hold modal */
+  .tv-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;}
+  .tv-modal{background:var(--graphite-800);border:1px solid rgba(255,255,255,.12);border-radius:8px;max-width:420px;width:100%;padding:22px;color:#fff;}
+  .tv-modal h3{margin:0 0 14px;font-family:var(--font-display);font-size:16px;}
+  .tv-modal label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--steel-300);margin:12px 0 5px;font-weight:600;}
+  .tv-modal input,.tv-modal select,.tv-modal textarea{
+    width:100%;padding:11px;font-size:14px;border:1.5px solid rgba(255,255,255,.15);border-radius:4px;
+    background:rgba(255,255,255,.05);color:#fff;font-family:var(--font-body);}
+  .tv-modal textarea{min-height:64px;resize:vertical;}
+  .tv-modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .tv-modal-actions button{flex:1;padding:12px;border-radius:4px;border:none;font-weight:700;text-transform:uppercase;
+    font-size:12.5px;cursor:pointer;letter-spacing:.4px;}
+  .tv-modal-actions .cancel{background:rgba(255,255,255,.08);color:#fff;}
+  .tv-modal-actions .confirm{background:var(--red-600);color:#fff;}
+  .tv-modal-actions .confirm.resume{background:var(--green-600);}
 
   /* ---------- segmented status control (operator entry) ---------- */
   .seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px;}
@@ -339,7 +354,7 @@
   /* ---------- QR label sheet (printable — kept high-contrast/ink-light for shop printers) ---------- */
   .label-sheet{width:210mm;min-height:297mm;padding:10mm 6.5mm;display:grid;grid-template-columns:repeat(3,64mm);
     grid-auto-rows:34mm;column-gap:2.5mm;row-gap:0mm;background:#fff;}
-  .label{border:0.75pt solid #000;display:flex;align-items:center;padding:2mm;font-family:var(--font-body);overflow:hidden;}
+  .label{border:0.75pt solid #000;display:flex;align-items:center;padding:2mm 2mm 2mm 4mm;font-family:var(--font-body);overflow:hidden;}
   .label .qrbox{width:23mm;height:23mm;flex-shrink:0;}
   .label .info{padding-left:2mm;line-height:1.32;font-size:8pt;}
   .label .info b{font-family:var(--font-display);font-size:10pt;display:block;letter-spacing:.3px;}
@@ -376,7 +391,8 @@ function toast(msg, isErr){
   setTimeout(()=>t.remove(),2800);
 }
 function esc(s){ return (s||'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function lampClass(status){ return status==='Completed'?'green':status==='Partial'?'amber':status==='Hold'?'red':'grey'; }
+function lampClass(status){ return status==='Completed'?'green':status==='Partial'?'amber':status==='Hold'?'red':status==='Not Started'?'grey':'grey'; }
+function statusCss(status){ return (status||'').replace(/\s+/g,''); } // css-safe class name for statuses like "Not Started"
 
 // Reusable two-choice modal. Returns a promise resolving 'a' or 'b' depending which button was clicked.
 function showChoiceModal({title, body, choiceA, choiceB}){
@@ -420,7 +436,7 @@ function switchView(v){
 const params = new URLSearchParams(location.search);
 const scanToken = params.get('job');
 const tvDisplay = params.get('display') === 'tv';
-const tvInterval = parseInt(params.get('interval')) || 7; // seconds per station
+const tvInterval = parseInt(params.get('interval')) || 30; // seconds per station
 let view = 'dashboard';
 let session = null;
 
@@ -458,7 +474,7 @@ function setNav(){
   const bar=document.getElementById('navBar');
   if(tvDisplay || scanToken){ bar.innerHTML=''; return; }
   if(!session){ bar.innerHTML=''; return; }
-  const items=[['dashboard','Dashboard'],['issues','Delay / Issue Log'],['entries','Production Entries'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels']];
+  const items=[['dashboard','Dashboard'],['issues','Delay / Issue Log'],['entries','Production Entries'],['gantt','Gantt Chart'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels']];
   bar.innerHTML = items.map(([id,l])=>`<button data-v="${id}" class="${view===id?'active':''}">${l}</button>`).join('')
     + `<button id="logoutBtn" class="small">Log Out</button>`;
   bar.querySelectorAll('button[data-v]').forEach(b=> b.onclick=()=> switchView(b.dataset.v));
@@ -484,6 +500,7 @@ async function render(){
   if(view==='jobs') return renderJobsQr(app);
   if(view==='issues') return renderIssueLog(app);
   if(view==='entries') return renderProductionEntries(app);
+  if(view==='gantt') return renderGanttChart(app);
   return renderDashboard(app);
 }
 
@@ -624,9 +641,42 @@ async function renderResponsibilityMaster(){
 }
 
 /* ================= JOB DETAILS EDITOR (machine no, customer, dates) ================= */
-function openJobDetailsEditor(job, app){
+async function openJobDetailsEditor(job, app){
   const panel = document.getElementById('opsPanel');
   panel.style.display='block';
+  const { data: ops } = await sb.from('job_operations').select('std_hours, is_completed').eq('job_id', job.id);
+  const opList = ops || [];
+  const totalStdHours = opList.reduce((s,o)=> s + (parseFloat(o.std_hours)||0), 0);
+  const doneStdHours = opList.filter(o=>o.is_completed).reduce((s,o)=> s + (parseFloat(o.std_hours)||0), 0);
+  const remainingStdHours = Math.max(0, totalStdHours - doneStdHours);
+  const shiftCount = job.shift_count || 1;
+  const hoursPerShift = job.hours_per_shift || 7.5;
+
+  function renderCalc(){
+    const sc = parseFloat(document.getElementById('ed_shifts').value)||1;
+    const hs = parseFloat(document.getElementById('ed_hrsday').value)||7.5;
+    const startForTarget = job.actual_start_date || job.start_date;
+    const targetDate = startForTarget ? computeTargetDate(startForTarget, totalStdHours, sc, hs) : null;
+    const tomorrow = addDaysStr(new Date().toISOString().slice(0,10), 1);
+    const estDeliveryDate = remainingStdHours>0 ? computeTargetDate(tomorrow, remainingStdHours, sc, hs) : tomorrow;
+    const risk = deliveryRiskLevel(estDeliveryDate, job.delivery_date);
+    const riskLabel = risk==='green' ? '✓ ON / BEFORE SO DATE' : risk==='yellow' ? '⚠ LATE (WITHIN BUFFER)' : risk==='red' ? '✕ LATE (BEYOND BUFFER)' : '—';
+    const riskColor = risk==='green' ? 'var(--green-600)' : risk==='yellow' ? 'var(--amber-signal)' : risk==='red' ? 'var(--red-600)' : 'var(--steel-600)';
+    document.getElementById('calcOut').innerHTML = `
+      <div class="row3">
+        <div><label style="margin-top:0;">Assembly Target Date <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(gantt, ${totalStdHours.toFixed(1)}h total, from ${startForTarget?fmtDate(startForTarget):'—'})</span></label>
+          <div class="tv-plan-chip" style="background:var(--plate-50);border-color:var(--plate-100);color:var(--graphite-950);"><b style="color:var(--graphite-950);">${targetDate?fmtDate(targetDate):'Set a start date first'}</b></div>
+        </div>
+        <div><label style="margin-top:0;">Est. Delivery Date <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(from tomorrow, ${remainingStdHours.toFixed(1)}h remaining, assumes material available)</span></label>
+          <div class="tv-plan-chip" style="background:var(--plate-50);border-color:var(--plate-100);color:var(--graphite-950);"><b style="color:var(--graphite-950);">${fmtDate(estDeliveryDate)}</b></div>
+        </div>
+        <div><label style="margin-top:0;">Delivery Health</label>
+          <div class="tv-plan-chip" style="background:var(--plate-50);border-color:var(--plate-100);"><b style="color:${riskColor};">${riskLabel}</b></div>
+        </div>
+      </div>
+    `;
+  }
+
   panel.innerHTML = `
     <div class="panel-title">Edit Job Details — ${esc(job.machine_no)}</div>
     <div class="row3">
@@ -641,11 +691,21 @@ function openJobDetailsEditor(job, app){
     </div>
     <div class="row3">
       <div><label>Actual Start Date <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(fill once work actually begins)</span></label><input id="ed_actualstart" type="date" value="${job.actual_start_date||''}"></div>
-      <div><label>Shifts / Day</label><select id="ed_shifts"><option value="1" ${(job.shift_count||1)==1?'selected':''}>1</option><option value="2" ${job.shift_count==2?'selected':''}>2</option><option value="3" ${job.shift_count==3?'selected':''}>3</option></select></div>
-      <div><label>Hours / Shift</label><input id="ed_hrsday" type="number" step="0.5" value="${job.hours_per_shift ?? 8}"></div>
+      <div><label>Shift(s) / Day</label>
+        <select id="ed_shifts"><option value="1" ${shiftCount==1?'selected':''}>1</option><option value="2" ${shiftCount==2?'selected':''}>2</option><option value="3" ${shiftCount==3?'selected':''}>3</option></select>
+      </div>
+      <div><label>Hours / Shift</label><input id="ed_hrsday" type="number" step="0.5" min="0.5" value="${hoursPerShift}"></div>
+    </div>
+    <div class="panel" style="background:var(--plate-50);margin:10px 0 0;padding:14px 16px;">
+      <div class="panel-title" style="font-size:11px;border:none;padding:0;margin:0 0 8px;">Assembly Scheduling Calculator <span class="sub">Mon–Sat, Sunday off</span></div>
+      <div id="calcOut"></div>
     </div>
     <button class="btn amber" id="saveDetailsBtn">Save Details</button>
   `;
+  document.getElementById('ed_shifts').onchange = renderCalc;
+  document.getElementById('ed_hrsday').oninput = renderCalc;
+  renderCalc();
+
   document.getElementById('saveDetailsBtn').onclick = async ()=>{
     const machine_no = document.getElementById('ed_machine').value.trim().toUpperCase();
     const customer = document.getElementById('ed_customer').value.trim();
@@ -655,7 +715,7 @@ function openJobDetailsEditor(job, app){
     const delivery_date = document.getElementById('ed_delivery').value || null;
     const actual_start_date = document.getElementById('ed_actualstart').value || null;
     const shift_count = parseInt(document.getElementById('ed_shifts').value) || 1;
-    const hours_per_shift = parseFloat(document.getElementById('ed_hrsday').value) || 8;
+    const hours_per_shift = parseFloat(document.getElementById('ed_hrsday').value) || 7.5;
     if(!machine_no) return toast('Machine No. is required', true);
     const { error } = await sb.from('jobs').update({ machine_no, customer, station_no, start_date, planned_end_date, delivery_date, actual_start_date, shift_count, hours_per_shift }).eq('id', job.id);
     if(error) return toast(error.message, true);
@@ -836,8 +896,8 @@ async function renderNewJob(app){
       </div>
       <div class="row3">
         <div><label>Actual Start Date <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(fill once work actually begins)</span></label><input id="f_actualstart" type="date"></div>
-        <div><label>Shifts / Day</label><select id="f_shifts"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select></div>
-        <div><label>Hours / Shift</label><input id="f_hrsday" type="number" step="0.5" value="8"></div>
+        <div><label>Shift(s) / Day</label><select id="f_shifts"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select></div>
+        <div><label>Hours / Shift</label><input id="f_hrsday" type="number" step="0.5" min="0.5" value="7.5"></div>
       </div>
       <label>Station No. <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional — sets its position on the rotating floor display)</span></label>
       <input id="f_station" type="number" min="1" placeholder="e.g. 1" style="max-width:140px;">
@@ -878,7 +938,7 @@ async function renderNewJob(app){
     const delivery_date = document.getElementById('f_delivery').value || null;
     const actual_start_date = document.getElementById('f_actualstart').value || null;
     const shift_count = parseInt(document.getElementById('f_shifts').value) || 1;
-    const hours_per_shift = parseFloat(document.getElementById('f_hrsday').value) || 8;
+    const hours_per_shift = parseFloat(document.getElementById('f_hrsday').value) || 7.5;
     const station_no = document.getElementById('f_station').value ? parseInt(document.getElementById('f_station').value) : null;
     if(!machine_no || !model_id) { toast('Machine No. and Model are required', true); return; }
 
@@ -1088,6 +1148,9 @@ async function renderScan(app, token){
   const { data: resp } = await sb.from('responsibilities').select('*').order('name');
   const today = new Date().toISOString().slice(0,10);
 
+  const sortedOps = (ops||[]).slice().sort((a,b)=>a.sequence-b.sequence);
+  const suggestedOp = sortedOps.find(o=>!o.is_completed) || null;
+
   app.innerHTML = `
     <div class="nameplate"><span class="rv2"></span><span class="rv3"></span>
       <div class="np-row"><span>Machine No.</span><b>${esc(job.machine_no)}</b></div>
@@ -1097,9 +1160,9 @@ async function renderScan(app, token){
     <div class="panel">
       <div class="panel-title">Log Your Work</div>
       <label>Your Name</label><input id="s_name" name="operator_name" autocomplete="name" placeholder="Your name">
-      <label>Operation</label>
+      <label>Operation ${suggestedOp ? '<span style="color:var(--green-600);text-transform:none;font-weight:400;">(next operation pre-selected — change if different)</span>' : ''}</label>
       <select id="s_op"><option value="">— Select —</option>
-        ${(ops||[]).map(o=>`<option value="${o.id}">${o.is_completed?'✓ ':''}${esc(o.op_no)} — ${esc(o.description)}${o.execution_mode==='Parallel'?' [Parallel]':''} (${o.std_hours}h std)</option>`).join('')}
+        ${sortedOps.map(o=>`<option value="${o.id}" ${suggestedOp && o.id===suggestedOp.id?'selected':''}>${o.is_completed?'✓ ':''}${esc(o.op_no)} — ${esc(o.description)}${o.execution_mode==='Parallel'?' [Parallel]':''} (${o.std_hours}h std)</option>`).join('')}
       </select>
       ${ops && ops.some(o=>o.is_completed) ? '<div class="stat-line">✓ = already logged as Completed at least once</div>' : ''}
       ${(!ops || ops.length===0) ? '<div class="stat-line" style="color:var(--red-600);">No operations are set up for this job yet — tell your supervisor before submitting.</div>' : ''}
@@ -1115,9 +1178,10 @@ async function renderScan(app, token){
         <div></div>
       </div>
       <div class="row2" id="timeRow">
-        <div><label>Start Time</label><input id="s_start" type="time"></div>
-        <div><label>End Time</label><input id="s_end" type="time"></div>
+        <div><label>Start Time <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(defaults to shift start — edit if different)</span></label><input id="s_start" type="time" value="09:00"></div>
+        <div><label>End Time <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(defaults to shift end — edit if different)</span></label><input id="s_end" type="time" value="17:30"></div>
       </div>
+      <div class="stat-line" id="netHoursLine" style="margin-top:-6px;"></div>
       <div id="statusBlock">
         <label>Status</label>
         <div class="seg" id="statusSeg">
@@ -1130,6 +1194,10 @@ async function renderScan(app, token){
       <input type="hidden" id="s_workstarted" value="yes">
 
       <div id="delayFields" style="display:none;">
+        <div class="toggle-pair" id="noWorkStatusToggle" style="display:none;margin-bottom:6px;">
+          <button type="button" id="nwsNotStartedBtn">Not Yet Started</button>
+          <button type="button" class="on" id="nwsHoldBtn">Hold</button>
+        </div>
         <label id="issueLabel">Issue / Delay Reason</label>
         <textarea id="s_issue" placeholder="e.g. wheel head not received, partial material only…"></textarea>
         <div class="row2">
@@ -1159,17 +1227,26 @@ async function renderScan(app, token){
     const status = document.getElementById('s_status').value;
     if(workStarted === 'no'){
       document.getElementById('timeRow').style.display = 'none';
+      document.getElementById('netHoursLine').textContent = '';
       document.getElementById('statusBlock').style.display = 'none';
       document.getElementById('extraOpsSection').style.display = 'none';
       document.getElementById('delayFields').style.display = 'block';
-      document.getElementById('issueLabel').innerHTML = 'Issue / Delay Reason <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
-      document.getElementById('delayHrsLabel').innerHTML = 'Hours Lost <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
-      document.getElementById('respLabel').innerHTML = 'Responsibility <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
+      document.getElementById('noWorkStatusToggle').style.display = 'flex';
+      if(status === 'Not Started'){
+        document.getElementById('issueLabel').innerHTML = 'Reason <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional — why hasn\'t it started yet)</span>';
+        document.getElementById('delayHrsLabel').innerHTML = 'Hours Lost <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span>';
+        document.getElementById('respLabel').innerHTML = 'Responsibility <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span>';
+      } else {
+        document.getElementById('issueLabel').innerHTML = 'Issue / Delay Reason <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
+        document.getElementById('delayHrsLabel').innerHTML = 'Hours Lost <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
+        document.getElementById('respLabel').innerHTML = 'Responsibility <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
+      }
     } else {
       document.getElementById('timeRow').style.display = 'grid';
       document.getElementById('statusBlock').style.display = 'block';
       document.getElementById('extraOpsSection').style.display = 'block';
       document.getElementById('delayFields').style.display = 'block';
+      document.getElementById('noWorkStatusToggle').style.display = 'none';
       if(status === 'Hold'){
         document.getElementById('issueLabel').innerHTML = 'Issue / Delay Reason <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
         document.getElementById('delayHrsLabel').innerHTML = 'Delay Hours <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
@@ -1185,12 +1262,26 @@ async function renderScan(app, token){
   document.getElementById('workYesBtn').onclick = ()=>{
     workStarted='yes'; document.getElementById('s_workstarted').value='yes';
     document.getElementById('workYesBtn').classList.add('on'); document.getElementById('workNoBtn').classList.remove('on');
+    document.getElementById('s_status').value = 'Completed';
+    document.querySelectorAll('#statusSeg button').forEach(x=>x.classList.toggle('on', x.dataset.s==='Completed'));
     updateFieldVisibility();
+    refreshNetHours();
   };
   document.getElementById('workNoBtn').onclick = ()=>{
     workStarted='no'; document.getElementById('s_workstarted').value='no';
     document.getElementById('workNoBtn').classList.add('on'); document.getElementById('workYesBtn').classList.remove('on');
     document.getElementById('s_status').value = 'Hold';
+    document.getElementById('nwsHoldBtn').classList.add('on'); document.getElementById('nwsNotStartedBtn').classList.remove('on');
+    updateFieldVisibility();
+  };
+  document.getElementById('nwsNotStartedBtn').onclick = ()=>{
+    document.getElementById('s_status').value = 'Not Started';
+    document.getElementById('nwsNotStartedBtn').classList.add('on'); document.getElementById('nwsHoldBtn').classList.remove('on');
+    updateFieldVisibility();
+  };
+  document.getElementById('nwsHoldBtn').onclick = ()=>{
+    document.getElementById('s_status').value = 'Hold';
+    document.getElementById('nwsHoldBtn').classList.add('on'); document.getElementById('nwsNotStartedBtn').classList.remove('on');
     updateFieldVisibility();
   };
   document.querySelectorAll('#statusSeg button').forEach(b=>{
@@ -1203,10 +1294,27 @@ async function renderScan(app, token){
   });
   updateFieldVisibility();
 
+  function refreshNetHours(){
+    const startEl = document.getElementById('s_start'), endEl = document.getElementById('s_end'), lineEl = document.getElementById('netHoursLine');
+    if(!startEl || !endEl || !lineEl || workStarted==='no'){ if(lineEl) lineEl.textContent=''; return; }
+    const net = toHours(startEl.value, endEl.value);
+    lineEl.textContent = (startEl.value && endEl.value) ? `Net working time: ${net.toFixed(2)} h (fixed breaks deducted automatically)` : '';
+  }
+  document.getElementById('s_start').addEventListener('input', refreshNetHours);
+  document.getElementById('s_end').addEventListener('input', refreshNetHours);
+  refreshNetHours();
+
+  document.getElementById('addExtraBtn').onclick = ()=>{
+    const row = document.createElement('div');
+    row.className='row2'; row.style.marginTop='6px';
+    row.innerHTML = `<div><input placeholder="Operator name" class="extraName"></div><div><input placeholder="Hours" class="extraHours"></div>`;
+    document.getElementById('extraOps').appendChild(row);
+  };
+
   // Stage-skip guard: if the selected op has an earlier Series-mode op that isn't
   // marked complete yet, ask the operator whether they meant to log that one instead.
   const opSelect = document.getElementById('s_op');
-  let lastConfirmedOpId = '';
+  let lastConfirmedOpId = suggestedOp ? suggestedOp.id : '';
   opSelect.addEventListener('change', async ()=>{
     const selectedId = opSelect.value;
     if(!selectedId || selectedId === lastConfirmedOpId) return;
@@ -1229,13 +1337,6 @@ async function renderScan(app, token){
       lastConfirmedOpId = selectedId;
     }
   });
-
-  document.getElementById('addExtraBtn').onclick = ()=>{
-    const row = document.createElement('div');
-    row.className='row2'; row.style.marginTop='6px';
-    row.innerHTML = `<div><input placeholder="Operator name" class="extraName"></div><div><input placeholder="Hours" class="extraHours"></div>`;
-    document.getElementById('extraOps').appendChild(row);
-  };
   document.getElementById('s_submit').onclick = (e)=> withLock(e.target, 'Submitting…', async ()=>{
     const name=document.getElementById('s_name').value.trim();
     const op_id=document.getElementById('s_op').value;
@@ -1252,9 +1353,11 @@ async function renderScan(app, token){
     if(!date) { toast('Fill the activity date', true); return; }
 
     if(workStarted === 'no'){
-      if(!issue) { toast('Issue/Delay reason is required', true); return; }
-      if(!delayHrs) { toast('Enter hours lost', true); return; }
-      if(!resp) { toast('Select Responsibility', true); return; }
+      if(status === 'Hold'){
+        if(!issue) { toast('Issue/Delay reason is required', true); return; }
+        if(!delayHrs) { toast('Enter hours lost', true); return; }
+        if(!resp) { toast('Select Responsibility', true); return; }
+      }
     } else {
       if(!start||!end) { toast('Fill start and end time', true); return; }
       if(status==='Hold'){
@@ -1368,6 +1471,7 @@ async function openEntryEditor(entry, app){
     const delay_hours = delayHrsVal ? parseFloat(delayHrsVal) : null;
     const responsibility = document.getElementById('e_resp').value || null;
     if(!primary_operator || !activity_date || !job_operation_id) { toast('Name, date and operation are required', true); return; }
+    if((status==='Completed' || status==='Partial') && (!start_time || !end_time)) { toast('Start and End time are required for Completed/Partial status', true); return; }
     if(status==='Hold' && (!issue_reason || !delay_hours || !responsibility)) { toast('Hold requires reason, delay hours and responsibility', true); return; }
     const { error } = await sb.from('entries').update({
       job_id, job_operation_id, primary_operator, activity_date, start_time, end_time, status, issue_reason, delay_hours, responsibility
@@ -1407,6 +1511,7 @@ async function bulkAddEntries(rows, resultsEl){
     const op = opsFound && opsFound[0];
     if(!op){ results.push({...r, ok:false, reason:'Operation "'+r.op_no+'" not found on that machine\'s job'}); continue; }
     if(!['Completed','Partial','Hold'].includes(r.status)){ results.push({...r, ok:false, reason:'Status must be Completed, Partial, or Hold'}); continue; }
+    if((r.status==='Completed' || r.status==='Partial') && (!r.start || !r.end)){ results.push({...r, ok:false, reason:'Start and End time are required for Completed/Partial status'}); continue; }
     if(r.status==='Hold' && (!r.issue || !r.delayHrs || !r.resp)){ results.push({...r, ok:false, reason:'Hold requires issue, delay hours, responsibility'}); continue; }
     results.push({...r, ok:true, job_id:job.id, job_operation_id:op.id});
   }
@@ -1426,15 +1531,73 @@ async function bulkAddEntries(rows, resultsEl){
 }
 
 /* ================= EFFICIENCY / CHART HELPERS ================= */
-function toHours(start, end){
-  if(!start || !end) return 0;
-  const [sh,sm] = start.split(':').map(Number);
-  const [eh,em] = end.split(':').map(Number);
-  if(isNaN(sh)||isNaN(sm)||isNaN(eh)||isNaN(em)) return 0;
-  let mins = (eh*60+em) - (sh*60+sm);
-  if(mins < 0) mins += 24*60; // overnight shift
-  return mins/60;
+// Fixed daily breaks — used to compute NET working hours automatically from any start/end time.
+const SHIFT_BREAKS = [
+  ['09:00','09:15'], // tea break
+  ['11:00','11:15'], // tea break
+  ['13:00','13:30'], // lunch
+  ['15:00','15:30'], // tea break
+  ['17:15','17:30'], // closing / tea break
+];
+function timeToMins(t){
+  const [h,m] = (t||'').split(':').map(Number);
+  if(isNaN(h)||isNaN(m)) return null;
+  return h*60+m;
 }
+// Minutes of overlap between [aStart,aEnd) and [bStart,bEnd), all in same-day minute space.
+function overlapMins(aStart,aEnd,bStart,bEnd){
+  return Math.max(0, Math.min(aEnd,bEnd) - Math.max(aStart,bStart));
+}
+// Net working hours between a start/end clock time, automatically deducting any of the
+// fixed breaks (9:00-9:15, 11:00-11:15, 1:00-1:30, 3:00-3:30, 5:15-5:30) that fall inside the span.
+function toHours(start, end){
+  const sm = timeToMins(start), em0 = timeToMins(end);
+  if(sm===null || em0===null) return 0;
+  let em = em0;
+  if(em < sm) em += 24*60; // overnight shift
+  let grossMins = em - sm;
+  let breakMins = 0;
+  SHIFT_BREAKS.forEach(([bs,be])=>{
+    const bsM = timeToMins(bs), beM = timeToMins(be);
+    breakMins += overlapMins(sm, em, bsM, beM);
+    breakMins += overlapMins(sm, em, bsM+24*60, beM+24*60); // in case span crosses midnight into next day's breaks
+  });
+  return Math.max(0, (grossMins - breakMins) / 60);
+}
+/* ================= SCHEDULING ENGINE (Assembly Target Date / Est. Delivery Date) ================= */
+// Working-day calculator: given a start date, a daily capacity (shifts/day × hours/shift),
+// and a quantity of std hours still to complete, walks forward day by day — skipping Sundays —
+// until cumulative capacity meets the required hours, and returns that calendar date.
+function computeTargetDate(startDateStr, totalHours, shiftsPerDay, hoursPerShift){
+  if(!startDateStr || !totalHours || totalHours<=0) return startDateStr || null;
+  const dailyCapacity = Math.max(0.1, (parseFloat(shiftsPerDay)||1) * (parseFloat(hoursPerShift)||7.5));
+  let cum = 0;
+  let d = new Date(startDateStr + 'T00:00:00');
+  let guard = 0;
+  while(guard < 3650){
+    if(d.getDay() !== 0){ // Sunday = day off
+      cum += dailyCapacity;
+      if(cum >= totalHours - 1e-9) return d.toISOString().slice(0,10);
+    }
+    d.setDate(d.getDate()+1);
+    guard++;
+  }
+  return d.toISOString().slice(0,10);
+}
+function addDaysStr(dateStr, days){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate()+days);
+  return d.toISOString().slice(0,10);
+}
+// Green = on/before SO delivery date · Yellow = late but within a 3-day buffer · Red = beyond buffer
+function deliveryRiskLevel(estDateStr, soDateStr, bufferDays){
+  if(!estDateStr || !soDateStr) return null;
+  bufferDays = bufferDays==null ? 3 : bufferDays;
+  if(estDateStr <= soDateStr) return 'green';
+  if(estDateStr <= addDaysStr(soDateStr, bufferDays)) return 'yellow';
+  return 'red';
+}
+
 function applyDatePreset(preset, fromEl, toEl){
   const fmt = d => d.toISOString().slice(0,10);
   const today = new Date();
@@ -1448,9 +1611,207 @@ function applyDatePreset(preset, fromEl, toEl){
     fromEl.value = fmt(first); toEl.value = fmt(today);
   } else { fromEl.value=''; toEl.value=''; }
 }
-// Earned Hours method: a Completed operation earns its full Std Hours regardless of
+
+/* ================= GANTT CHART ================= */
+function isSundayStr(d){ return new Date(d+'T00:00:00').getDay()===0; }
+function dateRangeArray(startStr, endStr){
+  const arr=[]; let d=startStr, guard=0;
+  while(d<=endStr && guard<2000){ arr.push(d); d=addDaysStr(d,1); guard++; }
+  return arr;
+}
+// Bin-packs each operation's std hours into working days (Mon-Sat) at the job's daily capacity
+// (shifts/day × hours/shift). Small ops keep packing into the same day cell until that day's
+// capacity is used up; Parallel-flagged ops branch off and run concurrently with the preceding
+// Series op (own lane, same start day) rather than queuing sequentially behind it.
+function computeGanttPlan(ops, startDate, shiftCount, hoursPerShift){
+  const dailyCap = Math.max(0.1, (parseFloat(shiftCount)||1) * (parseFloat(hoursPerShift)||7.5));
+  function packOne(stdHours, cursorDate, cursorCap){
+    let cd = cursorDate, cap = cursorCap;
+    while(isSundayStr(cd)){ cd = addDaysStr(cd,1); cap = dailyCap; }
+    const opStart = cd;
+    let remaining = parseFloat(stdHours)||0;
+    const segs = [];
+    if(remaining <= 1e-9){
+      return { start:cd, end:cd, segs:[{date:cd,hours:0}], next:{date:cd, cap} };
+    }
+    while(remaining > 1e-9){
+      if(isSundayStr(cd)){ cd = addDaysStr(cd,1); cap = dailyCap; continue; }
+      if(cap <= 1e-9){ cd = addDaysStr(cd,1); cap = dailyCap; continue; }
+      const use = Math.min(cap, remaining);
+      segs.push({date:cd, hours:use});
+      cap -= use; remaining -= use;
+      if(remaining > 1e-9){ cd = addDaysStr(cd,1); cap = dailyCap; }
+    }
+    return { start:opStart, end:segs[segs.length-1].date, segs, next:{date:cd, cap} };
+  }
+  const schedule = {};
+  let cursor = { date:startDate, cap:dailyCap };
+  let i=0;
+  while(i < ops.length){
+    const op = ops[i];
+    if(op.execution_mode === 'Parallel'){
+      // orphan parallel op (no preceding series op) — fall back to sequential packing
+      const r = packOne(op.std_hours, cursor.date, cursor.cap);
+      schedule[op.id] = r; cursor = r.next; i++; continue;
+    }
+    const anchorState = { date:cursor.date, cap:cursor.cap };
+    const anchorResult = packOne(op.std_hours, anchorState.date, anchorState.cap);
+    schedule[op.id] = anchorResult;
+    let latestEnd = anchorResult.end;
+    let j = i+1, hadParallel = false;
+    while(j < ops.length && ops[j].execution_mode === 'Parallel'){
+      hadParallel = true;
+      const pr = packOne(ops[j].std_hours, anchorState.date, dailyCap); // own concurrent lane, fresh capacity
+      schedule[ops[j].id] = pr;
+      if(pr.end > latestEnd) latestEnd = pr.end;
+      j++;
+    }
+    cursor = hadParallel ? { date: addDaysStr(latestEnd,1), cap: dailyCap } : anchorResult.next;
+    i = j;
+  }
+  return schedule;
+}
+// Actual hours actually logged per operation per day (break-time aware), from entries.
+function computeGanttActual(entries){
+  const byOp = {};
+  (entries||[]).forEach(e=>{
+    if(!e.job_operation_id || !e.activity_date) return;
+    const hrs = (e.start_time && e.end_time) ? toHours(e.start_time, e.end_time) : 0;
+    if(hrs <= 0) return;
+    if(!byOp[e.job_operation_id]) byOp[e.job_operation_id] = {};
+    byOp[e.job_operation_id][e.activity_date] = (byOp[e.job_operation_id][e.activity_date]||0) + hrs;
+  });
+  const result = {};
+  Object.keys(byOp).forEach(opId=>{
+    const dates = Object.keys(byOp[opId]).sort();
+    result[opId] = { byDate: byOp[opId], start: dates[0], end: dates[dates.length-1] };
+  });
+  return result;
+}
+function renderGanttRow(op, rowNo, planSchedule, actualSchedule, days){
+  const plan = planSchedule[op.id];
+  const planDates = new Set((plan?plan.segs:[]).map(s=>s.date));
+  const actual = actualSchedule[op.id];
+  const actualDates = new Set(actual ? Object.keys(actual.byDate) : []);
+  const actualTotal = actual ? Object.values(actual.byDate).reduce((s,h)=>s+h,0) : 0;
+  const isMilestone = (parseFloat(op.std_hours)||0) === 0;
+  const hasActualCol = actualSchedule && Object.keys(actualSchedule).length >= 0; // always show column; blank if no mode
+  return `<tr class="${isMilestone?'gantt-milestone':''}">
+    <td class="gfrz gfrz-sno">${rowNo}</td>
+    <td class="gfrz gfrz-opno">${esc(op.op_no)}</td>
+    <td class="gfrz gfrz-group">${esc(op.group_name||'')}</td>
+    <td class="gfrz gfrz-desc">${op.is_completed?'<span class="status-tag Completed" style="margin-right:4px;">✓</span>':''}${esc(op.description)}${op.execution_mode==='Parallel'?' <span class="exec-pill Parallel" style="margin-left:4px;">Parallel</span>':''}</td>
+    <td class="gfrz gfrz-std">${(parseFloat(op.std_hours)||0).toFixed(1)}</td>
+    <td class="gfrz gfrz-act">${actualTotal>0 ? actualTotal.toFixed(1) : '—'}</td>
+    ${days.map(d=>{
+      const off = isSundayStr(d);
+      const hasPlan = planDates.has(d);
+      const hasActual = actualDates.has(d);
+      let inner = '';
+      if(actualSchedule && Object.keys(actualSchedule).length>=0 && (hasPlan || hasActual)){
+        // Plan v/s Actual mode is signalled by actualSchedule being populated (or explicitly passed {})
+      }
+      if(hasPlan) inner += `<div class="gbar plan ${isMilestone?'milestone':''} ${actual!==undefined?'half':''}" title="Plan: ${esc(op.op_no)} — ${fmtDate(d)}"></div>`;
+      if(actual!==undefined && hasActual) inner += `<div class="gbar actual half" title="Actual: ${(actual.byDate[d]||0).toFixed(1)}h on ${fmtDate(d)}"></div>`;
+      return `<td class="gday ${off?'off':''}">${inner}</td>`;
+    }).join('')}
+  </tr>`;
+}
+async function renderGanttChart(app){
+  const { data: jobs } = await sb.from('jobs').select('id, machine_no, customer, status, start_date, actual_start_date, delivery_date, shift_count, hours_per_shift, models(model_name)').eq('status','Active').order('machine_no');
+  app.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">Gantt Chart</div>
+      <div class="row3">
+        <div><label>Machine</label><select id="g_machine"><option value="">— Select a machine —</option>${(jobs||[]).map(j=>`<option value="${j.id}">${esc(j.machine_no)} — ${esc(j.customer||'')}</option>`).join('')}</select></div>
+        <div><label>View</label>
+          <div class="toggle-pair" id="g_modeToggle">
+            <button type="button" class="on" data-m="plan">Plan Only</button>
+            <button type="button" data-m="planactual">Plan v/s Actual</button>
+          </div>
+        </div>
+        <div><label>&nbsp;</label><div class="gantt-legend" id="g_legend" style="margin-top:12px;"></div></div>
+      </div>
+      <div id="ganttArea"></div>
+    </div>
+  `;
+  if(!jobs || jobs.length===0){ document.getElementById('ganttArea').innerHTML = '<div class="empty">No active jobs yet.</div>'; return; }
+
+  let mode = 'plan';
+  function paintLegend(){
+    document.getElementById('g_legend').innerHTML = mode==='planactual'
+      ? `<span><span class="sw plan"></span>Plan</span><span><span class="sw actual"></span>Actual</span>`
+      : `<span><span class="sw plan"></span>Plan</span>`;
+  }
+  paintLegend();
+  document.querySelectorAll('#g_modeToggle button').forEach(b=>{
+    b.onclick = ()=>{ mode=b.dataset.m; document.querySelectorAll('#g_modeToggle button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); paintLegend(); paintGantt(); };
+  });
+  document.getElementById('g_machine').onchange = paintGantt;
+
+  async function paintGantt(){
+    const jobId = document.getElementById('g_machine').value;
+    const area = document.getElementById('ganttArea');
+    if(!jobId){ area.innerHTML = '<div class="empty">Select a machine to view its Gantt chart.</div>'; return; }
+    area.innerHTML = '<div class="empty">Loading…</div>';
+    const job = jobs.find(j=>j.id===jobId);
+    const { data: opsRaw } = await sb.from('job_operations').select('*').eq('job_id', jobId).order('sequence');
+    const ops = opsRaw || [];
+    if(ops.length===0){ area.innerHTML = '<div class="empty">No operations set up for this job yet.</div>'; return; }
+    const startDate = job.actual_start_date || job.start_date;
+    if(!startDate){ area.innerHTML = '<div class="empty">Set a Planned or Actual Start Date on this job first (Jobs / QR Labels → Edit Details), then come back here.</div>'; return; }
+    const shiftCount = job.shift_count || 1;
+    const hoursPerShift = job.hours_per_shift || 7.5;
+    const totalStdHours = ops.reduce((s,o)=> s + (parseFloat(o.std_hours)||0), 0);
+    const targetDate = computeTargetDate(startDate, totalStdHours, shiftCount, hoursPerShift);
+
+    const planSchedule = computeGanttPlan(ops, startDate, shiftCount, hoursPerShift);
+    let actualSchedule = undefined;
+    let rangeEnd = targetDate;
+    if(mode === 'planactual'){
+      const { data: entriesRaw } = await sb.from('entries').select('job_operation_id, activity_date, start_time, end_time').eq('job_id', jobId);
+      actualSchedule = computeGanttActual(entriesRaw||[]);
+      Object.values(actualSchedule).forEach(r=>{ if(r.end && r.end > rangeEnd) rangeEnd = r.end; });
+    }
+    const days = dateRangeArray(startDate, rangeEnd);
+    const rows = ops.slice().reverse(); // last operation (highest sequence) at top, matching the shopfloor Excel sheet
+
+    area.innerHTML = `
+      <div class="gantt-meta">
+        <div><b>${esc(job.machine_no)}</b> — ${esc(job.customer||'')}${job.models?.model_name ? (' · '+esc(job.models.model_name)) : ''}</div>
+        <div class="gantt-meta-right">
+          <span>Start: ${fmtDate(startDate)}</span>
+          <span>SO Delivery: ${fmtDate(job.delivery_date)}</span>
+          <span>Target: ${fmtDate(targetDate)}</span>
+          <span>${shiftCount} shift × ${hoursPerShift}h/day</span>
+          <span>${totalStdHours.toFixed(1)}h total std</span>
+        </div>
+      </div>
+      <div class="gantt-scroll">
+        <table class="gantt-table">
+          <thead>
+            <tr>
+              <th class="gfrz gfrz-sno">S.No</th>
+              <th class="gfrz gfrz-opno">Op No</th>
+              <th class="gfrz gfrz-group">Group</th>
+              <th class="gfrz gfrz-desc">Description</th>
+              <th class="gfrz gfrz-std">Std<br>Time</th>
+              <th class="gfrz gfrz-act">Actual<br>Hrs</th>
+              ${days.map((d,i)=>`<th class="gday ${isSundayStr(d)?'off':''}" title="${fmtDate(d)}">${i+1}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((o,ri)=> renderGanttRow(o, ri+1, planSchedule, actualSchedule, days)).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+}
+// Cumulative Std Hours method: a Completed operation earns its full Std Hours regardless of
 // actual time taken; an operation not yet Completed earns exactly the actual hours
-// logged against it so far. Efficiency % = Earned Hours ÷ Actual Hours × 100.
+// logged against it so far (this running total is "Cumulative Std Hours").
+// Efficiency % = Cumulative Std Hours ÷ Machine Hours × 100.
 function computeEfficiency(filteredEntries, jobOpsAll, entryOpsByEntry, jobsById){
   const byJob = {};
   filteredEntries.forEach(e=>{ if(e.job_id) (byJob[e.job_id] = byJob[e.job_id] || []).push(e); });
@@ -1484,22 +1845,30 @@ function computeEfficiency(filteredEntries, jobOpsAll, entryOpsByEntry, jobsById
 }
 
 /* ================= DASHBOARD ================= */
-function rowsHtml(rows){
+function rowsHtml(rows, entryOpsByEntry){
+  entryOpsByEntry = entryOpsByEntry || {};
   if(rows.length===0) return `<tr><td class="empty">No entries match this filter.</td></tr>`;
-  return `<tr><th>Machine</th><th>Op</th><th>Operator</th><th>Date</th><th>Time</th><th>Status</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th><th></th></tr>
-    ${rows.map(e=>`<tr class="${e.status==='Hold'?'hold-row':''}">
+  return `<tr><th>Machine</th><th>Op</th><th>Operator</th><th>Date</th><th>Time</th><th>Status</th><th>Labor Hours</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th><th></th></tr>
+    ${rows.map(e=>{
+      const machineHrs = toHours(e.start_time, e.end_time);
+      const extraOps = entryOpsByEntry[e.id] || [];
+      const extraHrs = extraOps.reduce((s,x)=> s + (parseFloat(x.hours)||0), 0);
+      const manHrs = machineHrs + extraHrs;
+      const laborCell = e.start_time ? `${machineHrs.toFixed(1)}h machine<br><span style="color:var(--steel-600);font-size:11px;">${manHrs.toFixed(1)}h man${extraOps.length?' ('+(1+extraOps.length)+' ops)':''}</span>` : '—';
+      return `<tr class="${e.status==='Hold'?'hold-row':''}">
       <td><b>${esc(e.jobs?.machine_no)}</b><br><span style="color:var(--steel-600);font-size:11px;">${esc(e.jobs?.customer||'')}</span></td>
       <td class="mono">${esc(e.job_operations?.op_no)}<br><span style="color:var(--steel-600);font-size:11px;font-family:var(--font-body);">${esc(e.job_operations?.description)}</span></td>
       <td>${esc(e.primary_operator)}</td>
       <td class="mono">${esc(e.activity_date)}</td>
       <td class="mono">${e.start_time ? esc(e.start_time)+'–'+esc(e.end_time) : '<span style="color:var(--steel-600);">not worked</span>'}</td>
-      <td><span class="status-tag ${e.status}"><span class="lamp ${lampClass(e.status)}" style="width:8px;height:8px;"></span>${esc(e.status)}</span></td>
+      <td><span class="status-tag ${statusCss(e.status)}"><span class="lamp ${lampClass(e.status)}" style="width:8px;height:8px;"></span>${esc(e.status)}</span></td>
+      <td class="mono" style="font-size:11.5px;">${laborCell}</td>
       <td>${e.issue_reason ? '<span class="issue-flag">'+esc(e.issue_reason)+'</span>' : '—'}</td>
       <td class="mono">${e.delay_hours ?? '—'}</td>
       <td>${e.responsibility ? esc(e.responsibility) : '—'}</td>
       <td style="font-size:10.5px;color:var(--steel-600);" class="mono">${new Date(e.submitted_at).toLocaleString()}</td>
       <td><button class="btn ghost small entryEditBtn" data-id="${e.id}">Edit</button></td>
-    </tr>`).join('')}`;
+    </tr>`;}).join('')}`;
 }
 function wireEditButtons(container, entries, app){
   container.querySelectorAll('.entryEditBtn').forEach(b=>{
@@ -1696,7 +2065,7 @@ async function renderProductionEntries(app){
           <button data-p="today">Today</button><button data-p="week">This Week</button><button data-p="month">This Month</button><button data-p="custom" class="on">Custom</button>
         </div>
         <div class="mini-kpi-row" id="prodMiniKpis"></div>
-        <b style="font-size:12px;display:block;margin:10px 0 4px;">Efficiency by Machine <span style="font-weight:400;color:var(--steel-600);">— Earned Hours method</span></b>
+        <b style="font-size:12px;display:block;margin:10px 0 4px;">Efficiency by Machine <span style="font-weight:400;color:var(--steel-600);">— Cumulative Std Hours method</span></b>
         <div style="overflow-x:auto;"><table class="eff" id="effTable"></table></div>
       </div>
       <div class="stat-line">${(entries||[]).length} entries · approx. ${sizeLabel} · <button class="btn ghost small" id="exportBtn">Export to Excel</button> · <button class="btn ghost small" id="exportSummaryBtn">Export Summary Report</button></div>
@@ -1757,7 +2126,7 @@ async function renderProductionEntries(app){
 
     const effRows = computeEfficiency(rows, jobOpsAll||[], entryOpsByEntry, jobsById);
     lastEffRows = effRows;
-    document.getElementById('effTable').innerHTML = `<tr><th>Machine</th><th>Customer</th><th>Std Hrs</th><th>Actual Hrs</th><th>Labour Hrs</th><th>Earned Hrs</th><th>Eff %</th></tr>` +
+    document.getElementById('effTable').innerHTML = `<tr><th>Machine</th><th>Customer</th><th>Total Std Hrs</th><th>Machine Hrs</th><th>Man-Hrs</th><th>Cumulative Std Hrs</th><th>Eff %</th></tr>` +
       (effRows.length ? effRows.map(r=>`<tr>
         <td><b>${esc(r.machine_no)}</b></td><td>${esc(r.customer||'')}</td>
         <td class="mono">${r.stdHours.toFixed(1)}</td><td class="mono">${r.actualHours.toFixed(1)}</td>
@@ -1766,7 +2135,7 @@ async function renderProductionEntries(app){
       </tr>`).join('') : `<tr><td class="empty" colspan="7">No data for current filters.</td></tr>`);
 
     const table = document.getElementById('entryTable');
-    table.innerHTML = rowsHtml(rows);
+    table.innerHTML = rowsHtml(rows, entryOpsByEntry);
     wireEditButtons(table, entries, app);
   }
   paint();
@@ -1803,8 +2172,8 @@ async function renderProductionEntries(app){
     ]), 'Overview');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastEffRows.map(r=>({
       Machine:r.machine_no, Customer:r.customer, Model:r.model_name,
-      StdHours:r.stdHours.toFixed(1), ActualHours:r.actualHours.toFixed(1), LabourHours:r.actualLabourHours.toFixed(1),
-      EarnedHours:r.earnedHours.toFixed(1), EfficiencyPct: r.effPct===null?'':r.effPct.toFixed(1)
+      TotalStdHours:r.stdHours.toFixed(1), MachineHours:r.actualHours.toFixed(1), ManHours:r.actualLabourHours.toFixed(1),
+      CumulativeStdHours:r.earnedHours.toFixed(1), EfficiencyPct: r.effPct===null?'':r.effPct.toFixed(1)
     }))), 'Efficiency by Machine');
     const respMap={}; (issueEntriesFull||[]).forEach(e=>{ if(e.responsibility) respMap[e.responsibility]=(respMap[e.responsibility]||0)+(parseFloat(e.delay_hours)||0); });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(respMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({Responsibility:k, DelayHours:v.toFixed(1)}))), 'Delay by Responsibility');
@@ -1829,7 +2198,7 @@ async function renderProductionEntries(app){
 }
 
 /* ================= STATION DISPLAY (rotating floor TV — public, no login) ================= */
-let tvRotateTimer=null, tvRefreshTimer=null, tvStations=[], tvIndex=0;
+let tvRotateTimer=null, tvRefreshTimer=null, tvStations=[], tvIndex=0, tvResponsibilities=null, tvPaused=false;
 
 async function fetchStations(){
   const { data, error } = await sb.rpc('get_station_summary');
@@ -1841,169 +2210,224 @@ function fmtDate(d){
   const dt = new Date(d + 'T00:00:00');
   return dt.toLocaleDateString('en-GB', {day:'2-digit', month:'short'});
 }
-function addDaysStr(dateStr, days){
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate()+days);
-  return d.toISOString().slice(0,10);
+function fmtClock(ts){
+  if(!ts) return '—';
+  return new Date(ts).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
 }
-// Working-day projection: from a start date, walks forward (skipping Sundays) accumulating
-// daily shift capacity until it covers the remaining hours, and returns that calendar date.
-function computeTargetDate(startDateStr, totalHours, shiftsPerDay, hoursPerShift){
-  if(!startDateStr) return null;
-  if(!totalHours || totalHours<=0) return startDateStr;
-  const dailyCapacity = Math.max(0.1, (parseFloat(shiftsPerDay)||1) * (parseFloat(hoursPerShift)||8));
-  let cum = 0;
-  let d = new Date(startDateStr + 'T00:00:00');
-  let guard = 0;
-  while(guard < 3650){
-    if(d.getDay() !== 0){ cum += dailyCapacity; if(cum >= totalHours - 1e-9) return d.toISOString().slice(0,10); }
-    d.setDate(d.getDate()+1);
-    guard++;
-  }
-  return d.toISOString().slice(0,10);
+function fmtDateTime(ts){
+  if(!ts) return '—';
+  const dt = new Date(ts);
+  return dt.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}) + ' | ' + fmtClock(ts);
 }
-// ontrack = finishing on/before SO date · atrisk = late but within a 3-day buffer · delayed = beyond that
-function deliveryRiskLevel(estDateStr, soDateStr, bufferDays){
-  if(!estDateStr || !soDateStr) return null;
-  if(estDateStr <= soDateStr) return 'ontrack';
-  if(estDateStr <= addDaysStr(soDateStr, bufferDays)) return 'atrisk';
-  return 'delayed';
+function hoursSince(ts){
+  if(!ts) return 0;
+  return Math.max(0, (Date.now() - new Date(ts).getTime()) / 3600000);
 }
+function statusKey(s){ return s==='In Progress' ? 'InProgress' : s; } // css-safe class
+
+const TV_DEPT_COLORS = ['#ef3f39','#d84c35','#f5a800','#46c957','#607f99'];
+const TV_REASON_COLORS = ['#ef3f39','#ef7a21','#f5a800','#46c957','#607f99'];
 function relTime(iso){
   const diffMin = Math.round((Date.now() - new Date(iso).getTime())/60000);
   if(diffMin < 60) return diffMin+'m ago';
   if(diffMin < 1440) return Math.round(diffMin/60)+'h ago';
   return Math.round(diffMin/1440)+'d ago';
 }
-const TV_DEPT_COLORS = ['#f2a30f','#57687a','#c0392b','#3f8f63','#8f6b9e','#4a90a4'];
 
 async function renderStationCard(app, s, idx, total){
-  if(!s){
-    app.innerHTML = `<div class="tv-empty">No active stations right now.</div>`;
-    return;
-  }
-  const lamp = lampClass(s.latest_status);
-  const todayStr = new Date().toISOString().slice(0,10);
-  const isOverdue = s.delivery_date && s.delivery_date < todayStr;
+  if(!s){ app.innerHTML = '<div class="tv-empty">No active stations right now.</div>'; return; }
 
-  const [deptRes, progressRes, eventsRes] = await Promise.all([
-    sb.rpc('get_job_dept_delays', { p_job_id: s.job_id }),
-    sb.rpc('get_job_operations_progress', { p_job_id: s.job_id }),
-    sb.rpc('get_job_recent_events', { p_job_id: s.job_id, p_limit: 8 })
+  const [deptRes, progressRes, eventsRes, projRes] = await Promise.all([
+    sb.rpc('get_job_dept_delays', {p_job_id: s.job_id}),
+    sb.rpc('get_job_operations_progress', {p_job_id: s.job_id}),
+    sb.rpc('get_job_recent_events', {p_job_id: s.job_id, p_limit: 6}),
+    sb.rpc('get_job_delivery_projection', {p_job_id: s.job_id})
   ]);
-  const deptDelays = deptRes.data || [];
-  const ops = progressRes.data || [];
-  const events = eventsRes.data || [];
+  const deptDelays = deptRes.data || [], ops = progressRes.data || [], events = eventsRes.data || [];
+  const projection = (projRes.data || [])[0] || null;
 
   const doneCt = ops.filter(o=>o.is_completed).length;
-  const currentCt = s.current_op_no ? ops.filter(o=>o.op_no===s.current_op_no).length : 0;
-  const pendingCt = ops.length - doneCt - currentCt;
+  const currentCt = s.current_op_no && ops.some(o=>o.op_no===s.current_op_no && !o.is_completed) ? 1 : 0;
+  const isOnHold = s.latest_status === 'Hold';
+  const holdCt = isOnHold ? 1 : 0;
+  const pendingCt = Math.max(0, ops.length - doneCt - currentCt - holdCt);
 
-  const remainingHours = Math.max(0, (s.std_hours||0) - (s.earned_hours||0));
-  const estDate = computeTargetDate(todayStr, remainingHours, s.shift_count, s.hours_per_shift);
-  const risk = deliveryRiskLevel(estDate, s.delivery_date, 3);
+  const remainingHours = projection ? Number(projection.remaining_hours||0) : Math.max(0, (s.std_hours||0) - (s.earned_hours||0));
+  const estDate = projection?.estimated_delivery || null;
+  const risk = projection?.delivery_status==='COMFORTABLE' ? 'ontrack' : projection?.delivery_status==='AT RISK' ? 'atrisk' : projection?.delivery_status==='DELAYED' ? 'delayed' : '';
   const riskLabel = risk==='ontrack' ? 'ON TRACK' : risk==='atrisk' ? 'AT RISK' : risk==='delayed' ? 'DELAYED' : 'STATUS UNKNOWN';
-  const riskClass = risk || '';
+  const bufferDays = projection?.buffer_days!=null ? Number(projection.buffer_days) : null;
+  const comfortPct = bufferDays===null ? 20 : Math.max(8, Math.min(100, Math.round((bufferDays/7)*100)));
+  const opProgressPct = s.current_op_std_hours>0 ? Math.min(100, Math.round((s.current_op_actual_hours||0)/s.current_op_std_hours*100)) : 0;
 
-  const opProgressPct = (s.current_op_std_hours && s.current_op_std_hours>0)
-    ? Math.min(100, Math.round((s.current_op_actual_hours||0)/s.current_op_std_hours*100)) : 0;
+  // most recent Hold event on this job — used for the on-hold duration shown in the Hold modal
+  const holdStartEvent = events.find(e=>e.status==='Hold') || null;
+  const holdHrs = isOnHold && holdStartEvent ? hoursSince(holdStartEvent.submitted_at) : 0;
 
+  const delayEntries = deptDelays; // department rows already carry total_hours; reason breakdown comes from events/issue_reason below
+  const latestDelayEvent = events.find(e=>Number(e.delay_hours||0)>0) || null;
+  const mainReason = latestDelayEvent?.issue_reason || (s.delay_hours_total>0 ? 'No specific reason recorded' : 'No active issue');
+  const responsibility = latestDelayEvent?.responsibility || deptDelays[0]?.responsibility || 'Not assigned';
+
+  const reasonMap = {};
+  events.forEach(e=>{ if(Number(e.delay_hours||0)>0){ const k=(e.issue_reason||'Reason not specified').trim(); reasonMap[k]=(reasonMap[k]||0)+Number(e.delay_hours||0); } });
+  const reasonRows = Object.entries(reasonMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const reasonTotal = reasonRows.reduce((a,[,v])=>a+v, 0) || (s.delay_hours_total||0);
+  let rp = 0;
+  const donutStops = reasonRows.map(([,v],i)=>{ const st = reasonTotal ? rp/reasonTotal*100 : 0; rp += v; const en = reasonTotal ? rp/reasonTotal*100 : 0; return `${TV_REASON_COLORS[i]} ${st.toFixed(1)}% ${en.toFixed(1)}%`; });
+  const donutBg = donutStops.length ? `conic-gradient(${donutStops.join(',')})` : '#263640';
   const maxDept = Math.max(1, ...deptDelays.map(d=>Number(d.total_hours)||0));
 
+  const fmtDateFull = d => d ? new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+  const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
+  const eventClass = st => st==='Completed' ? 'completed' : (st==='Hold' ? 'delay' : 'started');
+  const eventText = st => st==='Completed' ? 'COMPLETED' : st==='Hold' ? 'DELAY' : st==='Partial' ? 'STARTED' : (st||'UPDATE').toUpperCase();
+
   app.innerHTML = `
-    <div class="tv-card">
-      <div class="tv-topbar">
-        <div class="tv-id" style="text-align:left;">
-          <div class="tv-station-no">STATION ${s.station_no ?? '—'}<span class="tv-progress">${idx+1} / ${total}</span></div>
-          <div class="tv-machine" style="font-size:min(9vw,56px);">${esc(s.machine_no)}</div>
-          <div class="tv-sub">${esc(s.customer||'')} · ${esc(s.model_name||'')}</div>
-          <div class="tv-status" style="justify-content:flex-start;"><span class="lamp ${lamp}" style="width:18px;height:18px;"></span> ${esc(s.latest_status)}</div>
-        </div>
-        <div class="tv-status-banner ${riskClass}">
-          <div class="label">Overall Status</div>
-          <div class="value">${riskLabel}</div>
-        </div>
-      </div>
+  <div class="tv-card">
+    <aside class="tv-left">
+      <div class="tv-station-label">STATION</div><div class="tv-station-value">${s.station_no ?? '—'} / ${total||'—'}</div>
+      <div class="tv-machine">${esc(s.machine_no)}</div><div class="tv-model">${esc(s.model_name||'')}</div><div class="tv-customer">${esc(s.customer||'')}</div>
+      <div class="tv-side-rule"></div><div class="tv-side-label">LAST UPDATED</div><div class="tv-side-value">${events[0]?.submitted_at ? fmtDateFull(events[0].submitted_at.slice(0,10))+' | '+fmtTime(events[0].submitted_at) : 'No entries yet'}</div>
+      ${s.current_op_no ? `<button class="tv-hold-btn ${isOnHold?'resume':'hold'}" id="tvHoldBtn">${isOnHold?'▶ RESUME':'⏸ HOLD'}</button>` : ''}
+    </aside>
 
-      <div class="tv-plan">
-        <div class="tv-plan-chip">PLANNED START<b>${fmtDate(s.planned_start_date)}</b></div>
-        <div class="tv-plan-chip">ACTUAL START<b>${fmtDate(s.actual_start_date)}</b></div>
-        <div class="tv-plan-chip ${isOverdue?'late':''}">SO DELIVERY<b>${fmtDate(s.delivery_date)}${isOverdue?' (OVERDUE)':''}</b></div>
-        <div class="tv-plan-chip ${risk==='delayed'?'late':''}">EST. COMPLETION<b>${fmtDate(estDate)}</b></div>
-      </div>
+    <section class="tv-main-head">
+      <div style="min-width:0;flex:1;"><div class="tv-current-label">CURRENT OPERATION</div><div class="tv-current-title"><span class="opno">${esc(s.current_op_no||'—')}</span> — ${esc(s.current_op_description||'No active operation')}</div>
+      <div class="tv-live-row"><span class="tv-live-pill">◆ ${isOnHold?'ON HOLD':(s.latest_status==='Completed'?'COMPLETED':'IN PROGRESS')}</span><span>${s.current_op_actual_hours>0?'Active operation':'Awaiting confirmation'}</span></div></div>
+      <div class="tv-status-banner ${risk}"><div class="label">OVERALL STATUS</div><div class="value">${riskLabel}</div><div class="status-sub">${risk==='ontrack'?'We are comfortably meeting the target delivery.':risk==='atrisk'?'Delivery needs close monitoring.':risk==='delayed'?'Delivery is at risk based on current projection.':''}</div></div>
+    </section>
 
-      <div class="tv-metrics">
-        <div class="tv-metric"><div class="tv-metric-num">${(s.std_hours||0).toFixed(1)}h</div><div class="tv-metric-lbl">Std Hours</div></div>
-        <div class="tv-metric"><div class="tv-metric-num">${(s.actual_hours||0).toFixed(1)}h</div><div class="tv-metric-lbl">Actual Hours</div></div>
-        <div class="tv-metric"><div class="tv-metric-num">${(s.earned_hours||0).toFixed(1)}h</div><div class="tv-metric-lbl">Earned Hours</div></div>
-        <div class="tv-metric highlight"><div class="tv-metric-num">${(s.efficiency_pct===null || (s.actual_hours||0)<0.5) ? '—' : (s.efficiency_pct>300 ? '300%+' : s.efficiency_pct+'%')}</div><div class="tv-metric-lbl">Efficiency</div></div>
-        <div class="tv-metric ${s.delay_hours_total>0?'warn':''}"><div class="tv-metric-num">${(s.delay_hours_total||0).toFixed(1)}h</div><div class="tv-metric-lbl">Delay Hours</div></div>
-        <div class="tv-metric"><div class="tv-metric-num">${remainingHours.toFixed(1)}h</div><div class="tv-metric-lbl">Remaining</div></div>
-      </div>
+    <aside class="tv-delivery"><div class="tv-panel-title">DELIVERY INFORMATION</div>
+      <div class="tv-delivery-item"><div class="tv-delivery-icon">▣</div><div><div class="tv-delivery-label">Target Delivery (SO)</div><div class="tv-delivery-value">${fmtDateFull(s.delivery_date)}</div></div></div>
+      <div class="tv-delivery-item"><div class="tv-delivery-icon">▣</div><div><div class="tv-delivery-label">Est. Delivery</div><div class="tv-delivery-value good">${fmtDateFull(estDate)}</div></div></div>
+      <div class="tv-comfort"><div class="tv-comfort-label">Comfort Level</div><div class="tv-comfort-track"><div class="tv-comfort-fill" style="width:${comfortPct}%"></div></div><div class="tv-comfort-status">${projection?.delivery_status||'UNKNOWN'}${bufferDays!==null?' · '+Math.abs(bufferDays)+' DAY'+(Math.abs(bufferDays)===1?'':'S')+(bufferDays>=0?' BUFFER':' LATE'):''}</div></div>
+    </aside>
 
-      <div class="tv-progress-wrap">
-        <div class="tv-progress-summary">
-          <span style="color:var(--green-600);">● Completed (${doneCt})</span>
-          <span style="color:var(--amber-500);">● In Progress (${currentCt})</span>
-          <span style="color:var(--steel-300);">● Pending (${pendingCt})</span>
-        </div>
-        <div class="tv-progress-track">
-          ${ops.map(o=>`<div class="tv-op-dot ${o.is_completed?'done':(o.op_no===s.current_op_no?'current':'pending')}" title="${esc(o.op_no)} — ${esc(o.description)}">${o.is_completed?'✓':esc(o.op_no)}</div>`).join('') || '<div class="tv-table-empty">No operations set up yet</div>'}
-        </div>
-      </div>
+    <section class="tv-metrics">
+      <div class="tv-metric"><div class="tv-metric-num">${(s.std_hours||0).toFixed(1)}h</div><div class="tv-metric-lbl">Total Std Hours</div></div>
+      <div class="tv-metric"><div class="tv-metric-num">${(s.actual_hours||0).toFixed(1)}h</div><div class="tv-metric-lbl">Actual Hours</div></div>
+      <div class="tv-metric"><div class="tv-metric-num">${(s.earned_hours||0).toFixed(1)}h</div><div class="tv-metric-lbl">Cumulative Std Hours</div></div>
+      <div class="tv-metric highlight"><div class="tv-metric-num">${s.efficiency_pct==null?'—':(s.efficiency_pct>300?'300%+':Number(s.efficiency_pct).toFixed(0)+'%')}</div><div class="tv-metric-lbl">Efficiency %</div></div>
+      <div class="tv-metric ${s.delay_hours_total>0?'warn':''}"><div class="tv-metric-num">${(s.delay_hours_total||0).toFixed(1)}h</div><div class="tv-metric-lbl">Delay Hours</div></div>
+      <div class="tv-metric"><div class="tv-metric-num">${remainingHours.toFixed(1)}h</div><div class="tv-metric-lbl">Remaining Hours</div></div>
+    </section>
 
-      ${s.current_op_no ? `
-      <div class="tv-current-op">
-        <div class="op-title">${esc(s.current_op_no)} — ${esc(s.current_op_description||'')}</div>
-        <div class="op-sub">${esc(s.current_op_group||'')}</div>
-        <div class="op-stats">
-          <div class="op-stat">PLANNED<b>${(s.current_op_std_hours||0).toFixed(1)}h</b></div>
-          <div class="op-stat">ACTUAL<b>${(s.current_op_actual_hours||0).toFixed(1)}h</b></div>
-          <div class="op-stat">PROGRESS<b>${opProgressPct}%</b></div>
-        </div>
-      </div>` : ''}
+    <section class="tv-progress-panel"><div class="tv-progress-head"><div class="title">OPERATION PROGRESS <span class="count">(${ops.length} OPERATIONS)</span></div><div class="tv-progress-summary"><span style="color:#32d34b">● Completed (${doneCt})</span><span style="color:#1688ff">● In Progress (${currentCt})</span><span style="color:#ff4139">● Hold (${holdCt})</span><span style="color:#7f8f9b">● Pending (${pendingCt})</span></div></div>
+      <div class="tv-progress-track">${ops.map(o=>`<div class="tv-op-node ${o.is_completed?'done':(o.op_no===s.current_op_no?'current':'pending')}"><div class="tv-op-dot ${o.is_completed?'done':(o.op_no===s.current_op_no?'current':'pending')}">${o.is_completed?'✓':esc(o.op_no)}</div><div class="tv-op-no">${esc(o.op_no)}</div></div>`).join('') || '<div class="tv-table-empty">No operations set up yet</div>'}</div>
+      <div class="tv-progress-legend"><span class="done">COMPLETED</span><span class="current">IN PROGRESS</span><span class="pending">PENDING</span></div>
+    </section>
 
-      <div class="tv-tables">
-        <div class="tv-table">
-          <div class="tv-table-title">Delay by Department</div>
-          ${deptDelays.length ? deptDelays.map((d,i)=>`
-            <div class="tv-bar-row">
-              <div class="tv-bar-label">${esc(d.responsibility)}</div>
-              <div class="tv-bar-track"><div class="tv-bar-fill" style="width:${Math.round(Number(d.total_hours)/maxDept*100)}%;background:${TV_DEPT_COLORS[i%TV_DEPT_COLORS.length]};"></div></div>
-              <div class="tv-bar-val">${Number(d.total_hours).toFixed(1)}h</div>
-            </div>`).join('') : '<div class="tv-table-empty">No delays logged</div>'}
-        </div>
-        <div class="tv-table">
-          <div class="tv-table-title">Recent Activity</div>
-          <div class="tv-events">
-            ${events.length ? events.map(e=>`
-              <div class="tv-event-row">
-                <span class="tv-event-time">${relTime(e.submitted_at)}</span>
-                <span class="lamp ${lampClass(e.status)}" style="width:8px;height:8px;flex-shrink:0;margin-top:3px;"></span>
-                <span>${esc(e.op_no||'')} ${esc(e.op_description||'')}${e.responsibility?' · '+esc(e.responsibility):''}${e.delay_hours?' · '+Number(e.delay_hours).toFixed(1)+'h':''}</span>
-              </div>`).join('') : '<div class="tv-table-empty">No activity yet</div>'}
-          </div>
-        </div>
+    <aside class="tv-issue"><div class="tv-issue-title">CURRENT ISSUE</div><div class="tv-issue-main"><span class="tv-issue-icon">⚠</span><span>${s.delay_hours_total>0?'DELAY IMPACTING':'NO ACTIVE ISSUE'}</span></div>
+      <div class="tv-issue-grid"><div class="tv-issue-item"><div class="tv-issue-label">Delay Hours</div><div class="tv-issue-value big">${(s.delay_hours_total||0).toFixed(1)}h</div></div><div></div>
+      <div class="tv-issue-item full"><div class="tv-issue-label">Main Reason</div><div class="tv-issue-value">${esc(mainReason)}</div></div>
+      <div class="tv-issue-item"><div class="tv-issue-label">Department</div><div class="tv-issue-value">${esc(deptDelays[0]?.responsibility||'—')}</div></div><div class="tv-issue-item"><div class="tv-issue-label">Responsibility</div><div class="tv-issue-value">${esc(responsibility)}</div></div>
+      <div class="tv-issue-item full"><div class="tv-issue-label">Since</div><div class="tv-issue-value">${latestDelayEvent?.submitted_at ? fmtDateFull(latestDelayEvent.submitted_at.slice(0,10))+' | '+fmtTime(latestDelayEvent.submitted_at) : '—'}</div></div></div>
+    </aside>
+
+    ${s.current_op_no ? `<section class="tv-current-op"><div class="op-main"><div class="op-kicker">OPERATION ${esc(s.current_op_no)}</div><div class="op-title">${esc(s.current_op_description||'')}</div><div class="op-desc">${esc(s.current_op_group||'')} · Current stage progress based on latest confirmations.</div></div><div class="op-stat">PLANNED HOURS<b>${(s.current_op_std_hours||0).toFixed(1)}h</b></div><div class="op-stat">ACTUAL HOURS<b>${(s.current_op_actual_hours||0).toFixed(1)}h</b></div><div class="op-stat">PROGRESS<div class="op-progress" style="--pct:${opProgressPct}%"><span>${opProgressPct}%</span></div></div><div class="tv-assigned"><div class="label">STATUS / GROUP</div><div class="value">${esc(s.latest_status||'—')}</div><div class="sub">${esc(s.current_op_group||'—')}</div></div></section>` : ''}
+
+    <section class="tv-bottom">
+      <div class="tv-panel"><div class="tv-panel-title">DELAY BY DEPARTMENT <span style="color:#8997a2">(HOURS)</span></div>${deptDelays.length?deptDelays.slice(0,5).map((d,i)=>`<div class="tv-bar-row"><div class="tv-bar-label">${esc(d.responsibility)}</div><div class="tv-bar-track"><div class="tv-bar-fill" style="width:${Math.round(Number(d.total_hours)/maxDept*100)}%;background:${TV_DEPT_COLORS[i%5]}"></div></div><div class="tv-bar-val">${Number(d.total_hours).toFixed(1)}h</div></div>`).join(''):'<div class="tv-table-empty">No delays logged</div>'}<div class="tv-total-delay">TOTAL DELAY HOURS: <b>${(s.delay_hours_total||0).toFixed(1)}h</b></div></div>
+      <div class="tv-panel"><div class="tv-panel-title">TOP DELAY REASONS <span style="color:#8997a2">(HOURS)</span></div><div class="tv-reasons"><div class="tv-donut" style="background:${donutBg}"><div class="tv-donut-center">${(s.delay_hours_total||0).toFixed(1)}h<span>TOTAL DELAY</span></div></div><div class="tv-reason-list">${reasonRows.length?reasonRows.map(([reason,h],i)=>`<div class="tv-reason"><span class="tv-reason-dot" style="background:${TV_REASON_COLORS[i]}"></span><span>${esc(reason)}</span><span class="tv-reason-val">${h.toFixed(1)}h<small>${reasonTotal?((h/reasonTotal)*100).toFixed(1):'0.0'}%</small></span></div>`).join(''):'<div class="tv-table-empty">No delay reasons logged</div>'}</div></div></div>
+      <div class="tv-panel"><div class="tv-panel-title">RECENT EVENTS</div><div class="tv-events">${events.length?events.map(e=>`<div class="tv-event-row"><span class="tv-event-time">${fmtTime(e.submitted_at)}</span><span class="lamp ${lampClass(e.status)}" style="width:11px;height:11px;justify-self:center;"></span><span class="tv-event-status ${eventClass(e.status)}">${eventText(e.status)}</span><span class="tv-event-desc">${esc(e.op_description||e.op_no||'Update')}${e.responsibility?' · '+esc(e.responsibility):''}</span><span class="tv-event-hours ${Number(e.delay_hours||0)>0?'delay':''}">${Number(e.delay_hours||0)>0?Number(e.delay_hours).toFixed(1)+'h':'—'}</span></div>`).join(''):'<div class="tv-table-empty">No activity yet</div>'}</div></div>
+    </section>
+    <div class="tv-footer">ⓘ &nbsp; Progress and hours are updated based on the latest confirmations.</div>
+  </div>`;
+
+  const holdBtn = document.getElementById('tvHoldBtn');
+  if(holdBtn) holdBtn.onclick = ()=> openTvHoldModal(app, s, idx, total, isOnHold, holdHrs);
+}
+
+async function openTvHoldModal(app, s, idx, total, isOnHold, holdHrs){
+  if(!tvResponsibilities){
+    const { data } = await sb.from('responsibilities').select('*').order('name');
+    tvResponsibilities = data || [];
+  }
+  // get_station_summary doesn't expose the job_operations row id directly — resolve it here.
+  const { data: opRow } = await sb.from('job_operations').select('id').eq('job_id', s.job_id).eq('op_no', s.current_op_no).maybeSingle();
+  const opId = opRow?.id || null;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'tv-modal-overlay';
+  overlay.innerHTML = `
+    <div class="tv-modal">
+      <h3>${isOnHold ? `Resume ${esc(s.current_op_no)} — ${esc(s.current_op_description)}` : `Hold ${esc(s.current_op_no)} — ${esc(s.current_op_description)}`}</h3>
+      ${isOnHold ? `<p style="font-size:13px;color:var(--steel-200);margin:0;">On hold for ${holdHrs.toFixed(1)} h. Confirm to resume work and log the delay.</p>
+        <label>Operator Name</label><input id="tvm_name" placeholder="Your name">`
+        : `<label>Operator Name</label><input id="tvm_name" placeholder="Your name">
+        <label>Reason</label><textarea id="tvm_reason" placeholder="e.g. wheel head not received"></textarea>
+        <label>Department</label>
+        <select id="tvm_resp"><option value="">— Select —</option>${tvResponsibilities.map(r=>`<option>${esc(r.name)}</option>`).join('')}</select>`}
+      <div class="tv-modal-actions">
+        <button class="cancel" id="tvm_cancel">Cancel</button>
+        <button class="confirm ${isOnHold?'resume':''}" id="tvm_confirm">${isOnHold?'Confirm Resume':'Confirm Hold'}</button>
       </div>
     </div>
   `;
+  document.body.appendChild(overlay);
+  document.getElementById('tvm_cancel').onclick = ()=> overlay.remove();
+  document.getElementById('tvm_confirm').onclick = async ()=>{
+    if(!opId){ toast('Could not resolve the current operation — refresh and try again', true); return; }
+    const name = document.getElementById('tvm_name').value.trim();
+    if(!name){ toast('Enter operator name', true); return; }
+    const today = new Date().toISOString().slice(0,10);
+    let payload;
+    if(isOnHold){
+      payload = {
+        job_id: s.job_id, job_operation_id: opId, primary_operator: name,
+        activity_date: today, status: 'Partial', issue_reason: 'Resumed work',
+        delay_hours: Number(holdHrs.toFixed(1))
+      };
+    } else {
+      const reason = document.getElementById('tvm_reason').value.trim();
+      const resp = document.getElementById('tvm_resp').value;
+      if(!reason){ toast('Enter a reason', true); return; }
+      if(!resp){ toast('Select a department', true); return; }
+      payload = {
+        job_id: s.job_id, job_operation_id: opId, primary_operator: name,
+        activity_date: today, status: 'Hold', issue_reason: reason, responsibility: resp
+      };
+    }
+    const { error } = await sb.from('entries').insert(payload);
+    if(error){ toast(error.message, true); return; }
+    overlay.remove();
+    toast(isOnHold ? 'Resumed' : 'Placed on hold');
+    tvStations = await fetchStations();
+    await renderStationCard(app, tvStations[idx] || tvStations[0], idx, tvStations.length);
+  };
 }
+
+
 async function renderStationDisplay(app){
   document.body.classList.add('tv-mode');
   if(tvRotateTimer) clearInterval(tvRotateTimer);
   if(tvRefreshTimer) clearInterval(tvRefreshTimer);
+  tvPaused = false;
+
+  // Fixed pause/resume control pinned to the top of the screen — freezes rotation without
+  // affecting the per-station Hold button or the rest of the card content.
+  let bar = document.getElementById('tvRotateBar');
+  if(!bar){ bar = document.createElement('div'); bar.id = 'tvRotateBar'; bar.className = 'tv-rotate-bar'; document.body.appendChild(bar); }
+  function paintRotateBar(){
+    bar.innerHTML = `<button class="tv-rotate-pause-btn ${tvPaused?'paused':''}" id="tvRotatePauseBtn">${tvPaused ? '▶ Resume Rotation' : '⏸ Pause Rotation'}</button>`;
+    document.getElementById('tvRotatePauseBtn').onclick = ()=>{ tvPaused = !tvPaused; paintRotateBar(); };
+  }
+  paintRotateBar();
 
   tvStations = await fetchStations();
   tvIndex = 0;
   await renderStationCard(app, tvStations[0], 0, tvStations.length);
 
   tvRotateTimer = setInterval(async ()=>{
+    if(tvPaused) return;
     if(tvStations.length===0) return;
     tvIndex = (tvIndex+1) % tvStations.length;
     await renderStationCard(app, tvStations[tvIndex], tvIndex, tvStations.length);
   }, tvInterval*1000);
 
   tvRefreshTimer = setInterval(async ()=>{
+    if(tvPaused) return;
     tvStations = await fetchStations();
     if(tvIndex >= tvStations.length) tvIndex = 0;
     await renderStationCard(app, tvStations[tvIndex], tvIndex, tvStations.length);
