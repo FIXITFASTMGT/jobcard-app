@@ -2029,9 +2029,20 @@ async function renderStationCard(app, s, idx, total){
   const maxDept = Math.max(1, ...deptDelays.map(d=>Number(d.total_hours)||0));
   const totalDeptDelay = deptDelays.reduce((s2,d)=>s2+Number(d.total_hours||0),0) || 1;
 
-  const VISIBLE_OPS = 8;
-  const visibleOps = ops.slice(0, VISIBLE_OPS);
-  const moreOpsCt = Math.max(0, ops.length - VISIBLE_OPS);
+  // Show a window centered on the current operation — a few done before it, it, and a few coming up —
+  // instead of always the first 8, which made no sense once the job is deep into a long op list.
+  const WINDOW_BEFORE = 4, WINDOW_AFTER = 4;
+  const currentIdx = ops.findIndex(o=>o.op_no===s.current_op_no);
+  let windowStart, windowEnd;
+  if(currentIdx === -1){
+    windowStart = 0; windowEnd = Math.min(ops.length, WINDOW_BEFORE+WINDOW_AFTER+1);
+  } else {
+    windowStart = Math.max(0, currentIdx - WINDOW_BEFORE);
+    windowEnd = Math.min(ops.length, currentIdx + WINDOW_AFTER + 1);
+  }
+  const visibleOps = ops.slice(windowStart, windowEnd);
+  const hiddenBeforeCt = windowStart;
+  const hiddenAfterCt = ops.length - windowEnd;
 
   app.innerHTML = `
     <div class="tv-card" style="justify-content:flex-start;padding-top:24px;">
@@ -2095,6 +2106,7 @@ async function renderStationCard(app, s, idx, total){
       <div class="tv-row2">
         <div class="tv-panel">
           <div class="tv-table-title">Operation Progress (${ops.length} operations)</div>
+          ${hiddenBeforeCt>0 ? `<div class="tv-more-ops-note">↑ ${hiddenBeforeCt} earlier operation${hiddenBeforeCt===1?'':'s'} completed</div>` : ''}
           <table class="tv-ops tv-ops-compact">
             <tr><th>Op</th><th>Operation</th><th>Progress</th><th>Status</th></tr>
             ${visibleOps.map(o=>{
@@ -2107,7 +2119,7 @@ async function renderStationCard(app, s, idx, total){
               </tr>`;
             }).join('') || '<tr><td colspan="4" class="tv-table-empty">No operations set up yet</td></tr>'}
           </table>
-          ${moreOpsCt>0 ? `<div class="tv-more-ops-note">+ ${moreOpsCt} more operations</div>` : ''}
+          ${hiddenAfterCt>0 ? `<div class="tv-more-ops-note">↓ ${hiddenAfterCt} more operation${hiddenAfterCt===1?'':'s'} remaining</div>` : ''}
         </div>
 
         <div style="display:flex;flex-direction:column;gap:14px;">
