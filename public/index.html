@@ -94,13 +94,14 @@
   .btn.ghost{background:transparent;color:var(--graphite-950);border:1.5px solid var(--graphite-950);}
   .btn.red{background:var(--red-600);color:#fff;}
   .btn.small{padding:8px 13px;font-size:11px;margin-top:0;}
-  .modal-overlay{position:fixed;inset:0;background:rgba(26,30,34,0.72);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;}
-  .modal-box{background:#fff;border-radius:10px;max-width:420px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.35);}
-  .modal-box h3{margin:0 0 10px;font-family:var(--font-head);font-size:16px;color:var(--graphite-950);}
-  .modal-box p{margin:0 0 20px;font-size:13.5px;line-height:1.5;color:var(--steel-700);}
-  .modal-box .modal-actions{display:flex;flex-direction:column;gap:8px;}
   .btn:focus-visible{outline:2px solid var(--amber-500);outline-offset:2px;}
   .btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(26,30,34,0.72);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;}
+  .modal-box{background:#fff;border-radius:10px;max-width:420px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.35);}
+  .modal-box h3{margin:0 0 10px;font-family:var(--font-display);font-size:16px;color:var(--graphite-950);}
+  .modal-box p{margin:0 0 20px;font-size:13.5px;line-height:1.5;color:var(--steel-700);}
+  .modal-box .modal-actions{display:flex;flex-direction:column;gap:8px;}
 
   /* ---------- andon lamp (signature status element) ---------- */
   .lamp{width:11px;height:11px;border-radius:50%;flex-shrink:0;display:inline-block;position:relative;}
@@ -116,7 +117,6 @@
   .status-tag.Completed{background:var(--green-100);color:var(--green-600);}
   .status-tag.Partial{background:var(--amber-100);color:var(--amber-700);}
   .status-tag.Hold{background:var(--red-100);color:var(--red-600);}
-  .status-tag.NotStarted{background:var(--plate-100);color:var(--steel-600);}
 
   /* ---------- nameplate (signature identity element) ---------- */
   .nameplate{
@@ -224,171 +224,179 @@
     cursor:pointer;color:var(--steel-600);}
   .toggle-pair button.on{border-color:var(--graphite-950);background:var(--graphite-950);color:#fff;}
 
-  /* ---------- Gantt Chart tab ---------- */
-  .gantt-meta{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px 18px;padding:10px 2px;font-size:12.5px;
-    color:var(--steel-600);border-bottom:1px solid var(--plate-100);margin-bottom:10px;}
-  .gantt-meta b{color:var(--graphite-950);font-family:var(--font-display);font-size:14px;}
-  .gantt-meta-right{display:flex;gap:16px;flex-wrap:wrap;font-family:var(--font-mono);font-size:11.5px;align-items:center;}
-  .gantt-legend{display:flex;gap:14px;align-items:center;font-size:11px;color:var(--steel-600);}
-  .gantt-legend .sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px;}
-  .gantt-legend .sw.plan{background:var(--amber-500);}
-  .gantt-legend .sw.actual{background:var(--steel-700);}
-
-  .gantt-scroll{max-height:72vh;overflow:auto;border:1px solid var(--plate-100);position:relative;}
-  table.gantt-table{border-collapse:separate;border-spacing:0;font-size:11px;font-family:var(--font-body);}
-  table.gantt-table th,table.gantt-table td{border:1px solid var(--plate-100);padding:0;box-sizing:border-box;}
-  table.gantt-table thead th{background:var(--graphite-950);color:#fff;position:sticky;top:0;z-index:3;
-    font-size:9.5px;text-transform:uppercase;letter-spacing:.3px;padding:7px 4px;text-align:center;white-space:nowrap;}
-  table.gantt-table thead th.gday.off{background:var(--steel-700);}
-  table.gantt-table tbody td{padding:4px 6px;font-size:11px;color:var(--graphite-950);background:#fff;white-space:nowrap;}
-  table.gantt-table tbody tr:nth-child(even) td{background:var(--plate-50);}
-
-  .gfrz{position:sticky;z-index:2;background:inherit;}
-  .gfrz-sno{left:0;width:34px;min-width:34px;text-align:center;}
-  .gfrz-opno{left:34px;width:54px;min-width:54px;font-family:var(--font-mono);}
-  .gfrz-group{left:88px;width:84px;min-width:84px;font-size:10px;color:var(--steel-600);overflow:hidden;text-overflow:ellipsis;}
-  .gfrz-desc{left:172px;width:200px;min-width:200px;white-space:normal;line-height:1.3;}
-  .gfrz-std{left:372px;width:48px;min-width:48px;text-align:center;font-family:var(--font-mono);}
-  .gfrz-act{left:420px;width:56px;min-width:56px;text-align:center;font-family:var(--font-mono);}
-  thead .gfrz{z-index:4;background:var(--graphite-950);}
-  tbody .gfrz{background:#fff;}
-  tbody tr:nth-child(even) .gfrz{background:var(--plate-50);}
-  tr.gantt-milestone td{background:var(--amber-100) !important;}
-
-  .gday{width:27px;min-width:27px;height:32px;text-align:center;position:relative;}
-  thead th.gday{width:27px;min-width:27px;}
-  .gday.off{background:repeating-linear-gradient(45deg,var(--plate-100) 0 4px,#fff 4px 8px);}
-  .gbar{position:absolute;left:2px;right:2px;border-radius:2px;}
-  .gbar.plan{top:5px;bottom:5px;background:var(--amber-500);}
-  .gbar.plan.milestone{background:var(--amber-700);}
-  .gbar.plan.half{top:3px;bottom:auto;height:11px;}
-  .gbar.actual.half{bottom:3px;top:auto;height:11px;background:var(--steel-700);}
-
   /* ---------- print profile buttons ---------- */
   .print-profiles{display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;}
   .print-profile-cap{font-size:11px;color:var(--steel-600);margin-top:5px;max-width:220px;line-height:1.4;}
 
-  /* ---------- Station Display (rotating floor TV) — Executive Dashboard design ---------- */
-  body.tv-mode{background:#050b10;color:#fff;overflow-x:hidden;}
-  body.tv-mode .topbar{display:none;} body.tv-mode .wrap{max-width:none;padding:0;}
-  .tv-empty{min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;background:#050b10;}
-  .tv-card{min-height:100vh;box-sizing:border-box;padding:16px 18px 10px;background:radial-gradient(circle at 60% 5%,rgba(0,125,180,.06),transparent 30%),linear-gradient(135deg,#061018,#03080d);color:#fff;display:grid;grid-template-columns:185px minmax(0,1fr) 272px;grid-template-rows:auto auto auto auto auto;gap:10px 14px;align-content:start;text-align:left;}
-  .tv-left{grid-column:1;grid-row:1 / span 4;border-right:1px solid rgba(120,150,170,.18);padding:4px 16px 0 6px;min-width:0;}
-  .tv-station-label{font-size:13px;font-weight:800;color:#f5b313;text-transform:uppercase;letter-spacing:.7px;}.tv-station-value{font-family:var(--font-display);font-size:18px;font-weight:800;margin-top:3px;}.tv-machine{font-family:var(--font-display);font-size:48px;font-weight:800;letter-spacing:1px;line-height:.98;margin-top:12px;white-space:nowrap;}.tv-model{font-family:var(--font-display);font-size:19px;color:#f5b313;font-weight:800;margin-top:12px;}.tv-customer{font-size:12px;line-height:1.35;color:#d3dce3;text-transform:uppercase;margin-top:8px;max-width:160px;}.tv-side-rule{height:1px;background:rgba(120,150,170,.2);margin:17px 0 14px;}.tv-side-label{font-size:10px;color:#9cabb7;text-transform:uppercase;letter-spacing:.8px;margin-top:12px;}.tv-side-value{font-size:12px;font-weight:700;color:#fff;margin-top:4px;line-height:1.35;}.tv-details-btn{margin-top:18px;width:100%;border:1px solid rgba(130,160,180,.2);background:linear-gradient(180deg,#12202b,#0b151e);color:#fff;border-radius:7px;padding:10px 12px;font-size:11px;font-weight:700;cursor:pointer;}
-  .tv-hold-btn{margin-top:8px;width:100%;border:none;border-radius:7px;padding:11px 12px;font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;cursor:pointer;}
-  .tv-hold-btn.hold{background:#9b2727;color:#fff;}
-  .tv-hold-btn.resume{background:#1a7a3a;color:#fff;}
-  .tv-main-head{grid-column:2;grid-row:1;min-width:0;padding:4px 0 0;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;}.tv-current-label{font-size:12px;color:#a9b7c2;text-transform:uppercase;letter-spacing:1px;font-weight:700;}.tv-current-title{font-family:var(--font-display);font-size:30px;font-weight:800;line-height:1.1;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.tv-current-title .opno{color:#f5a800;}.tv-live-row{display:flex;align-items:center;gap:10px;margin-top:9px;font-size:12px;color:#d5dde4;}.tv-live-pill{border:1px solid #1688ff;background:rgba(0,115,255,.1);color:#1688ff;border-radius:5px;padding:6px 10px;font-weight:800;}.tv-status-banner{border-radius:10px;padding:12px 18px;text-align:center;min-width:215px;box-sizing:border-box;}.tv-status-banner.ontrack{background:rgba(39,184,76,.055);border:1px solid #11762b;}.tv-status-banner.atrisk{background:rgba(245,163,15,.055);border:1px solid #9a6c0b;}.tv-status-banner.delayed{background:rgba(239,68,68,.055);border:1px solid #9b2727;}.tv-status-banner .label{font-size:11px;letter-spacing:.8px;color:#a9b7c2;text-transform:uppercase;font-weight:800;}.tv-status-banner .value{font-family:var(--font-display);font-size:24px;font-weight:800;margin-top:5px;}.tv-status-banner.ontrack .value{color:#49d45c;}.tv-status-banner.atrisk .value{color:#f5b313;}.tv-status-banner.delayed .value{color:#ff4a42;}.tv-status-banner .status-sub{font-size:10px;line-height:1.25;margin-top:4px;color:#79e184;}
-  .tv-delivery{grid-column:3;grid-row:1 / span 2;border:1px solid rgba(100,145,170,.22);border-radius:9px;background:rgba(4,13,20,.55);padding:15px 18px;min-width:0;}.tv-panel-title{font-size:12px;text-transform:uppercase;letter-spacing:.8px;font-weight:800;color:#f4f7f9;}.tv-delivery-item{display:grid;grid-template-columns:36px 1fr;gap:8px;padding:14px 0;border-bottom:1px solid rgba(120,150,170,.15);}.tv-delivery-icon{font-size:25px;line-height:1;color:#e8f0f5;text-align:center;}.tv-delivery-label{font-size:10px;color:#9cabb7;text-transform:uppercase;letter-spacing:.5px;}.tv-delivery-value{font-family:var(--font-display);font-size:22px;font-weight:800;margin-top:4px;}.tv-delivery-value.good{color:#49d45c;}.tv-comfort{padding-top:12px;}.tv-comfort-label{font-size:10px;color:#9cabb7;text-transform:uppercase;letter-spacing:.5px;}.tv-comfort-track{height:9px;background:#1b2831;border-radius:999px;margin-top:7px;overflow:hidden;}.tv-comfort-fill{height:100%;background:linear-gradient(90deg,#40cf4d,#53dc64);border-radius:999px;}.tv-comfort-status{text-align:center;color:#49d45c;font-size:11px;font-weight:800;margin-top:7px;text-transform:uppercase;}
-  .tv-metrics{grid-column:2;grid-row:2;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:0;}.tv-metric{background:linear-gradient(180deg,rgba(11,24,34,.9),rgba(4,13,19,.92));border:1px solid rgba(90,130,150,.22);border-radius:7px;padding:11px 12px;min-width:0;box-sizing:border-box;}.tv-metric::before{content:'';display:block;width:20px;height:3px;border-radius:4px;background:#178cff;margin-bottom:7px;}.tv-metric:nth-child(3)::before{background:#32d34b;}.tv-metric:nth-child(4)::before{background:#f5a800;}.tv-metric:nth-child(5)::before{background:#ff4139;}.tv-metric:nth-child(6)::before{background:#f5a800;}.tv-metric-num{font-family:var(--font-display);font-size:26px;font-weight:800;white-space:nowrap;}.tv-metric.highlight .tv-metric-num{color:#f5a800;}.tv-metric.warn .tv-metric-num{color:#ff4a42;}.tv-metric-lbl{font-size:9px;text-transform:uppercase;color:#9cabb7;letter-spacing:.7px;margin-top:3px;}
-  .tv-progress-panel{grid-column:2;grid-row:3;border:1px solid rgba(90,130,150,.22);border-radius:8px;background:rgba(4,13,19,.62);padding:12px 16px 8px;min-width:0;}.tv-progress-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}.tv-progress-head .title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;}.tv-progress-head .count{color:#9cabb7;font-weight:500;}.tv-progress-summary{display:flex;gap:16px;justify-content:flex-end;font-size:10px;color:#b9c4cc;flex-wrap:wrap;}.tv-progress-summary span{white-space:nowrap;}.tv-progress-track{display:flex;align-items:center;gap:0;margin-top:14px;overflow:hidden;padding:2px 4px 7px;}.tv-op-node{position:relative;display:flex;align-items:center;flex:1;min-width:24px;}.tv-op-node::after{content:'';height:2px;background:#41515e;position:absolute;left:50%;right:-50%;top:15px;z-index:0;}.tv-op-node:last-child::after{display:none;}.tv-op-node.done::after{background:#24a73d;}.tv-op-dot{position:relative;z-index:1;width:29px;height:29px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-family:var(--font-mono);font-weight:800;box-sizing:border-box;margin:auto;background:#08141d;color:#8b9aa6;border:1px solid #526372;}.tv-op-dot.done{background:#239c3b;color:#fff;border-color:#239c3b;box-shadow:0 0 8px rgba(35,156,59,.25);}.tv-op-dot.current{width:40px;height:40px;margin:-5px auto;background:#0a263e;border:2px solid #1688ff;color:#fff;font-size:10px;box-shadow:0 0 0 3px rgba(22,136,255,.12),0 0 16px rgba(22,136,255,.45);}.tv-op-dot.pending{background:#08131b;border-color:#465866;color:#b4c0c8;}.tv-op-no{position:absolute;top:34px;left:50%;transform:translateX(-50%);font-family:var(--font-mono);font-size:8px;color:#7f8f9b;white-space:nowrap;}.tv-op-node.done .tv-op-no{color:#d5e1d8;}.tv-op-node.current .tv-op-no{color:#1688ff;font-weight:800;}.tv-progress-legend{display:flex;justify-content:center;gap:80px;margin-top:16px;font-size:10px;color:#aab6be;text-transform:uppercase;}.tv-progress-legend .done{color:#32d34b;}.tv-progress-legend .current{color:#1688ff;}.tv-progress-legend .pending{color:#8c9aa6;}
-  .tv-issue{grid-column:3;grid-row:3 / span 2;border:1px solid #8f2828;border-radius:8px;background:linear-gradient(180deg,rgba(35,7,8,.36),rgba(7,10,13,.7));padding:14px 16px;min-width:0;}.tv-issue-title{color:#ff4a42;font-size:12px;text-transform:uppercase;letter-spacing:.7px;font-weight:800;}.tv-issue-main{display:flex;align-items:center;gap:10px;margin:14px 0 16px;color:#ff4a42;font-family:var(--font-display);font-size:18px;font-weight:800;}.tv-issue-icon{font-size:22px;}.tv-issue-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 16px;}.tv-issue-item.full{grid-column:1/-1;}.tv-issue-label{font-size:9px;color:#9cabb7;text-transform:uppercase;letter-spacing:.6px;}.tv-issue-value{font-size:11px;color:#fff;font-weight:700;margin-top:4px;line-height:1.35;}.tv-issue-value.big{font-family:var(--font-display);font-size:23px;text-align:right;}
-  .tv-current-op{grid-column:2;grid-row:4;background:rgba(5,17,25,.85);border:1px solid rgba(90,130,150,.24);border-radius:8px;padding:13px 18px;margin:0;max-width:none;width:auto;text-align:left;display:grid;grid-template-columns:minmax(240px,1.8fr) repeat(2,minmax(90px,.7fr)) 110px 1.1fr;gap:12px;align-items:center;}.tv-current-op .op-main{min-width:0;}.tv-current-op .op-kicker{font-size:10px;color:#9cabb7;text-transform:uppercase;letter-spacing:.7px;}.tv-current-op .op-title{font-family:var(--font-display);font-size:18px;font-weight:800;color:#fff;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.tv-current-op .op-desc{font-size:11px;color:#c3cdd4;margin-top:5px;line-height:1.3;}.tv-current-op .op-stat{border-left:1px solid rgba(110,145,160,.18);padding-left:14px;font-size:9px;color:#9cabb7;text-transform:uppercase;letter-spacing:.5px;}.tv-current-op .op-stat b{display:block;font-family:var(--font-display);font-size:17px;color:#fff;margin-top:5px;}.tv-current-op .op-progress{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:4px;background:conic-gradient(#1688ff var(--pct),#263640 0);position:relative;font-family:var(--font-mono);font-size:11px;font-weight:800;}.tv-current-op .op-progress::after{content:'';position:absolute;inset:6px;border-radius:50%;background:#07131c;}.tv-current-op .op-progress span{position:relative;z-index:1;}.tv-assigned{border-left:1px solid rgba(110,145,160,.18);padding-left:14px;min-width:0;}.tv-assigned .label{font-size:9px;color:#9cabb7;text-transform:uppercase;}.tv-assigned .value{font-size:12px;font-weight:800;color:#fff;margin-top:5px;}.tv-assigned .sub{font-size:10px;color:#b7c3cb;margin-top:3px;}
-  .tv-bottom{grid-column:1 / -1;grid-row:5;display:grid;grid-template-columns:1fr 1.08fr 1.35fr;gap:10px;min-width:0;}.tv-panel{border:1px solid rgba(90,130,150,.22);border-radius:8px;background:rgba(4,13,19,.62);padding:13px 16px;min-width:0;box-sizing:border-box;}.tv-panel .tv-panel-title{margin-bottom:12px;}.tv-bar-row{display:flex;align-items:center;gap:9px;padding:5px 0;}.tv-bar-label{width:64px;font-size:10px;color:#d2dbe1;flex-shrink:0;text-align:left;}.tv-bar-track{flex:1;background:#101c24;border-radius:2px;height:13px;overflow:hidden;}.tv-bar-fill{height:100%;border-radius:2px;}.tv-bar-val{width:48px;font-family:var(--font-mono);font-size:10px;color:#e7edf1;flex-shrink:0;text-align:right;}.tv-total-delay{text-align:center;margin-top:12px;font-size:10px;color:#c4cdd3;text-transform:uppercase;letter-spacing:.5px;}.tv-total-delay b{color:#ff4a42;font-size:14px;font-family:var(--font-mono);margin-left:5px;}.tv-reasons{display:grid;grid-template-columns:145px 1fr;gap:14px;align-items:center;}.tv-donut{width:120px;height:120px;border-radius:50%;margin:auto;position:relative;}.tv-donut::after{content:'';position:absolute;inset:25px;border-radius:50%;background:#07131b;border:1px solid rgba(100,145,170,.15);}.tv-donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1;font-family:var(--font-display);font-weight:800;font-size:19px;}.tv-donut-center span{font-family:var(--font-body);font-size:8px;color:#9cabb7;text-transform:uppercase;margin-top:2px;}.tv-reason-list{display:flex;flex-direction:column;gap:8px;}.tv-reason{display:grid;grid-template-columns:10px 1fr auto;gap:6px;align-items:start;font-size:9.5px;color:#d3dce2;line-height:1.25;}.tv-reason-dot{width:8px;height:8px;border-radius:50%;margin-top:2px;}.tv-reason-val{text-align:right;font-family:var(--font-mono);white-space:nowrap;font-size:10px;color:#fff;}.tv-reason-val small{display:block;color:#9cabb7;font-family:var(--font-body);font-size:8px;margin-top:1px;}.tv-events{max-height:180px;overflow:hidden;text-align:left;}.tv-event-row{display:grid;grid-template-columns:52px 18px 70px 1fr 60px;gap:7px;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.07);font-size:10px;}.tv-event-row:first-child{border-top:none;}.tv-event-time{color:#d8e0e5;font-family:var(--font-mono);font-size:9px;}.tv-event-status{font-weight:800;text-transform:uppercase;font-size:9px;}.tv-event-status.delay{color:#ff4a42;}.tv-event-status.started{color:#39a0ff;}.tv-event-status.completed{color:#49d45c;}.tv-event-desc{color:#d3dce2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.tv-event-dept{color:#aebbc4;text-transform:uppercase;font-size:8px;}.tv-event-hours{text-align:right;font-family:var(--font-mono);color:#fff;}.tv-event-hours.delay{color:#ff4a42;font-weight:800;}.tv-view-all{text-align:center;color:#1688ff;font-size:10px;font-weight:800;margin-top:8px;text-transform:uppercase;}.tv-footer{grid-column:1/-1;font-size:9px;color:#9cabb7;border-top:1px solid rgba(100,145,170,.15);padding:8px 0 0;}
-  @media(max-width:1050px){.tv-card{grid-template-columns:150px minmax(0,1fr);}.tv-left{grid-row:1/span 7;}.tv-main-head{grid-column:2;grid-row:1;}.tv-delivery{grid-column:2;grid-row:2;}.tv-metrics{grid-column:2;grid-row:3;grid-template-columns:repeat(3,1fr);}.tv-progress-panel{grid-column:2;grid-row:4;}.tv-current-op{grid-column:2;grid-row:5;}.tv-issue{grid-column:2;grid-row:6;}.tv-bottom{grid-column:2;grid-row:7;grid-template-columns:1fr;}.tv-footer{grid-column:1/-1;}.tv-current-op{grid-template-columns:1fr 1fr 1fr;}.tv-assigned{border-left:none;padding-left:0;}}
-  @media(max-width:700px){.tv-card{display:block;padding:12px;}.tv-left{border-right:none;border-bottom:1px solid rgba(120,150,170,.18);padding:0 0 12px;margin-bottom:12px;}.tv-machine{font-size:42px;}.tv-main-head{display:block;}.tv-status-banner{margin-top:12px;}.tv-delivery,.tv-metrics,.tv-progress-panel,.tv-issue,.tv-current-op,.tv-bottom{margin-top:10px;}.tv-metrics{grid-template-columns:1fr 1fr;}.tv-current-op{display:block;}.tv-current-op .op-stat,.tv-assigned{border-left:none;border-top:1px solid rgba(110,145,160,.18);padding:9px 0 0;margin-top:9px;}.tv-reasons{grid-template-columns:1fr;}.tv-donut{margin-bottom:6px;}.tv-event-row{grid-template-columns:45px 14px 60px 1fr 48px;}.tv-current-title{font-size:24px;}.tv-progress-legend{gap:20px;}}
-
-  /* rotation pause/resume — fixed at top of TV screen, independent of the per-station Hold button */
-  .tv-rotate-bar{position:fixed;top:12px;right:14px;z-index:500;}
-  .tv-rotate-pause-btn{border:none;border-radius:5px;padding:9px 16px;font-family:var(--font-body);font-weight:700;
-    font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;
-    background:rgba(255,255,255,.12);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3);}
-  .tv-rotate-pause-btn:hover{background:rgba(255,255,255,.2);}
-
-  /* ===== revised floor dashboard (v2): 7 metric tiles with formula sub-lines, per-operation
-     table with std / actual / delay / progress, three delivery dates, latest-issue-only
-     panel, and a formula legend. Loaded after the base .tv-* rules so it wins. ===== */
-  .tv-card{grid-template-rows:auto auto auto auto;}
-  .tv-metrics{grid-template-columns:repeat(7,minmax(0,1fr));}
-  .tv-metric{padding:10px 11px;}
-  .tv-metric-num{font-size:23px;}
-  .tv-metric-sub{font-family:var(--font-mono);font-size:8.5px;color:#8496a2;margin-top:4px;line-height:1.3;}
-  .tv-metric:nth-child(7)::before{background:#32d34b;}
-  .tv-delivery-note{font-size:9.5px;color:#8496a2;margin-top:3px;line-height:1.35;}
-  .tv-delivery-value.amber{color:#f5b313;}
-  .tv-delivery-item{padding:11px 0;}
-  .tv-curstats{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;padding:8px 13px;border:1px solid rgba(90,130,150,.24);border-radius:8px;background:rgba(5,17,25,.75);}
-  .tv-curstats .st{min-width:70px;}
-  .tv-curstats .lbl{font-size:8.5px;text-transform:uppercase;letter-spacing:.6px;color:#9cabb7;font-weight:700;}
-  .tv-curstats .val{font-family:var(--font-display);font-size:18px;font-weight:800;margin-top:3px;}
-  .tv-curstats .val.blue{color:#4aa3ff;}
-  .tv-curstats .val.orange{color:#ff8a52;}
-  .tv-optable{width:100%;border-collapse:collapse;margin-top:9px;font-family:var(--font-mono);font-size:11px;}
-  .tv-optable th{font-family:var(--font-body);font-size:8.5px;text-transform:uppercase;letter-spacing:.6px;color:#8997a2;font-weight:700;text-align:center;padding:0 6px 6px;border-bottom:1px solid rgba(120,150,170,.22);vertical-align:bottom;}
-  .tv-optable th.l,.tv-optable td.l{text-align:left;}
-  .tv-optable td{padding:4px 6px;text-align:center;border-bottom:1px solid rgba(120,150,170,.1);color:#dbe4ea;}
-  .tv-optable td.name{font-family:var(--font-body);font-size:11.5px;font-weight:600;}
-  .tv-optable td.grp{font-family:var(--font-body);font-size:10px;color:#8997a2;}
-  .tv-optable tr.done td{color:#cfd9e0;}
-  .tv-optable tr.done td.l:first-child{color:#32d34b;}
-  .tv-optable tr.pending td{color:#8997a2;}
-  .tv-optable tr.current td{background:rgba(20,60,100,.35);color:#7cc0ff;}
-  .tv-optable td.delay{color:#ff8a52;}
-  .tv-optable tr.total td{border-top:1px solid rgba(120,150,170,.32);border-bottom:none;padding-top:8px;font-size:12px;font-weight:700;color:#fff;}
-  .tv-optable tr.total td.delay{color:#ff4a42;}
-  .tv-optable .pcell{display:flex;align-items:center;gap:7px;}
-  .tv-optable .ptrack{flex:1;height:8px;border-radius:5px;background:rgba(120,150,170,.22);overflow:hidden;}
-  .tv-optable .pfill{height:100%;border-radius:5px;}
-  .tv-op-skip{font-family:var(--font-body);font-size:10px;color:#8997a2;}
-  .tv-machine-progress{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:#9cabb7;font-weight:700;}
-  .tv-machine-progress b{font-family:var(--font-display);font-size:20px;color:#4aa3ff;margin-left:6px;letter-spacing:0;}
-  .tv-issue-latest{font-size:15px;font-weight:700;line-height:1.35;margin:12px 0 6px;color:#fff;}
-  .tv-issue-meta{font-family:var(--font-mono);font-size:10px;color:#a9b7c2;line-height:1.5;}
-  .tv-formulas{grid-column:2;grid-row:4;border:1px solid rgba(90,130,150,.2);border-radius:8px;background:rgba(4,13,19,.5);padding:10px 14px;min-width:0;}
-  .tv-formulas .ttl{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;font-weight:800;color:#93a4b1;}
-  .tv-formulas .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px 20px;margin-top:6px;font-size:10px;line-height:1.45;color:#a9b7c2;}
-  .tv-formulas b{color:#dceaf3;}
-  .tv-bottom{grid-column:1 / -1;grid-row:4;grid-template-columns:1fr 1.6fr;}
-  .tv-bar-val{width:70px;}
-  .tv-bar-val small{color:#9cabb7;margin-left:4px;font-family:var(--font-body);}
-  @media(max-width:1050px){
-    .tv-metrics{grid-column:2;grid-row:3;grid-template-columns:repeat(3,1fr);}
-    .tv-progress-panel{grid-column:2;grid-row:4;}
-    .tv-issue{grid-column:2;grid-row:5;}
-    .tv-bottom{grid-column:2;grid-row:6;grid-template-columns:1fr;}
-    .tv-optable{font-size:10px;}
+  /* ---------- Station Display (rotating floor TV) ---------- */
+  body.tv-mode{background:var(--graphite-950);}
+  body.tv-mode .topbar{display:none;}
+  body.tv-mode .wrap{max-width:none;padding:0;}
+  .tv-card{
+    min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;
+    background:linear-gradient(160deg,var(--graphite-800) 0%,var(--graphite-950) 100%);color:#fff;
+    padding:40px 20px;text-align:center;box-sizing:border-box;overflow-y:auto;
   }
-  @media(max-width:700px){
-    .tv-metrics{grid-template-columns:1fr 1fr;}
-    .tv-optable td.grp,.tv-optable th:nth-child(3){display:none;}
-  }
+  .tv-station-no{font-family:var(--font-mono);font-size:20px;color:var(--amber-500);letter-spacing:2px;margin-bottom:10px;}
+  .tv-progress{color:var(--steel-300);font-size:14px;margin-left:14px;}
+  .tv-machine{font-family:var(--font-display);font-size:min(14vw,88px);font-weight:700;letter-spacing:2px;line-height:1;}
+  .tv-sub{font-size:min(4vw,24px);color:var(--steel-200);margin-top:10px;}
+  .tv-status{font-size:min(4.5vw,28px);margin-top:22px;display:flex;align-items:center;gap:12px;justify-content:center;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
+  .tv-stage{font-size:min(3.2vw,18px);color:var(--amber-500);margin-top:12px;letter-spacing:.5px;}
+  .tv-plan{display:flex;gap:14px;margin-top:18px;flex-wrap:wrap;justify-content:center;}
+  .tv-plan-chip{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:8px 14px;font-size:12px;color:var(--steel-200);}
+  .tv-plan-chip b{display:block;font-size:14px;color:#fff;margin-top:2px;}
+  .tv-plan-chip.late b{color:var(--red-600);}
+  .tv-tables{display:flex;gap:20px;margin-top:34px;flex-wrap:wrap;justify-content:center;max-width:900px;}
+  .tv-table{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:16px 22px;min-width:260px;text-align:left;}
+  .tv-table-title{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--steel-300);margin-bottom:10px;}
+  .tv-table-row{display:flex;justify-content:space-between;gap:16px;padding:5px 0;font-size:13.5px;color:#fff;border-top:1px solid rgba(255,255,255,.07);}
+  .tv-table-row:first-child{border-top:none;}
+  .tv-table-row span:last-child{color:var(--amber-500);font-family:var(--font-mono);white-space:nowrap;}
+  .tv-table-empty{font-size:12.5px;color:var(--steel-300);padding:5px 0;}
+  .tv-bar-row{display:flex;align-items:center;gap:10px;padding:6px 0;}
+  .tv-bar-label{width:90px;font-size:12px;color:var(--steel-200);flex-shrink:0;text-align:right;}
+  .tv-bar-track{flex:1;background:rgba(255,255,255,.08);border-radius:4px;height:16px;overflow:hidden;}
+  .tv-bar-fill{height:100%;border-radius:4px;}
+  .tv-bar-val{width:52px;font-family:var(--font-mono);font-size:12px;color:#fff;flex-shrink:0;}
 
-  .tv-rotate-pause-btn.paused{background:var(--amber-500);color:var(--graphite-950);}
+  .tv-topbar{display:flex;justify-content:space-between;align-items:flex-start;width:100%;max-width:1300px;gap:20px;flex-wrap:wrap;}
+  .tv-status-banner{border-radius:10px;padding:12px 24px;text-align:center;min-width:200px;}
+  .tv-status-banner.ontrack{background:rgba(63,143,99,.14);border:1.5px solid var(--green-600);}
+  .tv-status-banner.atrisk{background:rgba(224,163,0,.14);border:1.5px solid var(--amber-signal);}
+  .tv-status-banner.delayed{background:rgba(192,57,43,.14);border:1.5px solid var(--red-600);}
+  .tv-status-banner .label{font-size:10.5px;letter-spacing:1.5px;color:var(--steel-300);text-transform:uppercase;}
+  .tv-status-banner .value{font-family:var(--font-display);font-size:20px;font-weight:700;margin-top:3px;}
+  .tv-status-banner.ontrack .value{color:var(--green-600);}
+  .tv-status-banner.atrisk .value{color:var(--amber-signal);}
+  .tv-status-banner.delayed .value{color:var(--red-600);}
 
-  /* ===== one-page fit-ups (v3) ===== */
-  /* the fixed Pause/Resume Rotation button sat on top of the delivery panel title */
-  .tv-delivery{padding-top:46px;}
-  /* top-5 reason rows: fixed value column so hours stay next to the label */
-  .tv-reason{display:grid !important;grid-template-columns:12px minmax(0,1fr) 96px;gap:9px;align-items:center;padding:3px 0;}
-  .tv-reason-val{text-align:right;white-space:nowrap;}
-  .tv-reason-val small{display:inline;margin-left:5px;color:#9cabb7;font-family:var(--font-body);}
-  .tv-reason-list{gap:4px;}
-  /* keep the whole card inside one screen */
-  .tv-card{min-height:0;height:100vh;overflow:hidden;padding-bottom:6px;}
-  .tv-bottom{align-items:start;}
-  .tv-panel{padding:10px 14px 12px;}
-  .tv-bar-row{padding:3px 0;}
-  .tv-total-delay{margin-top:8px;}
-  .tv-donut{width:132px;height:132px;}
-  .tv-footer{padding:4px 0 0;}
-  @media(max-width:1050px){.tv-delivery{padding-top:15px;}.tv-card{height:auto;overflow:visible;}}
+  .tv-progress-wrap{max-width:1100px;margin-top:30px;width:100%;}
+  .tv-progress-summary{display:flex;gap:18px;justify-content:center;font-size:11.5px;color:var(--steel-300);margin-bottom:12px;flex-wrap:wrap;}
+  .tv-progress-track{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;}
+  .tv-op-dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:var(--font-mono);font-weight:700;}
+  .tv-op-dot.done{background:var(--green-600);color:#fff;}
+  .tv-op-dot.current{background:transparent;border:2.5px solid var(--amber-500);color:var(--amber-500);box-shadow:0 0 8px rgba(242,163,15,.5);}
+  .tv-op-dot.pending{background:rgba(255,255,255,.07);color:var(--steel-300);border:1px solid rgba(255,255,255,.14);}
 
+  .tv-current-op{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:16px 22px;margin-top:22px;max-width:640px;width:100%;text-align:left;}
+  .tv-current-op .op-title{font-family:var(--font-display);font-size:18px;font-weight:700;color:#fff;}
+  .tv-current-op .op-sub{font-size:11px;color:var(--steel-300);margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
+  .tv-current-op .op-stats{display:flex;gap:22px;margin-top:10px;flex-wrap:wrap;}
+  .tv-current-op .op-stat{font-size:12px;color:var(--steel-200);}
+  .tv-current-op .op-stat b{display:block;font-size:16px;color:#fff;font-family:var(--font-mono);}
 
-  /* hold modal */
-  .tv-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;}
-  .tv-modal{background:var(--graphite-800);border:1px solid rgba(255,255,255,.12);border-radius:8px;max-width:420px;width:100%;padding:22px;color:#fff;}
-  .tv-modal h3{margin:0 0 14px;font-family:var(--font-display);font-size:16px;}
-  .tv-modal label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--steel-300);margin:12px 0 5px;font-weight:600;}
-  .tv-modal input,.tv-modal select,.tv-modal textarea{
-    width:100%;padding:11px;font-size:14px;border:1.5px solid rgba(255,255,255,.15);border-radius:4px;
-    background:rgba(255,255,255,.05);color:#fff;font-family:var(--font-body);}
-  .tv-modal textarea{min-height:64px;resize:vertical;}
-  .tv-modal-actions{display:flex;gap:10px;margin-top:18px;}
-  .tv-modal-actions button{flex:1;padding:12px;border-radius:4px;border:none;font-weight:700;text-transform:uppercase;
-    font-size:12.5px;cursor:pointer;letter-spacing:.4px;}
-  .tv-modal-actions .cancel{background:rgba(255,255,255,.08);color:#fff;}
-  .tv-modal-actions .confirm{background:var(--red-600);color:#fff;}
-  .tv-modal-actions .confirm.resume{background:var(--green-600);}
+  .tv-events{max-height:230px;overflow-y:auto;text-align:left;}
+  .tv-event-row{display:flex;gap:10px;align-items:baseline;padding:5px 0;border-top:1px solid rgba(255,255,255,.07);font-size:12px;}
+  .tv-event-row:first-child{border-top:none;}
+  .tv-event-time{color:var(--steel-300);font-family:var(--font-mono);min-width:60px;font-size:10.5px;}
+
+  /* ---------- TV redesign v3: horizontal identity strip, 4 metric widgets, ranked reasons ---------- */
+  .tv-hbar{display:flex;align-items:stretch;gap:0;width:100%;max-width:1400px;background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.1);border-radius:10px;overflow:hidden;text-align:left;}
+  .tv-hbar-item{padding:14px 20px;border-right:1px solid rgba(255,255,255,.08);}
+  .tv-hbar-item:last-child{border-right:none;}
+  .tv-hbar-item .lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:1px;color:var(--steel-300);}
+  .tv-hbar-item .val{font-size:min(3.2vw,20px);font-weight:700;color:#fff;margin-top:3px;font-family:var(--font-display);}
+  .tv-hbar-item .val.amber{color:var(--amber-500);}
+  .tv-hbar-status{margin-left:auto;padding:10px 22px;text-align:center;border-left:2px solid;display:flex;flex-direction:column;justify-content:center;min-width:190px;}
+  .tv-hbar-status.ontrack{border-color:var(--green-600);background:rgba(63,143,99,.1);}
+  .tv-hbar-status.atrisk{border-color:var(--amber-signal);background:rgba(224,163,0,.1);}
+  .tv-hbar-status.delayed{border-color:var(--red-600);background:rgba(192,57,43,.1);}
+  .tv-hbar-status .lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:1px;color:var(--steel-300);}
+  .tv-hbar-status .val{font-family:var(--font-display);font-size:22px;font-weight:700;margin-top:2px;}
+  .tv-hbar-status.ontrack .val{color:var(--green-600);}
+  .tv-hbar-status.atrisk .val{color:var(--amber-signal);}
+  .tv-hbar-status.delayed .val{color:var(--red-600);}
+  .tv-hbar-status .sub{font-size:9.5px;color:var(--steel-300);margin-top:3px;line-height:1.3;}
+
+  .tv-row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:1400px;margin-top:14px;}
+  @media(max-width:900px){.tv-row2{grid-template-columns:1fr;}}
+
+  .tv-metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;width:100%;max-width:1400px;margin-top:14px;}
+  @media(max-width:900px){.tv-metric-row{grid-template-columns:1fr 1fr;}}
+  .tv-mw{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:16px 18px;text-align:left;}
+  .tv-mw .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--steel-300);display:flex;align-items:center;gap:6px;}
+  .tv-mw-donut-wrap{display:flex;align-items:center;gap:14px;margin-top:8px;}
+  .tv-mw-donut-canvas-wrap{position:relative;width:70px;height:70px;flex-shrink:0;}
+  .tv-mw-donut-canvas-wrap canvas{width:70px !important;height:70px !important;}
+  .tv-mw-donut-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:16px;font-weight:700;color:#fff;}
+  .tv-mw .big{font-family:var(--font-display);font-size:26px;font-weight:700;color:#fff;margin-top:6px;}
+  .tv-mw .big.split{display:flex;align-items:baseline;gap:6px;}
+  .tv-mw .big.split .slash{color:var(--steel-300);font-weight:400;font-size:18px;}
+  .tv-mw .big.split b{color:var(--steel-blue,#6ea3c4);}
+  .tv-mw .big.red{color:var(--red-600);}
+  .tv-mw .caption{font-size:11px;color:var(--steel-300);margin-top:4px;}
+  .tv-mw .late-badge{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:10px;font-size:10.5px;font-weight:700;text-transform:uppercase;}
+  .tv-mw .late-badge.delayed{background:rgba(192,57,43,.2);color:var(--red-600);}
+  .tv-mw .late-badge.atrisk{background:rgba(224,163,0,.2);color:var(--amber-signal);}
+  .tv-mw .late-badge.ontrack{background:rgba(63,143,99,.2);color:var(--green-600);}
+
+  .tv-reason-rank{}
+  .tv-reason-rank-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,.07);}
+  .tv-reason-rank-row:first-child{border-top:none;}
+  .tv-reason-rank-badge{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}
+  .tv-reason-rank-txt{flex:1;font-size:12px;color:#fff;}
+  .tv-reason-rank-val{font-family:var(--font-mono);font-size:12px;color:var(--red-600);white-space:nowrap;}
+  .tv-reason-rank-other{padding:7px 0;border-top:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;font-size:11.5px;color:var(--steel-300);}
+
+  .tv-ops-compact td, .tv-ops-compact th{padding:5px 8px;}
+  .tv-more-ops-note{font-size:11px;color:var(--steel-300);margin-top:8px;}
+  .tv-top-grid{display:grid;grid-template-columns:1.1fr 1.3fr 1.3fr;gap:16px;width:100%;max-width:1300px;align-items:stretch;}
+  @media(max-width:1000px){.tv-top-grid{grid-template-columns:1fr;}}
+  .tv-panel{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:16px 18px;text-align:left;}
+  .tv-id-panel .tv-machine{font-size:min(6vw,42px);margin-top:6px;}
+  .tv-id-panel .tv-sub{margin-top:2px;}
+  .tv-op-status-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;text-transform:uppercase;padding:4px 10px;border-radius:12px;margin-top:6px;}
+  .tv-op-status-pill.Completed{background:var(--green-100);color:var(--green-600);}
+  .tv-op-status-pill.InProgress{background:var(--amber-100);color:var(--amber-700);}
+  .tv-op-status-pill.Hold{background:var(--red-100);color:var(--red-600);}
+  .tv-op-status-pill.Pending{background:rgba(255,255,255,.1);color:var(--steel-300);}
+  .tv-curop-title{font-family:var(--font-display);font-size:22px;font-weight:700;color:#fff;margin-top:4px;}
+  .tv-curop-stats{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap;}
+  .tv-curop-stat{font-size:11px;color:var(--steel-300);text-transform:uppercase;}
+  .tv-curop-stat b{display:block;font-size:17px;color:#fff;font-family:var(--font-mono);margin-top:2px;}
+  .tv-issue-panel{border-color:var(--red-600);background:rgba(192,57,43,.08);}
+  .tv-issue-panel .hdr{color:var(--red-600);font-weight:700;font-size:12px;letter-spacing:.5px;display:flex;align-items:center;gap:6px;text-transform:uppercase;}
+  .tv-issue-panel .issue-text{font-size:16px;font-weight:600;color:#fff;margin-top:8px;line-height:1.35;}
+  .tv-issue-panel .issue-meta{display:flex;gap:20px;margin-top:12px;flex-wrap:wrap;font-size:11px;color:var(--steel-300);text-transform:uppercase;}
+  .tv-issue-panel .issue-meta b{display:block;font-size:15px;color:#fff;font-family:var(--font-mono);margin-top:2px;}
+  .tv-delivery-dates{display:flex;flex-direction:column;gap:8px;}
+  .tv-delivery-dates .row{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--steel-300);text-transform:uppercase;padding:6px 0;border-top:1px solid rgba(255,255,255,.08);}
+  .tv-delivery-dates .row:first-child{border-top:none;}
+  .tv-delivery-dates .row b{font-size:15px;color:#fff;font-family:var(--font-mono);text-transform:none;}
+  .tv-delivery-dates .row.late b{color:var(--red-600);}
+
+  .tv-ops-table-wrap{max-width:1300px;width:100%;margin-top:22px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:16px 18px;text-align:left;}
+  .tv-ops-table-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+  .tv-ops-table-hdr .title{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--steel-300);}
+  .tv-ops-table-hdr .pct{font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--amber-500);}
+  table.tv-ops{width:100%;border-collapse:collapse;font-size:11.5px;}
+  table.tv-ops th{text-align:left;color:var(--steel-300);text-transform:uppercase;font-size:9.5px;padding:6px 8px;border-bottom:2px solid rgba(255,255,255,.15);}
+  table.tv-ops td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.06);color:#fff;font-family:var(--font-mono);}
+  table.tv-ops td.name{font-family:var(--font-body);}
+  table.tv-ops tr.current td{background:rgba(242,163,15,.08);}
+  table.tv-ops tr.totals td{border-top:2px solid rgba(255,255,255,.2);border-bottom:none;font-weight:700;}
+  .tv-ops-scroll{max-height:280px;overflow-y:auto;}
+  .tv-mini-pct-bar{width:60px;height:6px;background:rgba(255,255,255,.12);border-radius:3px;display:inline-block;overflow:hidden;vertical-align:middle;margin-right:6px;}
+  .tv-mini-pct-fill{height:100%;background:var(--amber-500);}
+
+  .tv-bottom-row{display:flex;gap:20px;margin-top:22px;flex-wrap:wrap;justify-content:center;max-width:1300px;width:100%;}
+  .tv-bottom-row .tv-table{flex:1;min-width:340px;}
+  .tv-pie-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  .tv-pie-wrap canvas{max-width:150px;max-height:150px;}
+  .tv-pie-legend{flex:1;min-width:160px;}
+  .tv-pie-legend-row{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#fff;padding:4px 0;}
+  .tv-pie-legend-row .swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+  .tv-pie-legend-row .txt{flex:1;color:var(--steel-200);}
+  .tv-pie-legend-row .val{font-family:var(--font-mono);color:var(--amber-500);}
+  .tv-metrics{display:flex;gap:20px;margin-top:44px;flex-wrap:wrap;justify-content:center;}
+  .tv-metric{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:18px 26px;min-width:140px;}
+  .tv-metric-num{font-family:var(--font-display);font-size:min(6vw,38px);font-weight:700;}
+  .tv-metric.highlight .tv-metric-num{color:var(--amber-500);}
+  .tv-metric.warn .tv-metric-num{color:var(--red-600);}
+  .tv-metric-lbl{font-size:12px;text-transform:uppercase;color:var(--steel-300);letter-spacing:1px;margin-top:4px;}
+  .tv-empty{min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;background:var(--graphite-950);}
 
   /* ---------- segmented status control (operator entry) ---------- */
   .seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px;}
@@ -431,7 +439,7 @@
   /* ---------- QR label sheet (printable — kept high-contrast/ink-light for shop printers) ---------- */
   .label-sheet{width:210mm;min-height:297mm;padding:10mm 6.5mm;display:grid;grid-template-columns:repeat(3,64mm);
     grid-auto-rows:34mm;column-gap:2.5mm;row-gap:0mm;background:#fff;}
-  .label{border:0.75pt solid #000;display:flex;align-items:center;padding:2mm 2mm 2mm 4mm;font-family:var(--font-body);overflow:hidden;}
+  .label{border:0.75pt solid #000;display:flex;align-items:center;padding:2mm;font-family:var(--font-body);overflow:hidden;}
   .label .qrbox{width:23mm;height:23mm;flex-shrink:0;}
   .label .info{padding-left:2mm;line-height:1.32;font-size:8pt;}
   .label .info b{font-family:var(--font-display);font-size:10pt;display:block;letter-spacing:.3px;}
@@ -468,8 +476,7 @@ function toast(msg, isErr){
   setTimeout(()=>t.remove(),2800);
 }
 function esc(s){ return (s||'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function lampClass(status){ return status==='Completed'?'green':status==='Partial'?'amber':status==='Hold'?'red':status==='Not Started'?'grey':'grey'; }
-function statusCss(status){ return (status||'').replace(/\s+/g,''); } // css-safe class name for statuses like "Not Started"
+function lampClass(status){ return status==='Completed'?'green':status==='Partial'?'amber':status==='Hold'?'red':'grey'; }
 
 // Reusable two-choice modal. Returns a promise resolving 'a' or 'b' depending which button was clicked.
 function showChoiceModal({title, body, choiceA, choiceB}){
@@ -513,7 +520,7 @@ function switchView(v){
 const params = new URLSearchParams(location.search);
 const scanToken = params.get('job');
 const tvDisplay = params.get('display') === 'tv';
-const tvInterval = parseInt(params.get('interval')) || 30; // seconds per station
+const tvInterval = parseInt(params.get('interval')) || 7; // seconds per station
 let view = 'dashboard';
 let session = null;
 
@@ -551,7 +558,7 @@ function setNav(){
   const bar=document.getElementById('navBar');
   if(tvDisplay || scanToken){ bar.innerHTML=''; return; }
   if(!session){ bar.innerHTML=''; return; }
-  const items=[['dashboard','Dashboard'],['issues','Delay / Issue Log'],['entries','Production Entries'],['gantt','Gantt Chart'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels']];
+  const items=[['dashboard','Dashboard'],['issues','Delay / Issue Log'],['entries','Production Entries'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels']];
   bar.innerHTML = items.map(([id,l])=>`<button data-v="${id}" class="${view===id?'active':''}">${l}</button>`).join('')
     + `<button id="logoutBtn" class="small">Log Out</button>`;
   bar.querySelectorAll('button[data-v]').forEach(b=> b.onclick=()=> switchView(b.dataset.v));
@@ -577,7 +584,6 @@ async function render(){
   if(view==='jobs') return renderJobsQr(app);
   if(view==='issues') return renderIssueLog(app);
   if(view==='entries') return renderProductionEntries(app);
-  if(view==='gantt') return renderGanttChart(app);
   return renderDashboard(app);
 }
 
@@ -718,42 +724,9 @@ async function renderResponsibilityMaster(){
 }
 
 /* ================= JOB DETAILS EDITOR (machine no, customer, dates) ================= */
-async function openJobDetailsEditor(job, app){
+function openJobDetailsEditor(job, app){
   const panel = document.getElementById('opsPanel');
   panel.style.display='block';
-  const { data: ops } = await sb.from('job_operations').select('std_hours, is_completed').eq('job_id', job.id);
-  const opList = ops || [];
-  const totalStdHours = opList.reduce((s,o)=> s + (parseFloat(o.std_hours)||0), 0);
-  const doneStdHours = opList.filter(o=>o.is_completed).reduce((s,o)=> s + (parseFloat(o.std_hours)||0), 0);
-  const remainingStdHours = Math.max(0, totalStdHours - doneStdHours);
-  const shiftCount = job.shift_count || 1;
-  const hoursPerShift = job.hours_per_shift || 7.5;
-
-  function renderCalc(){
-    const sc = parseFloat(document.getElementById('ed_shifts').value)||1;
-    const hs = parseFloat(document.getElementById('ed_hrsday').value)||7.5;
-    const startForTarget = job.actual_start_date || job.start_date;
-    const targetDate = startForTarget ? computeTargetDate(startForTarget, totalStdHours, sc, hs) : null;
-    const tomorrow = addDaysStr(new Date().toISOString().slice(0,10), 1);
-    const estDeliveryDate = remainingStdHours>0 ? computeTargetDate(tomorrow, remainingStdHours, sc, hs) : tomorrow;
-    const risk = deliveryRiskLevel(estDeliveryDate, job.delivery_date);
-    const riskLabel = risk==='green' ? '✓ ON / BEFORE SO DATE' : risk==='yellow' ? '⚠ LATE (WITHIN BUFFER)' : risk==='red' ? '✕ LATE (BEYOND BUFFER)' : '—';
-    const riskColor = risk==='green' ? 'var(--green-600)' : risk==='yellow' ? 'var(--amber-signal)' : risk==='red' ? 'var(--red-600)' : 'var(--steel-600)';
-    document.getElementById('calcOut').innerHTML = `
-      <div class="row3">
-        <div><label style="margin-top:0;">Assembly Target Date <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(gantt, ${totalStdHours.toFixed(1)}h total, from ${startForTarget?fmtDate(startForTarget):'—'})</span></label>
-          <div class="tv-plan-chip" style="background:var(--plate-50);border-color:var(--plate-100);color:var(--graphite-950);"><b style="color:var(--graphite-950);">${targetDate?fmtDate(targetDate):'Set a start date first'}</b></div>
-        </div>
-        <div><label style="margin-top:0;">Est. Delivery Date <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(from tomorrow, ${remainingStdHours.toFixed(1)}h remaining, assumes material available)</span></label>
-          <div class="tv-plan-chip" style="background:var(--plate-50);border-color:var(--plate-100);color:var(--graphite-950);"><b style="color:var(--graphite-950);">${fmtDate(estDeliveryDate)}</b></div>
-        </div>
-        <div><label style="margin-top:0;">Delivery Health</label>
-          <div class="tv-plan-chip" style="background:var(--plate-50);border-color:var(--plate-100);"><b style="color:${riskColor};">${riskLabel}</b></div>
-        </div>
-      </div>
-    `;
-  }
-
   panel.innerHTML = `
     <div class="panel-title">Edit Job Details — ${esc(job.machine_no)}</div>
     <div class="row3">
@@ -768,21 +741,11 @@ async function openJobDetailsEditor(job, app){
     </div>
     <div class="row3">
       <div><label>Actual Start Date <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(fill once work actually begins)</span></label><input id="ed_actualstart" type="date" value="${job.actual_start_date||''}"></div>
-      <div><label>Shift(s) / Day</label>
-        <select id="ed_shifts"><option value="1" ${shiftCount==1?'selected':''}>1</option><option value="2" ${shiftCount==2?'selected':''}>2</option><option value="3" ${shiftCount==3?'selected':''}>3</option></select>
-      </div>
-      <div><label>Hours / Shift</label><input id="ed_hrsday" type="number" step="0.5" min="0.5" value="${hoursPerShift}"></div>
-    </div>
-    <div class="panel" style="background:var(--plate-50);margin:10px 0 0;padding:14px 16px;">
-      <div class="panel-title" style="font-size:11px;border:none;padding:0;margin:0 0 8px;">Assembly Scheduling Calculator <span class="sub">Mon–Sat, Sunday off</span></div>
-      <div id="calcOut"></div>
+      <div><label>Shifts / Day</label><select id="ed_shifts"><option value="1" ${(job.shift_count||1)==1?'selected':''}>1</option><option value="2" ${job.shift_count==2?'selected':''}>2</option><option value="3" ${job.shift_count==3?'selected':''}>3</option></select></div>
+      <div><label>Hours / Shift</label><input id="ed_hrsday" type="number" step="0.5" value="${job.hours_per_shift ?? 8}"></div>
     </div>
     <button class="btn amber" id="saveDetailsBtn">Save Details</button>
   `;
-  document.getElementById('ed_shifts').onchange = renderCalc;
-  document.getElementById('ed_hrsday').oninput = renderCalc;
-  renderCalc();
-
   document.getElementById('saveDetailsBtn').onclick = async ()=>{
     const machine_no = document.getElementById('ed_machine').value.trim().toUpperCase();
     const customer = document.getElementById('ed_customer').value.trim();
@@ -792,7 +755,7 @@ async function openJobDetailsEditor(job, app){
     const delivery_date = document.getElementById('ed_delivery').value || null;
     const actual_start_date = document.getElementById('ed_actualstart').value || null;
     const shift_count = parseInt(document.getElementById('ed_shifts').value) || 1;
-    const hours_per_shift = parseFloat(document.getElementById('ed_hrsday').value) || 7.5;
+    const hours_per_shift = parseFloat(document.getElementById('ed_hrsday').value) || 8;
     if(!machine_no) return toast('Machine No. is required', true);
     const { error } = await sb.from('jobs').update({ machine_no, customer, station_no, start_date, planned_end_date, delivery_date, actual_start_date, shift_count, hours_per_shift }).eq('id', job.id);
     if(error) return toast(error.message, true);
@@ -973,8 +936,8 @@ async function renderNewJob(app){
       </div>
       <div class="row3">
         <div><label>Actual Start Date <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(fill once work actually begins)</span></label><input id="f_actualstart" type="date"></div>
-        <div><label>Shift(s) / Day</label><select id="f_shifts"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select></div>
-        <div><label>Hours / Shift</label><input id="f_hrsday" type="number" step="0.5" min="0.5" value="7.5"></div>
+        <div><label>Shifts / Day</label><select id="f_shifts"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select></div>
+        <div><label>Hours / Shift</label><input id="f_hrsday" type="number" step="0.5" value="8"></div>
       </div>
       <label>Station No. <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional — sets its position on the rotating floor display)</span></label>
       <input id="f_station" type="number" min="1" placeholder="e.g. 1" style="max-width:140px;">
@@ -1015,7 +978,7 @@ async function renderNewJob(app){
     const delivery_date = document.getElementById('f_delivery').value || null;
     const actual_start_date = document.getElementById('f_actualstart').value || null;
     const shift_count = parseInt(document.getElementById('f_shifts').value) || 1;
-    const hours_per_shift = parseFloat(document.getElementById('f_hrsday').value) || 7.5;
+    const hours_per_shift = parseFloat(document.getElementById('f_hrsday').value) || 8;
     const station_no = document.getElementById('f_station').value ? parseInt(document.getElementById('f_station').value) : null;
     if(!machine_no || !model_id) { toast('Machine No. and Model are required', true); return; }
 
@@ -1225,9 +1188,6 @@ async function renderScan(app, token){
   const { data: resp } = await sb.from('responsibilities').select('*').order('name');
   const today = new Date().toISOString().slice(0,10);
 
-  const sortedOps = (ops||[]).slice().sort((a,b)=>a.sequence-b.sequence);
-  const suggestedOp = sortedOps.find(o=>!o.is_completed) || null;
-
   app.innerHTML = `
     <div class="nameplate"><span class="rv2"></span><span class="rv3"></span>
       <div class="np-row"><span>Machine No.</span><b>${esc(job.machine_no)}</b></div>
@@ -1237,9 +1197,9 @@ async function renderScan(app, token){
     <div class="panel">
       <div class="panel-title">Log Your Work</div>
       <label>Your Name</label><input id="s_name" name="operator_name" autocomplete="name" placeholder="Your name">
-      <label>Operation ${suggestedOp ? '<span style="color:var(--green-600);text-transform:none;font-weight:400;">(next operation pre-selected — change if different)</span>' : ''}</label>
+      <label>Operation</label>
       <select id="s_op"><option value="">— Select —</option>
-        ${sortedOps.map(o=>`<option value="${o.id}" ${suggestedOp && o.id===suggestedOp.id?'selected':''}>${o.is_completed?'✓ ':''}${esc(o.op_no)} — ${esc(o.description)}${o.execution_mode==='Parallel'?' [Parallel]':''} (${o.std_hours}h std)</option>`).join('')}
+        ${(ops||[]).map(o=>`<option value="${o.id}">${o.is_completed?'✓ ':''}${esc(o.op_no)} — ${esc(o.description)}${o.execution_mode==='Parallel'?' [Parallel]':''} (${o.std_hours}h std)</option>`).join('')}
       </select>
       ${ops && ops.some(o=>o.is_completed) ? '<div class="stat-line">✓ = already logged as Completed at least once</div>' : ''}
       ${(!ops || ops.length===0) ? '<div class="stat-line" style="color:var(--red-600);">No operations are set up for this job yet — tell your supervisor before submitting.</div>' : ''}
@@ -1255,10 +1215,9 @@ async function renderScan(app, token){
         <div></div>
       </div>
       <div class="row2" id="timeRow">
-        <div><label>Start Time <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(defaults to shift start — edit if different)</span></label><input id="s_start" type="time" value="09:00"></div>
-        <div><label>End Time <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(defaults to shift end — edit if different)</span></label><input id="s_end" type="time" value="17:30"></div>
+        <div><label>Start Time</label><input id="s_start" type="time"></div>
+        <div><label>End Time</label><input id="s_end" type="time"></div>
       </div>
-      <div class="stat-line" id="netHoursLine" style="margin-top:-6px;"></div>
       <div id="statusBlock">
         <label>Status</label>
         <div class="seg" id="statusSeg">
@@ -1271,10 +1230,6 @@ async function renderScan(app, token){
       <input type="hidden" id="s_workstarted" value="yes">
 
       <div id="delayFields" style="display:none;">
-        <div class="toggle-pair" id="noWorkStatusToggle" style="display:none;margin-bottom:6px;">
-          <button type="button" id="nwsNotStartedBtn">Not Yet Started</button>
-          <button type="button" class="on" id="nwsHoldBtn">Hold</button>
-        </div>
         <label id="issueLabel">Issue / Delay Reason</label>
         <textarea id="s_issue" placeholder="e.g. wheel head not received, partial material only…"></textarea>
         <div class="row2">
@@ -1304,26 +1259,17 @@ async function renderScan(app, token){
     const status = document.getElementById('s_status').value;
     if(workStarted === 'no'){
       document.getElementById('timeRow').style.display = 'none';
-      document.getElementById('netHoursLine').textContent = '';
       document.getElementById('statusBlock').style.display = 'none';
       document.getElementById('extraOpsSection').style.display = 'none';
       document.getElementById('delayFields').style.display = 'block';
-      document.getElementById('noWorkStatusToggle').style.display = 'flex';
-      if(status === 'Not Started'){
-        document.getElementById('issueLabel').innerHTML = 'Reason <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional — why hasn\'t it started yet)</span>';
-        document.getElementById('delayHrsLabel').innerHTML = 'Hours Lost <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span>';
-        document.getElementById('respLabel').innerHTML = 'Responsibility <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span>';
-      } else {
-        document.getElementById('issueLabel').innerHTML = 'Issue / Delay Reason <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
-        document.getElementById('delayHrsLabel').innerHTML = 'Hours Lost <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
-        document.getElementById('respLabel').innerHTML = 'Responsibility <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
-      }
+      document.getElementById('issueLabel').innerHTML = 'Issue / Delay Reason <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
+      document.getElementById('delayHrsLabel').innerHTML = 'Hours Lost <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
+      document.getElementById('respLabel').innerHTML = 'Responsibility <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
     } else {
       document.getElementById('timeRow').style.display = 'grid';
       document.getElementById('statusBlock').style.display = 'block';
       document.getElementById('extraOpsSection').style.display = 'block';
       document.getElementById('delayFields').style.display = 'block';
-      document.getElementById('noWorkStatusToggle').style.display = 'none';
       if(status === 'Hold'){
         document.getElementById('issueLabel').innerHTML = 'Issue / Delay Reason <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
         document.getElementById('delayHrsLabel').innerHTML = 'Delay Hours <span style="color:var(--red-600);text-transform:none;font-weight:400;">(required)</span>';
@@ -1339,26 +1285,12 @@ async function renderScan(app, token){
   document.getElementById('workYesBtn').onclick = ()=>{
     workStarted='yes'; document.getElementById('s_workstarted').value='yes';
     document.getElementById('workYesBtn').classList.add('on'); document.getElementById('workNoBtn').classList.remove('on');
-    document.getElementById('s_status').value = 'Completed';
-    document.querySelectorAll('#statusSeg button').forEach(x=>x.classList.toggle('on', x.dataset.s==='Completed'));
     updateFieldVisibility();
-    refreshNetHours();
   };
   document.getElementById('workNoBtn').onclick = ()=>{
     workStarted='no'; document.getElementById('s_workstarted').value='no';
     document.getElementById('workNoBtn').classList.add('on'); document.getElementById('workYesBtn').classList.remove('on');
     document.getElementById('s_status').value = 'Hold';
-    document.getElementById('nwsHoldBtn').classList.add('on'); document.getElementById('nwsNotStartedBtn').classList.remove('on');
-    updateFieldVisibility();
-  };
-  document.getElementById('nwsNotStartedBtn').onclick = ()=>{
-    document.getElementById('s_status').value = 'Not Started';
-    document.getElementById('nwsNotStartedBtn').classList.add('on'); document.getElementById('nwsHoldBtn').classList.remove('on');
-    updateFieldVisibility();
-  };
-  document.getElementById('nwsHoldBtn').onclick = ()=>{
-    document.getElementById('s_status').value = 'Hold';
-    document.getElementById('nwsHoldBtn').classList.add('on'); document.getElementById('nwsNotStartedBtn').classList.remove('on');
     updateFieldVisibility();
   };
   document.querySelectorAll('#statusSeg button').forEach(b=>{
@@ -1371,27 +1303,10 @@ async function renderScan(app, token){
   });
   updateFieldVisibility();
 
-  function refreshNetHours(){
-    const startEl = document.getElementById('s_start'), endEl = document.getElementById('s_end'), lineEl = document.getElementById('netHoursLine');
-    if(!startEl || !endEl || !lineEl || workStarted==='no'){ if(lineEl) lineEl.textContent=''; return; }
-    const net = toHours(startEl.value, endEl.value);
-    lineEl.textContent = (startEl.value && endEl.value) ? `Net working time: ${net.toFixed(2)} h (fixed breaks deducted automatically)` : '';
-  }
-  document.getElementById('s_start').addEventListener('input', refreshNetHours);
-  document.getElementById('s_end').addEventListener('input', refreshNetHours);
-  refreshNetHours();
-
-  document.getElementById('addExtraBtn').onclick = ()=>{
-    const row = document.createElement('div');
-    row.className='row2'; row.style.marginTop='6px';
-    row.innerHTML = `<div><input placeholder="Operator name" class="extraName"></div><div><input placeholder="Hours" class="extraHours"></div>`;
-    document.getElementById('extraOps').appendChild(row);
-  };
-
   // Stage-skip guard: if the selected op has an earlier Series-mode op that isn't
   // marked complete yet, ask the operator whether they meant to log that one instead.
   const opSelect = document.getElementById('s_op');
-  let lastConfirmedOpId = suggestedOp ? suggestedOp.id : '';
+  let lastConfirmedOpId = '';
   opSelect.addEventListener('change', async ()=>{
     const selectedId = opSelect.value;
     if(!selectedId || selectedId === lastConfirmedOpId) return;
@@ -1414,6 +1329,13 @@ async function renderScan(app, token){
       lastConfirmedOpId = selectedId;
     }
   });
+
+  document.getElementById('addExtraBtn').onclick = ()=>{
+    const row = document.createElement('div');
+    row.className='row2'; row.style.marginTop='6px';
+    row.innerHTML = `<div><input placeholder="Operator name" class="extraName"></div><div><input placeholder="Hours" class="extraHours"></div>`;
+    document.getElementById('extraOps').appendChild(row);
+  };
   document.getElementById('s_submit').onclick = (e)=> withLock(e.target, 'Submitting…', async ()=>{
     const name=document.getElementById('s_name').value.trim();
     const op_id=document.getElementById('s_op').value;
@@ -1430,11 +1352,9 @@ async function renderScan(app, token){
     if(!date) { toast('Fill the activity date', true); return; }
 
     if(workStarted === 'no'){
-      if(status === 'Hold'){
-        if(!issue) { toast('Issue/Delay reason is required', true); return; }
-        if(!delayHrs) { toast('Enter hours lost', true); return; }
-        if(!resp) { toast('Select Responsibility', true); return; }
-      }
+      if(!issue) { toast('Issue/Delay reason is required', true); return; }
+      if(!delayHrs) { toast('Enter hours lost', true); return; }
+      if(!resp) { toast('Select Responsibility', true); return; }
     } else {
       if(!start||!end) { toast('Fill start and end time', true); return; }
       if(status==='Hold'){
@@ -1548,7 +1468,6 @@ async function openEntryEditor(entry, app){
     const delay_hours = delayHrsVal ? parseFloat(delayHrsVal) : null;
     const responsibility = document.getElementById('e_resp').value || null;
     if(!primary_operator || !activity_date || !job_operation_id) { toast('Name, date and operation are required', true); return; }
-    if((status==='Completed' || status==='Partial') && (!start_time || !end_time)) { toast('Start and End time are required for Completed/Partial status', true); return; }
     if(status==='Hold' && (!issue_reason || !delay_hours || !responsibility)) { toast('Hold requires reason, delay hours and responsibility', true); return; }
     const { error } = await sb.from('entries').update({
       job_id, job_operation_id, primary_operator, activity_date, start_time, end_time, status, issue_reason, delay_hours, responsibility
@@ -1588,7 +1507,6 @@ async function bulkAddEntries(rows, resultsEl){
     const op = opsFound && opsFound[0];
     if(!op){ results.push({...r, ok:false, reason:'Operation "'+r.op_no+'" not found on that machine\'s job'}); continue; }
     if(!['Completed','Partial','Hold'].includes(r.status)){ results.push({...r, ok:false, reason:'Status must be Completed, Partial, or Hold'}); continue; }
-    if((r.status==='Completed' || r.status==='Partial') && (!r.start || !r.end)){ results.push({...r, ok:false, reason:'Start and End time are required for Completed/Partial status'}); continue; }
     if(r.status==='Hold' && (!r.issue || !r.delayHrs || !r.resp)){ results.push({...r, ok:false, reason:'Hold requires issue, delay hours, responsibility'}); continue; }
     results.push({...r, ok:true, job_id:job.id, job_operation_id:op.id});
   }
@@ -1608,73 +1526,15 @@ async function bulkAddEntries(rows, resultsEl){
 }
 
 /* ================= EFFICIENCY / CHART HELPERS ================= */
-// Fixed daily breaks — used to compute NET working hours automatically from any start/end time.
-const SHIFT_BREAKS = [
-  ['09:00','09:15'], // tea break
-  ['11:00','11:15'], // tea break
-  ['13:00','13:30'], // lunch
-  ['15:00','15:30'], // tea break
-  ['17:15','17:30'], // closing / tea break
-];
-function timeToMins(t){
-  const [h,m] = (t||'').split(':').map(Number);
-  if(isNaN(h)||isNaN(m)) return null;
-  return h*60+m;
-}
-// Minutes of overlap between [aStart,aEnd) and [bStart,bEnd), all in same-day minute space.
-function overlapMins(aStart,aEnd,bStart,bEnd){
-  return Math.max(0, Math.min(aEnd,bEnd) - Math.max(aStart,bStart));
-}
-// Net working hours between a start/end clock time, automatically deducting any of the
-// fixed breaks (9:00-9:15, 11:00-11:15, 1:00-1:30, 3:00-3:30, 5:15-5:30) that fall inside the span.
 function toHours(start, end){
-  const sm = timeToMins(start), em0 = timeToMins(end);
-  if(sm===null || em0===null) return 0;
-  let em = em0;
-  if(em < sm) em += 24*60; // overnight shift
-  let grossMins = em - sm;
-  let breakMins = 0;
-  SHIFT_BREAKS.forEach(([bs,be])=>{
-    const bsM = timeToMins(bs), beM = timeToMins(be);
-    breakMins += overlapMins(sm, em, bsM, beM);
-    breakMins += overlapMins(sm, em, bsM+24*60, beM+24*60); // in case span crosses midnight into next day's breaks
-  });
-  return Math.max(0, (grossMins - breakMins) / 60);
+  if(!start || !end) return 0;
+  const [sh,sm] = start.split(':').map(Number);
+  const [eh,em] = end.split(':').map(Number);
+  if(isNaN(sh)||isNaN(sm)||isNaN(eh)||isNaN(em)) return 0;
+  let mins = (eh*60+em) - (sh*60+sm);
+  if(mins < 0) mins += 24*60; // overnight shift
+  return mins/60;
 }
-/* ================= SCHEDULING ENGINE (Assembly Target Date / Est. Delivery Date) ================= */
-// Working-day calculator: given a start date, a daily capacity (shifts/day × hours/shift),
-// and a quantity of std hours still to complete, walks forward day by day — skipping Sundays —
-// until cumulative capacity meets the required hours, and returns that calendar date.
-function computeTargetDate(startDateStr, totalHours, shiftsPerDay, hoursPerShift){
-  if(!startDateStr || !totalHours || totalHours<=0) return startDateStr || null;
-  const dailyCapacity = Math.max(0.1, (parseFloat(shiftsPerDay)||1) * (parseFloat(hoursPerShift)||7.5));
-  let cum = 0;
-  let d = new Date(startDateStr + 'T00:00:00');
-  let guard = 0;
-  while(guard < 3650){
-    if(d.getDay() !== 0){ // Sunday = day off
-      cum += dailyCapacity;
-      if(cum >= totalHours - 1e-9) return d.toISOString().slice(0,10);
-    }
-    d.setDate(d.getDate()+1);
-    guard++;
-  }
-  return d.toISOString().slice(0,10);
-}
-function addDaysStr(dateStr, days){
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate()+days);
-  return d.toISOString().slice(0,10);
-}
-// Green = on/before SO delivery date · Yellow = late but within a 3-day buffer · Red = beyond buffer
-function deliveryRiskLevel(estDateStr, soDateStr, bufferDays){
-  if(!estDateStr || !soDateStr) return null;
-  bufferDays = bufferDays==null ? 3 : bufferDays;
-  if(estDateStr <= soDateStr) return 'green';
-  if(estDateStr <= addDaysStr(soDateStr, bufferDays)) return 'yellow';
-  return 'red';
-}
-
 function applyDatePreset(preset, fromEl, toEl){
   const fmt = d => d.toISOString().slice(0,10);
   const today = new Date();
@@ -1688,207 +1548,9 @@ function applyDatePreset(preset, fromEl, toEl){
     fromEl.value = fmt(first); toEl.value = fmt(today);
   } else { fromEl.value=''; toEl.value=''; }
 }
-
-/* ================= GANTT CHART ================= */
-function isSundayStr(d){ return new Date(d+'T00:00:00').getDay()===0; }
-function dateRangeArray(startStr, endStr){
-  const arr=[]; let d=startStr, guard=0;
-  while(d<=endStr && guard<2000){ arr.push(d); d=addDaysStr(d,1); guard++; }
-  return arr;
-}
-// Bin-packs each operation's std hours into working days (Mon-Sat) at the job's daily capacity
-// (shifts/day × hours/shift). Small ops keep packing into the same day cell until that day's
-// capacity is used up; Parallel-flagged ops branch off and run concurrently with the preceding
-// Series op (own lane, same start day) rather than queuing sequentially behind it.
-function computeGanttPlan(ops, startDate, shiftCount, hoursPerShift){
-  const dailyCap = Math.max(0.1, (parseFloat(shiftCount)||1) * (parseFloat(hoursPerShift)||7.5));
-  function packOne(stdHours, cursorDate, cursorCap){
-    let cd = cursorDate, cap = cursorCap;
-    while(isSundayStr(cd)){ cd = addDaysStr(cd,1); cap = dailyCap; }
-    const opStart = cd;
-    let remaining = parseFloat(stdHours)||0;
-    const segs = [];
-    if(remaining <= 1e-9){
-      return { start:cd, end:cd, segs:[{date:cd,hours:0}], next:{date:cd, cap} };
-    }
-    while(remaining > 1e-9){
-      if(isSundayStr(cd)){ cd = addDaysStr(cd,1); cap = dailyCap; continue; }
-      if(cap <= 1e-9){ cd = addDaysStr(cd,1); cap = dailyCap; continue; }
-      const use = Math.min(cap, remaining);
-      segs.push({date:cd, hours:use});
-      cap -= use; remaining -= use;
-      if(remaining > 1e-9){ cd = addDaysStr(cd,1); cap = dailyCap; }
-    }
-    return { start:opStart, end:segs[segs.length-1].date, segs, next:{date:cd, cap} };
-  }
-  const schedule = {};
-  let cursor = { date:startDate, cap:dailyCap };
-  let i=0;
-  while(i < ops.length){
-    const op = ops[i];
-    if(op.execution_mode === 'Parallel'){
-      // orphan parallel op (no preceding series op) — fall back to sequential packing
-      const r = packOne(op.std_hours, cursor.date, cursor.cap);
-      schedule[op.id] = r; cursor = r.next; i++; continue;
-    }
-    const anchorState = { date:cursor.date, cap:cursor.cap };
-    const anchorResult = packOne(op.std_hours, anchorState.date, anchorState.cap);
-    schedule[op.id] = anchorResult;
-    let latestEnd = anchorResult.end;
-    let j = i+1, hadParallel = false;
-    while(j < ops.length && ops[j].execution_mode === 'Parallel'){
-      hadParallel = true;
-      const pr = packOne(ops[j].std_hours, anchorState.date, dailyCap); // own concurrent lane, fresh capacity
-      schedule[ops[j].id] = pr;
-      if(pr.end > latestEnd) latestEnd = pr.end;
-      j++;
-    }
-    cursor = hadParallel ? { date: addDaysStr(latestEnd,1), cap: dailyCap } : anchorResult.next;
-    i = j;
-  }
-  return schedule;
-}
-// Actual hours actually logged per operation per day (break-time aware), from entries.
-function computeGanttActual(entries){
-  const byOp = {};
-  (entries||[]).forEach(e=>{
-    if(!e.job_operation_id || !e.activity_date) return;
-    const hrs = (e.start_time && e.end_time) ? toHours(e.start_time, e.end_time) : 0;
-    if(hrs <= 0) return;
-    if(!byOp[e.job_operation_id]) byOp[e.job_operation_id] = {};
-    byOp[e.job_operation_id][e.activity_date] = (byOp[e.job_operation_id][e.activity_date]||0) + hrs;
-  });
-  const result = {};
-  Object.keys(byOp).forEach(opId=>{
-    const dates = Object.keys(byOp[opId]).sort();
-    result[opId] = { byDate: byOp[opId], start: dates[0], end: dates[dates.length-1] };
-  });
-  return result;
-}
-function renderGanttRow(op, rowNo, planSchedule, actualSchedule, days){
-  const plan = planSchedule[op.id];
-  const planDates = new Set((plan?plan.segs:[]).map(s=>s.date));
-  const actual = actualSchedule[op.id];
-  const actualDates = new Set(actual ? Object.keys(actual.byDate) : []);
-  const actualTotal = actual ? Object.values(actual.byDate).reduce((s,h)=>s+h,0) : 0;
-  const isMilestone = (parseFloat(op.std_hours)||0) === 0;
-  const hasActualCol = actualSchedule && Object.keys(actualSchedule).length >= 0; // always show column; blank if no mode
-  return `<tr class="${isMilestone?'gantt-milestone':''}">
-    <td class="gfrz gfrz-sno">${rowNo}</td>
-    <td class="gfrz gfrz-opno">${esc(op.op_no)}</td>
-    <td class="gfrz gfrz-group">${esc(op.group_name||'')}</td>
-    <td class="gfrz gfrz-desc">${op.is_completed?'<span class="status-tag Completed" style="margin-right:4px;">✓</span>':''}${esc(op.description)}${op.execution_mode==='Parallel'?' <span class="exec-pill Parallel" style="margin-left:4px;">Parallel</span>':''}</td>
-    <td class="gfrz gfrz-std">${(parseFloat(op.std_hours)||0).toFixed(1)}</td>
-    <td class="gfrz gfrz-act">${actualTotal>0 ? actualTotal.toFixed(1) : '—'}</td>
-    ${days.map(d=>{
-      const off = isSundayStr(d);
-      const hasPlan = planDates.has(d);
-      const hasActual = actualDates.has(d);
-      let inner = '';
-      if(actualSchedule && Object.keys(actualSchedule).length>=0 && (hasPlan || hasActual)){
-        // Plan v/s Actual mode is signalled by actualSchedule being populated (or explicitly passed {})
-      }
-      if(hasPlan) inner += `<div class="gbar plan ${isMilestone?'milestone':''} ${actual!==undefined?'half':''}" title="Plan: ${esc(op.op_no)} — ${fmtDate(d)}"></div>`;
-      if(actual!==undefined && hasActual) inner += `<div class="gbar actual half" title="Actual: ${(actual.byDate[d]||0).toFixed(1)}h on ${fmtDate(d)}"></div>`;
-      return `<td class="gday ${off?'off':''}">${inner}</td>`;
-    }).join('')}
-  </tr>`;
-}
-async function renderGanttChart(app){
-  const { data: jobs } = await sb.from('jobs').select('id, machine_no, customer, status, start_date, actual_start_date, delivery_date, shift_count, hours_per_shift, models(model_name)').eq('status','Active').order('machine_no');
-  app.innerHTML = `
-    <div class="panel">
-      <div class="panel-title">Gantt Chart</div>
-      <div class="row3">
-        <div><label>Machine</label><select id="g_machine"><option value="">— Select a machine —</option>${(jobs||[]).map(j=>`<option value="${j.id}">${esc(j.machine_no)} — ${esc(j.customer||'')}</option>`).join('')}</select></div>
-        <div><label>View</label>
-          <div class="toggle-pair" id="g_modeToggle">
-            <button type="button" class="on" data-m="plan">Plan Only</button>
-            <button type="button" data-m="planactual">Plan v/s Actual</button>
-          </div>
-        </div>
-        <div><label>&nbsp;</label><div class="gantt-legend" id="g_legend" style="margin-top:12px;"></div></div>
-      </div>
-      <div id="ganttArea"></div>
-    </div>
-  `;
-  if(!jobs || jobs.length===0){ document.getElementById('ganttArea').innerHTML = '<div class="empty">No active jobs yet.</div>'; return; }
-
-  let mode = 'plan';
-  function paintLegend(){
-    document.getElementById('g_legend').innerHTML = mode==='planactual'
-      ? `<span><span class="sw plan"></span>Plan</span><span><span class="sw actual"></span>Actual</span>`
-      : `<span><span class="sw plan"></span>Plan</span>`;
-  }
-  paintLegend();
-  document.querySelectorAll('#g_modeToggle button').forEach(b=>{
-    b.onclick = ()=>{ mode=b.dataset.m; document.querySelectorAll('#g_modeToggle button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); paintLegend(); paintGantt(); };
-  });
-  document.getElementById('g_machine').onchange = paintGantt;
-
-  async function paintGantt(){
-    const jobId = document.getElementById('g_machine').value;
-    const area = document.getElementById('ganttArea');
-    if(!jobId){ area.innerHTML = '<div class="empty">Select a machine to view its Gantt chart.</div>'; return; }
-    area.innerHTML = '<div class="empty">Loading…</div>';
-    const job = jobs.find(j=>j.id===jobId);
-    const { data: opsRaw } = await sb.from('job_operations').select('*').eq('job_id', jobId).order('sequence');
-    const ops = opsRaw || [];
-    if(ops.length===0){ area.innerHTML = '<div class="empty">No operations set up for this job yet.</div>'; return; }
-    const startDate = job.actual_start_date || job.start_date;
-    if(!startDate){ area.innerHTML = '<div class="empty">Set a Planned or Actual Start Date on this job first (Jobs / QR Labels → Edit Details), then come back here.</div>'; return; }
-    const shiftCount = job.shift_count || 1;
-    const hoursPerShift = job.hours_per_shift || 7.5;
-    const totalStdHours = ops.reduce((s,o)=> s + (parseFloat(o.std_hours)||0), 0);
-    const targetDate = computeTargetDate(startDate, totalStdHours, shiftCount, hoursPerShift);
-
-    const planSchedule = computeGanttPlan(ops, startDate, shiftCount, hoursPerShift);
-    let actualSchedule = undefined;
-    let rangeEnd = targetDate;
-    if(mode === 'planactual'){
-      const { data: entriesRaw } = await sb.from('entries').select('job_operation_id, activity_date, start_time, end_time').eq('job_id', jobId);
-      actualSchedule = computeGanttActual(entriesRaw||[]);
-      Object.values(actualSchedule).forEach(r=>{ if(r.end && r.end > rangeEnd) rangeEnd = r.end; });
-    }
-    const days = dateRangeArray(startDate, rangeEnd);
-    const rows = ops.slice().reverse(); // last operation (highest sequence) at top, matching the shopfloor Excel sheet
-
-    area.innerHTML = `
-      <div class="gantt-meta">
-        <div><b>${esc(job.machine_no)}</b> — ${esc(job.customer||'')}${job.models?.model_name ? (' · '+esc(job.models.model_name)) : ''}</div>
-        <div class="gantt-meta-right">
-          <span>Start: ${fmtDate(startDate)}</span>
-          <span>SO Delivery: ${fmtDate(job.delivery_date)}</span>
-          <span>Target: ${fmtDate(targetDate)}</span>
-          <span>${shiftCount} shift × ${hoursPerShift}h/day</span>
-          <span>${totalStdHours.toFixed(1)}h total std</span>
-        </div>
-      </div>
-      <div class="gantt-scroll">
-        <table class="gantt-table">
-          <thead>
-            <tr>
-              <th class="gfrz gfrz-sno">S.No</th>
-              <th class="gfrz gfrz-opno">Op No</th>
-              <th class="gfrz gfrz-group">Group</th>
-              <th class="gfrz gfrz-desc">Description</th>
-              <th class="gfrz gfrz-std">Std<br>Time</th>
-              <th class="gfrz gfrz-act">Actual<br>Hrs</th>
-              ${days.map((d,i)=>`<th class="gday ${isSundayStr(d)?'off':''}" title="${fmtDate(d)}">${i+1}</th>`).join('')}
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map((o,ri)=> renderGanttRow(o, ri+1, planSchedule, actualSchedule, days)).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
-}
-// Cumulative Std Hours method: a Completed operation earns its full Std Hours regardless of
+// Earned Hours method: a Completed operation earns its full Std Hours regardless of
 // actual time taken; an operation not yet Completed earns exactly the actual hours
-// logged against it so far (this running total is "Cumulative Std Hours").
-// Efficiency % = Cumulative Std Hours ÷ Machine Hours × 100.
+// logged against it so far. Efficiency % = Earned Hours ÷ Actual Hours × 100.
 function computeEfficiency(filteredEntries, jobOpsAll, entryOpsByEntry, jobsById){
   const byJob = {};
   filteredEntries.forEach(e=>{ if(e.job_id) (byJob[e.job_id] = byJob[e.job_id] || []).push(e); });
@@ -1922,30 +1584,22 @@ function computeEfficiency(filteredEntries, jobOpsAll, entryOpsByEntry, jobsById
 }
 
 /* ================= DASHBOARD ================= */
-function rowsHtml(rows, entryOpsByEntry){
-  entryOpsByEntry = entryOpsByEntry || {};
+function rowsHtml(rows){
   if(rows.length===0) return `<tr><td class="empty">No entries match this filter.</td></tr>`;
-  return `<tr><th>Machine</th><th>Op</th><th>Operator</th><th>Date</th><th>Time</th><th>Status</th><th>Labor Hours</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th><th></th></tr>
-    ${rows.map(e=>{
-      const machineHrs = toHours(e.start_time, e.end_time);
-      const extraOps = entryOpsByEntry[e.id] || [];
-      const extraHrs = extraOps.reduce((s,x)=> s + (parseFloat(x.hours)||0), 0);
-      const manHrs = machineHrs + extraHrs;
-      const laborCell = e.start_time ? `${machineHrs.toFixed(1)}h machine<br><span style="color:var(--steel-600);font-size:11px;">${manHrs.toFixed(1)}h man${extraOps.length?' ('+(1+extraOps.length)+' ops)':''}</span>` : '—';
-      return `<tr class="${e.status==='Hold'?'hold-row':''}">
+  return `<tr><th>Machine</th><th>Op</th><th>Operator</th><th>Date</th><th>Time</th><th>Status</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th><th></th></tr>
+    ${rows.map(e=>`<tr class="${e.status==='Hold'?'hold-row':''}">
       <td><b>${esc(e.jobs?.machine_no)}</b><br><span style="color:var(--steel-600);font-size:11px;">${esc(e.jobs?.customer||'')}</span></td>
       <td class="mono">${esc(e.job_operations?.op_no)}<br><span style="color:var(--steel-600);font-size:11px;font-family:var(--font-body);">${esc(e.job_operations?.description)}</span></td>
       <td>${esc(e.primary_operator)}</td>
       <td class="mono">${esc(e.activity_date)}</td>
       <td class="mono">${e.start_time ? esc(e.start_time)+'–'+esc(e.end_time) : '<span style="color:var(--steel-600);">not worked</span>'}</td>
-      <td><span class="status-tag ${statusCss(e.status)}"><span class="lamp ${lampClass(e.status)}" style="width:8px;height:8px;"></span>${esc(e.status)}</span></td>
-      <td class="mono" style="font-size:11.5px;">${laborCell}</td>
+      <td><span class="status-tag ${e.status}"><span class="lamp ${lampClass(e.status)}" style="width:8px;height:8px;"></span>${esc(e.status)}</span></td>
       <td>${e.issue_reason ? '<span class="issue-flag">'+esc(e.issue_reason)+'</span>' : '—'}</td>
       <td class="mono">${e.delay_hours ?? '—'}</td>
       <td>${e.responsibility ? esc(e.responsibility) : '—'}</td>
       <td style="font-size:10.5px;color:var(--steel-600);" class="mono">${new Date(e.submitted_at).toLocaleString()}</td>
       <td><button class="btn ghost small entryEditBtn" data-id="${e.id}">Edit</button></td>
-    </tr>`;}).join('')}`;
+    </tr>`).join('')}`;
 }
 function wireEditButtons(container, entries, app){
   container.querySelectorAll('.entryEditBtn').forEach(b=>{
@@ -2142,7 +1796,7 @@ async function renderProductionEntries(app){
           <button data-p="today">Today</button><button data-p="week">This Week</button><button data-p="month">This Month</button><button data-p="custom" class="on">Custom</button>
         </div>
         <div class="mini-kpi-row" id="prodMiniKpis"></div>
-        <b style="font-size:12px;display:block;margin:10px 0 4px;">Efficiency by Machine <span style="font-weight:400;color:var(--steel-600);">— Cumulative Std Hours method</span></b>
+        <b style="font-size:12px;display:block;margin:10px 0 4px;">Efficiency by Machine <span style="font-weight:400;color:var(--steel-600);">— Earned Hours method</span></b>
         <div style="overflow-x:auto;"><table class="eff" id="effTable"></table></div>
       </div>
       <div class="stat-line">${(entries||[]).length} entries · approx. ${sizeLabel} · <button class="btn ghost small" id="exportBtn">Export to Excel</button> · <button class="btn ghost small" id="exportSummaryBtn">Export Summary Report</button></div>
@@ -2203,7 +1857,7 @@ async function renderProductionEntries(app){
 
     const effRows = computeEfficiency(rows, jobOpsAll||[], entryOpsByEntry, jobsById);
     lastEffRows = effRows;
-    document.getElementById('effTable').innerHTML = `<tr><th>Machine</th><th>Customer</th><th>Total Std Hrs</th><th>Machine Hrs</th><th>Man-Hrs</th><th>Cumulative Std Hrs</th><th>Eff %</th></tr>` +
+    document.getElementById('effTable').innerHTML = `<tr><th>Machine</th><th>Customer</th><th>Std Hrs</th><th>Actual Hrs</th><th>Labour Hrs</th><th>Earned Hrs</th><th>Eff %</th></tr>` +
       (effRows.length ? effRows.map(r=>`<tr>
         <td><b>${esc(r.machine_no)}</b></td><td>${esc(r.customer||'')}</td>
         <td class="mono">${r.stdHours.toFixed(1)}</td><td class="mono">${r.actualHours.toFixed(1)}</td>
@@ -2212,7 +1866,7 @@ async function renderProductionEntries(app){
       </tr>`).join('') : `<tr><td class="empty" colspan="7">No data for current filters.</td></tr>`);
 
     const table = document.getElementById('entryTable');
-    table.innerHTML = rowsHtml(rows, entryOpsByEntry);
+    table.innerHTML = rowsHtml(rows);
     wireEditButtons(table, entries, app);
   }
   paint();
@@ -2249,8 +1903,8 @@ async function renderProductionEntries(app){
     ]), 'Overview');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lastEffRows.map(r=>({
       Machine:r.machine_no, Customer:r.customer, Model:r.model_name,
-      TotalStdHours:r.stdHours.toFixed(1), MachineHours:r.actualHours.toFixed(1), ManHours:r.actualLabourHours.toFixed(1),
-      CumulativeStdHours:r.earnedHours.toFixed(1), EfficiencyPct: r.effPct===null?'':r.effPct.toFixed(1)
+      StdHours:r.stdHours.toFixed(1), ActualHours:r.actualHours.toFixed(1), LabourHours:r.actualLabourHours.toFixed(1),
+      EarnedHours:r.earnedHours.toFixed(1), EfficiencyPct: r.effPct===null?'':r.effPct.toFixed(1)
     }))), 'Efficiency by Machine');
     const respMap={}; (issueEntriesFull||[]).forEach(e=>{ if(e.responsibility) respMap[e.responsibility]=(respMap[e.responsibility]||0)+(parseFloat(e.delay_hours)||0); });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(Object.entries(respMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({Responsibility:k, DelayHours:v.toFixed(1)}))), 'Delay by Responsibility');
@@ -2275,7 +1929,7 @@ async function renderProductionEntries(app){
 }
 
 /* ================= STATION DISPLAY (rotating floor TV — public, no login) ================= */
-let tvRotateTimer=null, tvRefreshTimer=null, tvStations=[], tvIndex=0, tvResponsibilities=null, tvPaused=false;
+let tvRotateTimer=null, tvRefreshTimer=null, tvStations=[], tvIndex=0;
 
 async function fetchStations(){
   const { data, error } = await sb.rpc('get_station_summary');
@@ -2287,328 +1941,236 @@ function fmtDate(d){
   const dt = new Date(d + 'T00:00:00');
   return dt.toLocaleDateString('en-GB', {day:'2-digit', month:'short'});
 }
-function fmtClock(ts){
-  if(!ts) return '—';
-  return new Date(ts).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+function addDaysStr(dateStr, days){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate()+days);
+  return d.toISOString().slice(0,10);
 }
-function fmtDateTime(ts){
-  if(!ts) return '—';
-  const dt = new Date(ts);
-  return dt.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'}) + ' | ' + fmtClock(ts);
+// Working-day projection: from a start date, walks forward (skipping Sundays) accumulating
+// daily shift capacity until it covers the remaining hours, and returns that calendar date.
+function computeTargetDate(startDateStr, totalHours, shiftsPerDay, hoursPerShift){
+  if(!startDateStr) return null;
+  if(!totalHours || totalHours<=0) return startDateStr;
+  const dailyCapacity = Math.max(0.1, (parseFloat(shiftsPerDay)||1) * (parseFloat(hoursPerShift)||8));
+  let cum = 0;
+  let d = new Date(startDateStr + 'T00:00:00');
+  let guard = 0;
+  while(guard < 3650){
+    if(d.getDay() !== 0){ cum += dailyCapacity; if(cum >= totalHours - 1e-9) return d.toISOString().slice(0,10); }
+    d.setDate(d.getDate()+1);
+    guard++;
+  }
+  return d.toISOString().slice(0,10);
 }
-function hoursSince(ts){
-  if(!ts) return 0;
-  return Math.max(0, (Date.now() - new Date(ts).getTime()) / 3600000);
+// ontrack = finishing on/before SO date · atrisk = late but within a 3-day buffer · delayed = beyond that
+function deliveryRiskLevel(estDateStr, soDateStr, bufferDays){
+  if(!estDateStr || !soDateStr) return null;
+  if(estDateStr <= soDateStr) return 'ontrack';
+  if(estDateStr <= addDaysStr(soDateStr, bufferDays)) return 'atrisk';
+  return 'delayed';
 }
-function statusKey(s){ return s==='In Progress' ? 'InProgress' : s; } // css-safe class
-
-const TV_DEPT_COLORS = ['#ef3f39','#d84c35','#f5a800','#46c957','#607f99'];
-const TV_REASON_COLORS = ['#ef3f39','#ef7a21','#f5a800','#46c957','#607f99'];
 function relTime(iso){
   const diffMin = Math.round((Date.now() - new Date(iso).getTime())/60000);
   if(diffMin < 60) return diffMin+'m ago';
   if(diffMin < 1440) return Math.round(diffMin/60)+'h ago';
   return Math.round(diffMin/1440)+'d ago';
 }
+const TV_DEPT_COLORS = ['#f2a30f','#57687a','#c0392b','#3f8f63','#8f6b9e','#4a90a4'];
 
 async function renderStationCard(app, s, idx, total){
-  if(!s){ app.innerHTML = '<div class="tv-empty">No active stations right now.</div>'; return; }
+  if(!s){
+    app.innerHTML = `<div class="tv-empty">No active stations right now.</div>`;
+    return;
+  }
+  const lamp = lampClass(s.latest_status);
+  const todayStr = new Date().toISOString().slice(0,10);
 
-  const [deptRes, progressRes, eventsRes, projRes, entryRes] = await Promise.all([
-    sb.rpc('get_job_dept_delays', {p_job_id: s.job_id}),
-    sb.rpc('get_job_operations_progress', {p_job_id: s.job_id}),
-    sb.rpc('get_job_recent_events', {p_job_id: s.job_id, p_limit: 6}),
-    sb.rpc('get_job_delivery_projection', {p_job_id: s.job_id}),
-    // read delay entries straight from the table: get_job_recent_events does not
-    // return issue_reason / responsibility, and is capped at a few rows
-    sb.from('entries').select('*, job_operations(op_no, description)')
-      .eq('job_id', s.job_id).order('submitted_at', {ascending:false})
+  const [deptRes, opsRes, issueRes, reasonsRes] = await Promise.all([
+    sb.rpc('get_job_dept_delays', { p_job_id: s.job_id }),
+    sb.rpc('get_job_operations_progress', { p_job_id: s.job_id }),
+    sb.rpc('get_job_latest_issue', { p_job_id: s.job_id }),
+    sb.rpc('get_job_top_delay_reasons', { p_job_id: s.job_id, p_limit: 20 })
   ]);
-  const deptDelays = deptRes.data || [], ops = progressRes.data || [];
-  const projection = (projRes.data || [])[0] || null;
-  // normalise the raw entries into the shape the rest of this screen expects
-  const events = (entryRes.data || []).map(e => ({
-    op_no: e.job_operations ? e.job_operations.op_no : null,
-    op_description: e.job_operations ? e.job_operations.description : null,
-    status: e.status,
-    issue_reason: e.issue_reason,
-    responsibility: e.responsibility,
-    delay_hours: e.delay_hours,
-    submitted_at: e.submitted_at || (e.activity_date ? e.activity_date + 'T00:00:00' : null)
-  }));
+  const deptDelays = deptRes.data || [];
+  const ops = opsRes.data || [];
+  const latestIssue = (issueRes.data && issueRes.data[0]) || null;
+  const allReasons = reasonsRes.data || [];
 
-  const doneCt = ops.filter(o=>o.is_completed).length;
-  const isOnHold = s.latest_status === 'Hold';
-  const currentCt = s.current_op_no && ops.some(o=>o.op_no===s.current_op_no && !o.is_completed) ? 1 : 0;
-  const holdCt = isOnHold ? 1 : 0;
-  const pendingCt = Math.max(0, ops.length - doneCt - currentCt - holdCt);
-
-  /* ---------- HOUR DEFINITIONS (single source of truth for this screen) ----------
-     Actual hours        = clocked time on operator confirmations, fixed shift breaks
-                           already deducted (toHours()).
-     Delay / loss hours  = hours entered on Hold / Partial confirmations with a
-                           responsibility. They are reported SEPARATELY — they are NOT
-                           subtracted from actual hours. So "actual 162h, delay 150h"
-                           does NOT mean 12h of work; it means 162h were clocked on the
-                           machine and 150h of loss were logged against departments.
-     Cumulative std hrs  = std hours of every completed operation + hours clocked on the
-                           operation currently running ("earned hours").
-     Efficiency %        = cumulative std hours / actual hours x 100.
-     Machine progress %  = cumulative std hours / total std hours x 100.
-     Remaining std hrs   = total std hours - cumulative std hours.
-     Est. delivery        = tomorrow + remaining std hours / daily capacity, Sundays off,
-                           assuming material available and zero rework.
-     Planned delivery     = last day of the assembly Gantt plan (jobs.planned_end_date).
-  ------------------------------------------------------------------------------- */
-  const num = v => Number(v || 0);
-  const opStd = o => num(o.std_hours);
-  const opAct = o => num(o.actual_hours != null ? o.actual_hours : (o.act_hours != null ? o.act_hours : o.hours));
-  const opDelay = o => num(o.delay_hours);
-
-  const totalStd    = num(s.std_hours) || ops.reduce((a,o)=>a+opStd(o), 0);
-  const actualHours = num(s.actual_hours);
-  const earnedHours = num(s.earned_hours);
-  const delayTotal  = num(s.delay_hours_total);
-  const effPct      = s.efficiency_pct == null ? (actualHours>0 ? earnedHours/actualHours*100 : null) : Number(s.efficiency_pct);
-  const machinePct  = totalStd>0 ? Math.round(earnedHours/totalStd*100) : 0;
-
-  const remainingHours = projection ? num(projection.remaining_hours) : Math.max(0, totalStd - earnedHours);
-  const shiftsPerDay = num(s.shift_count) || 1;
-  const hoursPerShift = num(s.hours_per_shift) || 7.5;
-  const dailyCap = Math.max(0.5, shiftsPerDay * hoursPerShift);
-  const workDaysLeft = Math.ceil(remainingHours / dailyCap);
-
-  const estDate = projection ? projection.estimated_delivery : null;
-  const plannedDate = s.planned_end_date || (projection ? projection.planned_delivery : null) || null;
-  const risk = projection && projection.delivery_status==='COMFORTABLE' ? 'ontrack' : projection && projection.delivery_status==='AT RISK' ? 'atrisk' : projection && projection.delivery_status==='DELAYED' ? 'delayed' : '';
+  const remainingHours = Math.max(0, (s.std_hours||0) - (s.earned_hours||0));
+  const estDate = computeTargetDate(todayStr, remainingHours, s.shift_count, s.hours_per_shift);
+  const risk = deliveryRiskLevel(estDate, s.delivery_date, 3);
   const riskLabel = risk==='ontrack' ? 'ON TRACK' : risk==='atrisk' ? 'AT RISK' : risk==='delayed' ? 'DELAYED' : 'STATUS UNKNOWN';
-  const bufferDays = projection && projection.buffer_days!=null ? Number(projection.buffer_days) : null;
-  const comfortPct = bufferDays===null ? 20 : Math.max(8, Math.min(100, Math.round((bufferDays/7)*100)));
+  const riskClass = risk || '';
+  const riskSub = risk==='ontrack' ? 'Comfortably meeting the target delivery.' : risk==='atrisk' ? 'Slightly behind — within buffer.' : risk==='delayed' ? 'Delivery is at risk based on current projection.' : '';
 
-  // most recent Hold event on this job — used for the on-hold duration shown in the Hold modal
-  const holdStartEvent = events.find(e=>e.status==='Hold') || null;
-  const holdHrs = isOnHold && holdStartEvent ? hoursSince(holdStartEvent.submitted_at) : 0;
+  const daysDiff = (s.delivery_date && estDate) ? Math.round((new Date(estDate+'T00:00:00') - new Date(s.delivery_date+'T00:00:00'))/86400000) : null;
+  const lateBadge = daysDiff===null ? '' : daysDiff>0 ? `<span class="late-badge delayed">DELAYED · ${daysDiff} DAY${daysDiff===1?'':'S'} LATE</span>`
+    : daysDiff<0 ? `<span class="late-badge ontrack">AHEAD · ${Math.abs(daysDiff)} DAY${Math.abs(daysDiff)===1?'':'S'} EARLY</span>`
+    : `<span class="late-badge ontrack">ON TIME</span>`;
 
-  // ---- CURRENT ISSUE: the latest issue only ----
-  const latestDelayEvent = events.find(e=>Number(e.delay_hours||0)>0 || e.status==='Hold') || null;
-  const issueOpNo = (latestDelayEvent && latestDelayEvent.op_no) || s.current_op_no || null;
-  const issueOpRow = ops.find(o=>o.op_no===issueOpNo) || null;
-  const issueReason = (latestDelayEvent && latestDelayEvent.issue_reason) || (delayTotal>0 ? 'No specific reason recorded' : 'No active issue');
-  const responsibility = (latestDelayEvent && latestDelayEvent.responsibility) || (deptDelays[0] && deptDelays[0].responsibility) || 'Not assigned';
-  const stageLossFromEvents = events.filter(e=>e.op_no===issueOpNo).reduce((a,e)=>a+num(e.delay_hours), 0);
-  const stageLoss = issueOpRow && opDelay(issueOpRow) ? opDelay(issueOpRow) : stageLossFromEvents;
-  const issueOpLabel = issueOpNo ? issueOpNo + ' — ' + ((issueOpRow && issueOpRow.description) || (latestDelayEvent && latestDelayEvent.op_description) || s.current_op_description || '') : '—';
+  const totalMachinePct = (s.std_hours||0) > 0 ? Math.min(100, Math.round((s.earned_hours||0)/s.std_hours*100)) : 0;
+  const workingDaysLeft = (()=>{
+    if(!estDate) return 0;
+    let d = new Date(todayStr+'T00:00:00'); const end = new Date(estDate+'T00:00:00');
+    let count=0, guard=0;
+    while(d<end && guard<3650){ d.setDate(d.getDate()+1); if(d.getDay()!==0) count++; guard++; }
+    return count;
+  })();
 
-  // ---- TOP 5 DELAY REASONS (share of total delay; remainder shown as one grey slice) ----
-  const reasonMap = {};
-  events.forEach(e=>{ if(Number(e.delay_hours||0)>0){ const k=(e.issue_reason||'Reason not specified').trim(); reasonMap[k]=(reasonMap[k]||0)+Number(e.delay_hours||0); } });
-  const reasonRows = Object.entries(reasonMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  const top5Total = reasonRows.reduce((a,r)=>a+r[1], 0);
-  const reasonTotal = delayTotal || top5Total;
-  const slices = reasonRows.slice();
-  if(reasonTotal - top5Total > 0.05) slices.push(['All other reasons', reasonTotal - top5Total]);
-  let rp = 0;
-  const donutStops = slices.map((row,i)=>{ const st = reasonTotal ? rp/reasonTotal*100 : 0; rp += row[1]; const en = reasonTotal ? rp/reasonTotal*100 : 0; const col = i<5 ? TV_REASON_COLORS[i] : '#4a5a66'; return col+' '+st.toFixed(1)+'% '+en.toFixed(1)+'%'; });
-  const donutBg = donutStops.length ? 'conic-gradient('+donutStops.join(',')+')' : '#263640';
+  const currentOpRow = ops.find(o=>o.op_no===s.current_op_no);
+  const currentStatus = !currentOpRow ? 'Pending' : (currentOpRow.has_hold ? 'Hold' : (currentOpRow.actual_hours>0 ? 'InProgress' : 'Pending'));
+  const currentStatusLabel = currentStatus==='InProgress' ? 'In Progress' : currentStatus;
+
+  const totalDelay = allReasons.reduce((s2,r)=>s2+Number(r.total_hours||0),0) || (s.delay_hours_total||0) || 1;
+  const top3Reasons = allReasons.slice(0,3);
+  const otherReasonsHours = allReasons.slice(3).reduce((s2,r)=>s2+Number(r.total_hours||0),0);
+  const rankColors = ['var(--red-600)','var(--red-600)','var(--amber-signal)'];
+
   const maxDept = Math.max(1, ...deptDelays.map(d=>Number(d.total_hours)||0));
+  const totalDeptDelay = deptDelays.reduce((s2,d)=>s2+Number(d.total_hours||0),0) || 1;
 
-  const fmtDateFull = d => d ? new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-  const fmtTime = iso => iso ? new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
-  const h1 = n => n.toFixed(1)+'h';
-
-  // ---- OPERATION PROGRESS TABLE: window around the running operation ----
-  const curIdx = Math.max(0, ops.findIndex(o=>o.op_no===s.current_op_no));
-  const winFrom = ops.length<=10 ? 0 : Math.max(0, curIdx-4);
-  const winTo   = ops.length<=10 ? ops.length : Math.min(ops.length, winFrom+9);
-  const winOps  = ops.slice(winFrom, winTo);
-  const skippedStd = ops.slice(0, winFrom).reduce((a,o)=>a+opStd(o), 0);
-  const opPct = o => o.is_completed ? 100 : (opStd(o)>0 ? Math.min(100, Math.round(opAct(o)/opStd(o)*100)) : 0);
-  const opState = o => o.is_completed ? 'done' : (o.op_no===s.current_op_no ? 'current' : 'pending');
-  const opStatusText = o => o.is_completed ? 'Completed' : (o.op_no===s.current_op_no ? (isOnHold ? 'Hold' : 'In Progress') : 'Pending');
-  const opBarColor = o => o.is_completed ? '#32d34b' : (o.op_no===s.current_op_no ? '#1688ff' : 'rgba(120,150,170,.3)');
-
-  const curStd = num(s.current_op_std_hours);
-  const curAct = num(s.current_op_actual_hours);
-  const curDelay = s.current_op_no && issueOpNo===s.current_op_no ? stageLoss : (ops.find(o=>o.op_no===s.current_op_no) ? opDelay(ops.find(o=>o.op_no===s.current_op_no)) : 0);
-  const opProgressPct = curStd>0 ? Math.min(100, Math.round(curAct/curStd*100)) : 0;
+  const VISIBLE_OPS = 8;
+  const visibleOps = ops.slice(0, VISIBLE_OPS);
+  const moreOpsCt = Math.max(0, ops.length - VISIBLE_OPS);
 
   app.innerHTML = `
-  <div class="tv-card">
-    <aside class="tv-left">
-      <div class="tv-station-label">STATION</div><div class="tv-station-value">${s.station_no ?? '—'} / ${total||'—'}</div>
-      <div class="tv-machine">${esc(s.machine_no)}</div><div class="tv-model">${esc(s.model_name||'')}</div><div class="tv-customer">${esc(s.customer||'')}</div>
-      <div class="tv-side-rule"></div>
-      <div class="tv-side-label">DAILY CAPACITY</div><div class="tv-side-value">${shiftsPerDay} shift × ${hoursPerShift}h = ${dailyCap.toFixed(1)}h/day</div>
-      <div class="tv-side-label">LAST UPDATED</div><div class="tv-side-value">${events[0]?.submitted_at ? fmtDateFull(events[0].submitted_at.slice(0,10))+' | '+fmtTime(events[0].submitted_at) : 'No entries yet'}</div>
-      ${s.current_op_no ? `<button class="tv-hold-btn ${isOnHold?'resume':'hold'}" id="tvHoldBtn">${isOnHold?'▶ RESUME':'⏸ HOLD'}</button>` : ''}
-    </aside>
+    <div class="tv-card" style="justify-content:flex-start;padding-top:24px;">
 
-    <section class="tv-main-head">
-      <div style="min-width:0;flex:1;"><div class="tv-current-label">CURRENT OPERATION</div><div class="tv-current-title"><span class="opno">${esc(s.current_op_no||'—')}</span> — ${esc(s.current_op_description||'No active operation')}</div>
-      <div class="tv-live-row"><span class="tv-live-pill">◆ ${isOnHold?'ON HOLD':(s.latest_status==='Completed'?'COMPLETED':'IN PROGRESS')}</span><span>${curAct>0?'Active operation':'Awaiting confirmation'}</span></div>
-      ${s.current_op_no ? `<div class="tv-curstats">
-        <div class="st"><div class="lbl">Operation No.</div><div class="val">${esc(s.current_op_no)}</div></div>
-        <div class="st"><div class="lbl">Planned (Std) Hours</div><div class="val">${h1(curStd)}</div></div>
-        <div class="st"><div class="lbl">Actual Hours (clocked)</div><div class="val blue">${h1(curAct)}</div></div>
-        <div class="st"><div class="lbl">Delay in this Op</div><div class="val orange">${h1(curDelay)}</div></div>
-        <div class="st"><div class="lbl">Progress</div><div class="val">${opProgressPct}%</div></div>
-        <div class="st"><div class="lbl">Status / Group</div><div class="val" style="font-size:13px;">${esc(s.latest_status||'—')} · ${esc(s.current_op_group||'—')}</div></div>
-      </div>` : ''}</div>
-      <div class="tv-status-banner ${risk}"><div class="label">OVERALL STATUS</div><div class="value">${riskLabel}</div><div class="status-sub">${risk==='ontrack'?'We are comfortably meeting the target delivery.':risk==='atrisk'?'Delivery needs close monitoring.':risk==='delayed'?'Delivery is at risk based on current projection.':''}</div></div>
-    </section>
-
-    <aside class="tv-delivery"><div class="tv-panel-title">DELIVERY INFORMATION</div>
-      <div class="tv-delivery-item"><div class="tv-delivery-icon">▣</div><div><div class="tv-delivery-label">Target Delivery (SO)</div><div class="tv-delivery-value">${fmtDateFull(s.delivery_date)}</div><div class="tv-delivery-note">Sales order commitment</div></div></div>
-      <div class="tv-delivery-item"><div class="tv-delivery-icon">▣</div><div><div class="tv-delivery-label">Planned Delivery (Assy Gantt)</div><div class="tv-delivery-value amber">${fmtDateFull(plannedDate)}</div><div class="tv-delivery-note">Last day of the assembly plan</div></div></div>
-      <div class="tv-delivery-item"><div class="tv-delivery-icon">▣</div><div><div class="tv-delivery-label">Est. Delivery (Projected)</div><div class="tv-delivery-value good">${fmtDateFull(estDate)}</div><div class="tv-delivery-note">${h1(remainingHours)} remaining ÷ ${dailyCap.toFixed(1)}h/day, Sundays off, zero rework</div></div></div>
-      <div class="tv-comfort"><div class="tv-comfort-label">Comfort Level</div><div class="tv-comfort-track"><div class="tv-comfort-fill" style="width:${comfortPct}%"></div></div><div class="tv-comfort-status">${(projection && projection.delivery_status)||'UNKNOWN'}${bufferDays!==null?' · '+Math.abs(bufferDays)+' DAY'+(Math.abs(bufferDays)===1?'':'S')+(bufferDays>=0?' BUFFER':' LATE'):''}</div></div>
-    </aside>
-
-    <section class="tv-metrics">
-      <div class="tv-metric"><div class="tv-metric-num">${h1(totalStd)}</div><div class="tv-metric-lbl">Total Std Hours</div><div class="tv-metric-sub">${ops.length} operations</div></div>
-      <div class="tv-metric"><div class="tv-metric-num">${h1(actualHours)}</div><div class="tv-metric-lbl">Actual Hours (clocked)</div><div class="tv-metric-sub">confirmed time, breaks deducted</div></div>
-      <div class="tv-metric"><div class="tv-metric-num">${h1(earnedHours)}</div><div class="tv-metric-lbl">Cumulative Std Hours</div><div class="tv-metric-sub">std of completed + clocked of current</div></div>
-      <div class="tv-metric highlight"><div class="tv-metric-num">${effPct==null?'—':(effPct>300?'300%+':effPct.toFixed(0)+'%')}</div><div class="tv-metric-lbl">Efficiency %</div><div class="tv-metric-sub">${h1(earnedHours)} ÷ ${h1(actualHours)}</div></div>
-      <div class="tv-metric ${delayTotal>0?'warn':''}"><div class="tv-metric-num">${h1(delayTotal)}</div><div class="tv-metric-lbl">Delay / Loss Hours</div><div class="tv-metric-sub">logged separately — NOT deducted from clocked</div></div>
-      <div class="tv-metric"><div class="tv-metric-num">${h1(remainingHours)}</div><div class="tv-metric-lbl">Remaining Std Hours</div><div class="tv-metric-sub">${h1(totalStd)} − ${h1(earnedHours)}</div></div>
-      <div class="tv-metric"><div class="tv-metric-num">${workDaysLeft}d</div><div class="tv-metric-lbl">Working Days Left</div><div class="tv-metric-sub">${h1(remainingHours)} ÷ ${dailyCap.toFixed(1)}h/day, Sundays off</div></div>
-    </section>
-
-    <section class="tv-progress-panel">
-      <div class="tv-progress-head">
-        <div class="title">OPERATION PROGRESS <span class="count">(${ops.length} OPERATIONS · ${doneCt} COMPLETED · ${currentCt+holdCt} RUNNING · ${pendingCt} PENDING)</span></div>
-        <div class="tv-machine-progress">TOTAL MACHINE PROGRESS <b>${machinePct}%</b></div>
+      <div class="tv-hbar">
+        <div class="tv-hbar-item"><div class="lbl">Station</div><div class="val amber">${s.station_no ?? '—'} / ${idx+1}</div></div>
+        <div class="tv-hbar-item"><div class="lbl">Machine</div><div class="val">${esc(s.machine_no)}</div></div>
+        <div class="tv-hbar-item"><div class="lbl">Model</div><div class="val">${esc(s.model_name||'—')}</div></div>
+        <div class="tv-hbar-item" style="flex:1;"><div class="lbl">Customer</div><div class="val" style="font-size:14px;">${esc(s.customer||'—')}</div></div>
+        <div class="tv-hbar-item"><div class="lbl">Last Updated</div><div class="val" style="font-size:13px;">${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})} · ${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div></div>
+        <div class="tv-hbar-status ${riskClass}">
+          <div class="lbl">Overall Status</div>
+          <div class="val">${riskLabel}</div>
+          <div class="sub">${riskSub}</div>
+        </div>
       </div>
-      ${ops.length ? `<table class="tv-optable">
-        <thead><tr><th class="l">Operation No.</th><th class="l">Operation Name</th><th class="l">Group</th><th>Std Hours</th><th>Actual Hours<br>(clocked)</th><th>Delay Hours</th><th style="min-width:120px;">Progress %</th><th>Status</th></tr></thead>
-        <tbody>
-        ${winFrom>0 ? `<tr><td class="l tv-op-skip" colspan="8">⋮ ${winFrom} earlier operation${winFrom===1?'':'s'} completed (${h1(skippedStd)} std)</td></tr>` : ''}
-        ${winOps.map(o=>`<tr class="${opState(o)}">
-          <td class="l">${o.is_completed?'✓ ':''}${esc(o.op_no)}</td>
-          <td class="l name">${esc(o.description||'')}</td>
-          <td class="l grp">${esc(o.group_name||'')}</td>
-          <td>${h1(opStd(o))}</td>
-          <td>${opAct(o).toFixed(2)}h</td>
-          <td class="${opDelay(o)>0?'delay':''}">${opDelay(o).toFixed(2)}h</td>
-          <td><div class="pcell"><div class="ptrack"><div class="pfill" style="width:${opPct(o)}%;background:${opBarColor(o)}"></div></div><span>${opPct(o)}%</span></div></td>
-          <td>${opStatusText(o)}</td></tr>`).join('')}
-        ${winTo<ops.length ? `<tr><td class="l tv-op-skip" colspan="8">+ ${ops.length-winTo} later operation${ops.length-winTo===1?'':'s'} pending</td></tr>` : ''}
-        <tr class="total"><td class="l">TOTAL</td><td class="l" style="font-family:var(--font-body);font-size:10px;color:#8997a2;font-weight:600;">All ${ops.length} operations</td><td></td><td>${h1(totalStd)}</td><td>${h1(actualHours)}</td><td class="delay">${h1(delayTotal)}</td><td style="text-align:right;padding-right:34px;">${machinePct}%</td><td></td></tr>
-        </tbody></table>` : '<div class="tv-table-empty">No operations set up yet</div>'}
-    </section>
 
-    <aside class="tv-issue"><div class="tv-issue-title">⚠ CURRENT ISSUE <span style="color:#a9b7c2;">(LATEST ONLY)</span></div>
-      <div class="tv-issue-latest">${esc(issueReason)}</div>
-      <div class="tv-issue-meta">${esc(issueOpLabel)}<br>${latestDelayEvent?.submitted_at ? fmtDateFull(latestDelayEvent.submitted_at.slice(0,10))+' | '+fmtTime(latestDelayEvent.submitted_at)+' · '+esc(latestDelayEvent.status||'') : '—'}</div>
-      <div class="tv-issue-grid" style="margin-top:14px;">
-        <div class="tv-issue-item"><div class="tv-issue-label">Responsibility</div><div class="tv-issue-value" style="font-family:var(--font-display);font-size:19px;">${esc(responsibility)}</div></div>
-        <div class="tv-issue-item"><div class="tv-issue-label">Total Loss Hours (this stage)</div><div class="tv-issue-value big" style="color:#ff4a42;">${h1(stageLoss)}</div></div>
-        <div class="tv-issue-item full"><div class="tv-issue-label">Total Loss Hours (this machine)</div><div class="tv-issue-value">${h1(delayTotal)} across all operations</div></div>
+      <div class="tv-row2">
+        <div class="tv-panel">
+          <div class="tv-table-title">Current Operation</div>
+          <div class="tv-curop-title">${s.current_op_no ? esc(s.current_op_no)+' — '+esc(s.current_op_description||'') : 'All operations completed'}</div>
+          <span class="tv-op-status-pill ${currentStatus}">${esc(currentStatusLabel)}</span>
+        </div>
+        ${latestIssue ? `
+        <div class="tv-panel tv-issue-panel">
+          <div class="hdr">⚠ Current Issue (Latest)</div>
+          <div class="issue-text">${esc(latestIssue.issue_reason)}</div>
+          <div class="issue-meta">
+            <div>REPORTED<b style="font-size:12px;">${new Date(latestIssue.submitted_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})} · ${new Date(latestIssue.submitted_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</b></div>
+            <div>RESPONSIBLE<b style="font-size:12px;">${esc(latestIssue.responsibility||'—')}</b></div>
+          </div>
+        </div>` : `<div class="tv-panel"><div class="tv-table-title">Current Issue</div><div class="tv-table-empty">No open issue logged</div></div>`}
       </div>
-    </aside>
 
-    <section class="tv-bottom">
-      <div class="tv-panel"><div class="tv-panel-title">DELAY BY DEPARTMENT <span style="color:#8997a2">(HOURS)</span></div>${deptDelays.length?deptDelays.slice(0,5).map((d,i)=>`<div class="tv-bar-row"><div class="tv-bar-label">${esc(d.responsibility)}</div><div class="tv-bar-track"><div class="tv-bar-fill" style="width:${Math.round(Number(d.total_hours)/maxDept*100)}%;background:${TV_DEPT_COLORS[i%5]}"></div></div><div class="tv-bar-val">${Number(d.total_hours).toFixed(1)}h<small>${delayTotal?((Number(d.total_hours)/delayTotal)*100).toFixed(1):'0.0'}%</small></div></div>`).join(''):'<div class="tv-table-empty">No delays logged</div>'}<div class="tv-total-delay">TOTAL DELAY HOURS: <b>${h1(delayTotal)}</b></div></div>
-      <div class="tv-panel"><div class="tv-panel-title">TOP 5 DELAY REASONS <span style="color:#8997a2">(HOURS · SHARE OF ${h1(delayTotal)} TOTAL)</span></div><div class="tv-reasons"><div class="tv-donut" style="background:${donutBg}"><div class="tv-donut-center">${h1(delayTotal)}<span>TOTAL DELAY</span></div></div><div class="tv-reason-list">${slices.length?slices.map((row,i)=>`<div class="tv-reason"><span class="tv-reason-dot" style="background:${i<5?TV_REASON_COLORS[i]:'#4a5a66'}"></span><span${i>=5?' style="color:#8997a2;"':''}>${esc(row[0])}</span><span class="tv-reason-val">${row[1].toFixed(1)}h<small>${reasonTotal?((row[1]/reasonTotal)*100).toFixed(1):'0.0'}%</small></span></div>`).join(''):'<div class="tv-table-empty">No delay reasons logged</div>'}</div></div></div>
-    </section>
-    <div class="tv-footer">ⓘ &nbsp; Hours come from operator confirmations (net of fixed shift breaks). Delay hours are logged separately on Hold / Partial confirmations and are not subtracted from clocked hours.</div>
-  </div>`;
-
-  const holdBtn = document.getElementById('tvHoldBtn');
-  if(holdBtn) holdBtn.onclick = ()=> openTvHoldModal(app, s, idx, total, isOnHold, holdHrs);
-}
-
-async function openTvHoldModal(app, s, idx, total, isOnHold, holdHrs){
-  if(!tvResponsibilities){
-    const { data } = await sb.from('responsibilities').select('*').order('name');
-    tvResponsibilities = data || [];
-  }
-  // get_station_summary doesn't expose the job_operations row id directly — resolve it here.
-  const { data: opRow } = await sb.from('job_operations').select('id').eq('job_id', s.job_id).eq('op_no', s.current_op_no).maybeSingle();
-  const opId = opRow?.id || null;
-
-  const overlay = document.createElement('div');
-  overlay.className = 'tv-modal-overlay';
-  overlay.innerHTML = `
-    <div class="tv-modal">
-      <h3>${isOnHold ? `Resume ${esc(s.current_op_no)} — ${esc(s.current_op_description)}` : `Hold ${esc(s.current_op_no)} — ${esc(s.current_op_description)}`}</h3>
-      ${isOnHold ? `<p style="font-size:13px;color:var(--steel-200);margin:0;">On hold for ${holdHrs.toFixed(1)} h. Confirm to resume work and log the delay.</p>
-        <label>Operator Name</label><input id="tvm_name" placeholder="Your name">`
-        : `<label>Operator Name</label><input id="tvm_name" placeholder="Your name">
-        <label>Reason</label><textarea id="tvm_reason" placeholder="e.g. wheel head not received"></textarea>
-        <label>Department</label>
-        <select id="tvm_resp"><option value="">— Select —</option>${tvResponsibilities.map(r=>`<option>${esc(r.name)}</option>`).join('')}</select>`}
-      <div class="tv-modal-actions">
-        <button class="cancel" id="tvm_cancel">Cancel</button>
-        <button class="confirm ${isOnHold?'resume':''}" id="tvm_confirm">${isOnHold?'Confirm Resume':'Confirm Hold'}</button>
+      <div class="tv-metric-row">
+        <div class="tv-mw">
+          <div class="lbl">Overall Progress</div>
+          <div class="tv-mw-donut-wrap">
+            <div class="tv-mw-donut-canvas-wrap"><canvas id="progressDonut"></canvas><div class="tv-mw-donut-pct">${totalMachinePct}%</div></div>
+            <div class="caption">${(s.earned_hours||0).toFixed(1)}h of ${(s.std_hours||0).toFixed(1)}h</div>
+          </div>
+        </div>
+        <div class="tv-mw">
+          <div class="lbl">Actual vs Planned Hours</div>
+          <div class="big split"><b>${(s.actual_hours||0).toFixed(0)}h</b><span class="slash">/</span>${(s.std_hours||0).toFixed(0)}h</div>
+          <div class="caption">Actual / Planned (Std)</div>
+        </div>
+        <div class="tv-mw">
+          <div class="lbl">Delay Hours</div>
+          <div class="big red">${(s.delay_hours_total||0).toFixed(0)}h</div>
+          <div class="caption">Across all operations</div>
+        </div>
+        <div class="tv-mw">
+          <div class="lbl">Est. Delivery</div>
+          <div class="big ${risk==='delayed'?'red':''}" style="font-size:19px;">${fmtDate(estDate)}</div>
+          <div class="caption">Plan: ${fmtDate(s.delivery_date)}</div>
+          ${lateBadge}
+        </div>
       </div>
+
+      <div class="tv-row2">
+        <div class="tv-panel">
+          <div class="tv-table-title">Operation Progress (${ops.length} operations)</div>
+          <table class="tv-ops tv-ops-compact">
+            <tr><th>Op</th><th>Operation</th><th>Progress</th><th>Status</th></tr>
+            ${visibleOps.map(o=>{
+              const pct = o.is_completed ? 100 : (o.std_hours>0 ? Math.min(100, Math.round(o.actual_hours/o.std_hours*100)) : 0);
+              const st = o.is_completed ? 'Completed' : (o.op_no===s.current_op_no ? currentStatusLabel : (o.has_hold ? 'Hold' : 'Pending'));
+              return `<tr class="${o.op_no===s.current_op_no?'current':''}">
+                <td>${esc(o.op_no)}</td><td class="name">${esc(o.description)}</td>
+                <td><span class="tv-mini-pct-bar"><span class="tv-mini-pct-fill" style="width:${pct}%;"></span></span>${pct}%</td>
+                <td><span class="tv-op-status-pill ${st==='In Progress'?'InProgress':st}" style="margin:0;">${esc(st)}</span></td>
+              </tr>`;
+            }).join('') || '<tr><td colspan="4" class="tv-table-empty">No operations set up yet</td></tr>'}
+          </table>
+          ${moreOpsCt>0 ? `<div class="tv-more-ops-note">+ ${moreOpsCt} more operations</div>` : ''}
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="tv-panel">
+            <div class="tv-table-title">Top 3 Delay Reasons <span style="font-weight:400;text-transform:none;color:var(--steel-300);">(share of ${totalDelay.toFixed(1)}h total delay)</span></div>
+            <div class="tv-reason-rank">
+              ${top3Reasons.length ? top3Reasons.map((r,i)=>`
+                <div class="tv-reason-rank-row">
+                  <div class="tv-reason-rank-badge" style="background:${rankColors[i]};">${i+1}</div>
+                  <div class="tv-reason-rank-txt">${esc(r.issue_reason)}</div>
+                  <div class="tv-reason-rank-val">${Number(r.total_hours).toFixed(1)}h (${Math.round(Number(r.total_hours)/totalDelay*100)}%)</div>
+                </div>`).join('') : '<div class="tv-table-empty">No delays logged</div>'}
+              ${otherReasonsHours>0 ? `<div class="tv-reason-rank-other"><span>All other reasons</span><span>${otherReasonsHours.toFixed(1)}h (${Math.round(otherReasonsHours/totalDelay*100)}%)</span></div>` : ''}
+            </div>
+          </div>
+          <div class="tv-panel">
+            <div class="tv-table-title">Delay by Department <span style="font-weight:400;text-transform:none;color:var(--steel-300);">(total ${totalDeptDelay.toFixed(1)}h)</span></div>
+            ${deptDelays.length ? deptDelays.map((d,i)=>`
+              <div class="tv-bar-row">
+                <div class="tv-bar-label">${esc(d.responsibility)}</div>
+                <div class="tv-bar-track"><div class="tv-bar-fill" style="width:${Math.round(Number(d.total_hours)/maxDept*100)}%;background:${TV_DEPT_COLORS[i%TV_DEPT_COLORS.length]};"></div></div>
+                <div class="tv-bar-val">${Number(d.total_hours).toFixed(1)}h (${Math.round(Number(d.total_hours)/totalDeptDelay*100)}%)</div>
+              </div>`).join('') : '<div class="tv-table-empty">No delays logged</div>'}
+          </div>
+        </div>
+      </div>
+
+      <div class="tv-hbar" style="margin-top:14px;">
+        <div class="tv-hbar-item"><div class="lbl">Shift Capacity</div><div class="val" style="font-size:15px;">${s.shift_count||1} shift × ${(s.hours_per_shift||8)}h = ${((s.shift_count||1)*(s.hours_per_shift||8)).toFixed(1)}h/day</div></div>
+        <div class="tv-hbar-item"><div class="lbl">Working Days Left</div><div class="val">${workingDaysLeft} Days</div></div>
+        <div class="tv-hbar-item"><div class="lbl">Efficiency</div><div class="val amber">${(s.efficiency_pct===null || (s.actual_hours||0)<0.5) ? '—' : (s.efficiency_pct>300 ? '300%+' : s.efficiency_pct+'%')}</div></div>
+        <div class="tv-hbar-item"><div class="lbl">Remaining Hours</div><div class="val">${remainingHours.toFixed(1)}h <span style="font-size:10px;color:var(--steel-300);font-weight:400;">to complete</span></div></div>
+      </div>
+
     </div>
   `;
-  document.body.appendChild(overlay);
-  document.getElementById('tvm_cancel').onclick = ()=> overlay.remove();
-  document.getElementById('tvm_confirm').onclick = async ()=>{
-    if(!opId){ toast('Could not resolve the current operation — refresh and try again', true); return; }
-    const name = document.getElementById('tvm_name').value.trim();
-    if(!name){ toast('Enter operator name', true); return; }
-    const today = new Date().toISOString().slice(0,10);
-    let payload;
-    if(isOnHold){
-      payload = {
-        job_id: s.job_id, job_operation_id: opId, primary_operator: name,
-        activity_date: today, status: 'Partial', issue_reason: (holdStartEvent && holdStartEvent.issue_reason) || 'Resumed work',
-        responsibility: (holdStartEvent && holdStartEvent.responsibility) || null,
-        delay_hours: Number(holdHrs.toFixed(1))
-      };
-    } else {
-      const reason = document.getElementById('tvm_reason').value.trim();
-      const resp = document.getElementById('tvm_resp').value;
-      if(!reason){ toast('Enter a reason', true); return; }
-      if(!resp){ toast('Select a department', true); return; }
-      payload = {
-        job_id: s.job_id, job_operation_id: opId, primary_operator: name,
-        activity_date: today, status: 'Hold', issue_reason: reason, responsibility: resp,
-        delay_hours: 0
-      };
-    }
-    const { error } = await sb.from('entries').insert(payload);
-    if(error){ toast(error.message, true); return; }
-    overlay.remove();
-    toast(isOnHold ? 'Resumed' : 'Placed on hold');
-    tvStations = await fetchStations();
-    await renderStationCard(app, tvStations[idx] || tvStations[0], idx, tvStations.length);
-  };
+
+  if(window.__tvDonutChart) window.__tvDonutChart.destroy();
+  const donutCanvas = document.getElementById('progressDonut');
+  if(donutCanvas){
+    window.__tvDonutChart = new Chart(donutCanvas, {
+      type:'doughnut',
+      data:{ datasets:[{ data:[totalMachinePct, 100-totalMachinePct], backgroundColor:['#4a90a4','rgba(255,255,255,.08)'], borderWidth:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'70%', plugins:{legend:{display:false},tooltip:{enabled:false}} }
+    });
+  }
 }
-
-
 async function renderStationDisplay(app){
   document.body.classList.add('tv-mode');
   if(tvRotateTimer) clearInterval(tvRotateTimer);
   if(tvRefreshTimer) clearInterval(tvRefreshTimer);
-  tvPaused = false;
-
-  // Fixed pause/resume control pinned to the top of the screen — freezes rotation without
-  // affecting the per-station Hold button or the rest of the card content.
-  let bar = document.getElementById('tvRotateBar');
-  if(!bar){ bar = document.createElement('div'); bar.id = 'tvRotateBar'; bar.className = 'tv-rotate-bar'; document.body.appendChild(bar); }
-  function paintRotateBar(){
-    bar.innerHTML = `<button class="tv-rotate-pause-btn ${tvPaused?'paused':''}" id="tvRotatePauseBtn">${tvPaused ? '▶ Resume Rotation' : '⏸ Pause Rotation'}</button>`;
-    document.getElementById('tvRotatePauseBtn').onclick = ()=>{ tvPaused = !tvPaused; paintRotateBar(); };
-  }
-  paintRotateBar();
 
   tvStations = await fetchStations();
   tvIndex = 0;
   await renderStationCard(app, tvStations[0], 0, tvStations.length);
 
   tvRotateTimer = setInterval(async ()=>{
-    if(tvPaused) return;
     if(tvStations.length===0) return;
     tvIndex = (tvIndex+1) % tvStations.length;
     await renderStationCard(app, tvStations[tvIndex], tvIndex, tvStations.length);
   }, tvInterval*1000);
 
   tvRefreshTimer = setInterval(async ()=>{
-    if(tvPaused) return;
     tvStations = await fetchStations();
     if(tvIndex >= tvStations.length) tvIndex = 0;
     await renderStationCard(app, tvStations[tvIndex], tvIndex, tvStations.length);
