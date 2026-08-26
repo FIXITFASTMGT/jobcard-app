@@ -368,7 +368,9 @@
   .gantt-bar-actual.completed{background:linear-gradient(180deg,#5cb98a,#3f8f63);}
   .gantt-bar-actual.inprogress{background:linear-gradient(180deg,#f2bb4d,#e0a300);}
   .gantt-bar-actual.notstarted{background:rgba(0,0,0,.06);border:1px dashed #ccc;box-shadow:none;}
-  .gantt-bar-delay{background:repeating-linear-gradient(45deg,#c0392b,#c0392b 4px,#e07a6c 4px,#e07a6c 8px);z-index:1;}
+  .gantt-day.completed{background:linear-gradient(180deg,#5cb98a,#3f8f63);}
+  .gantt-day.inprogress{background:linear-gradient(180deg,#f2bb4d,#e0a300);}
+  .gantt-day.hold{background:repeating-linear-gradient(45deg,#c0392b,#c0392b 4px,#e07a6c 4px,#e07a6c 8px);}
   .gantt-controls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
   #ganttPrintArea{display:none;}
   @media print{
@@ -1526,30 +1528,21 @@ async function drawGanttForJob(area, job){
     }
   });
 
-  // Actual schedule + delay hours, per operation.
-  const actual = {};
-  const delayHoursByOp = {};
-  const hasHoldByOp = {};
+  // Actual schedule: group entries per operation, per exact day, so each day renders
+  // in its own real chronological position — not compressed into one bar with delay
+  // guessed as "whatever happened after the last date."
+  const entriesByOp = {};
   (entries||[]).forEach(e=>{
-    if(!e.job_operation_id) return;
-    if(e.activity_date){
-      if(!actual[e.job_operation_id]) actual[e.job_operation_id] = { start:e.activity_date, end:e.activity_date };
-      else {
-        if(e.activity_date < actual[e.job_operation_id].start) actual[e.job_operation_id].start = e.activity_date;
-        if(e.activity_date > actual[e.job_operation_id].end) actual[e.job_operation_id].end = e.activity_date;
-      }
-    }
-    if(e.delay_hours) delayHoursByOp[e.job_operation_id] = (delayHoursByOp[e.job_operation_id]||0) + parseFloat(e.delay_hours);
-    if(e.status==='Hold') hasHoldByOp[e.job_operation_id] = true;
+    if(!e.job_operation_id || !e.activity_date) return;
+    (entriesByOp[e.job_operation_id] = entriesByOp[e.job_operation_id]||[]).push(e);
   });
+  Object.values(entriesByOp).forEach(list=> list.sort((a,b)=> a.activity_date.localeCompare(b.activity_date)));
 
   // Overall date span across plan, actual, and delay overrun, so nothing gets cut off.
   const allDates = [];
   Object.values(planned).forEach(w=>{ allDates.push(w.start.getTime(), w.end.getTime()); });
-  Object.entries(actual).forEach(([opId,a])=>{
-    const aEnd = new Date(a.end+'T00:00:00').getTime();
-    const delayDays = (delayHoursByOp[opId]||0) / dailyCap;
-    allDates.push(new Date(a.start+'T00:00:00').getTime(), aEnd + delayDays*86400000);
+  Object.values(entriesByOp).forEach(list=>{
+    list.forEach(e=> allDates.push(new Date(e.activity_date+'T00:00:00').getTime()));
   });
   allDates.push(Date.now());
   const spanStart = Math.min(...allDates);
@@ -1564,9 +1557,10 @@ async function drawGanttForJob(area, job){
       </div>
       <div class="gantt-legend">
         <span><span class="sw" style="background:linear-gradient(180deg,#8fa3b3,#57687a);opacity:.7;"></span>Planned</span>
-        <span><span class="sw" style="background:linear-gradient(180deg,#5cb98a,#3f8f63);"></span>Actual — Completed</span>
-        <span><span class="sw" style="background:linear-gradient(180deg,#f2bb4d,#e0a300);"></span>Actual — In Progress</span>
-        <span><span class="sw" style="background:repeating-linear-gradient(45deg,#c0392b,#c0392b 4px,#e07a6c 4px,#e07a6c 8px);"></span>Delay</span>
+        <span><span class="sw" style="background:linear-gradient(180deg,#5cb98a,#3f8f63);"></span>Completed day</span>
+        <span><span class="sw" style="background:linear-gradient(180deg,#f2bb4d,#e0a300);"></span>Partial day</span>
+        <span><span class="sw" style="background:repeating-linear-gradient(45deg,#c0392b,#c0392b 4px,#e07a6c 4px,#e07a6c 8px);"></span>Hold day</span>
+        <span><span class="sw" style="background:#3f8f63;box-shadow:inset 0 -3px 0 #c0392b;"></span>Day had delay hours logged</span>
         <span><span class="sw" style="background:rgba(0,0,0,.06);border:1px dashed #ccc;"></span>Not started</span>
       </div>
       <div class="gantt-v2" id="ganttOnscreen"></div>
@@ -1590,34 +1584,33 @@ async function drawGanttForJob(area, job){
     const barH = Math.max(6, Math.round(rowHeightPx*0.26));
     const rowsHtml = ops.map(o=>{
       const p = planned[o.id];
-      const a = actual[o.id];
-      const delayHrs = delayHoursByOp[o.id] || 0;
       let plannedBar = '';
       if(p){
         const left = (p.start.getTime()-spanStart)/86400000/totalDays*100;
         const width = Math.max(0.3, (p.end.getTime()-p.start.getTime())/86400000/totalDays*100);
         plannedBar = `<div class="gantt-bar gantt-bar-planned" style="left:${left}%;width:${width}%;top:${rowHeightPx*0.10}px;height:${barH}px;" title="Planned: ${esc(o.op_no)} — ${p.start.toLocaleDateString('en-GB')} to ${p.end.toLocaleDateString('en-GB')}"></div>`;
       }
-      let actualBar = '', delayBar = '';
-      if(a){
-        const aStart = new Date(a.start+'T00:00:00').getTime();
-        const aEnd = new Date(a.end+'T00:00:00').getTime();
-        const left = (aStart-spanStart)/86400000/totalDays*100;
-        const width = Math.max(0.3, (aEnd-aStart)/86400000/totalDays*100 + (1/totalDays*100)*0.6);
-        const cls = o.is_completed ? 'completed' : 'inprogress';
-        actualBar = `<div class="gantt-bar gantt-bar-actual ${cls}" style="left:${left}%;width:${width}%;top:${rowHeightPx*0.50}px;height:${barH}px;" title="Actual: ${esc(o.op_no)} — ${a.start} to ${a.end}${hasHoldByOp[o.id]?' (had a Hold)':''}"></div>`;
-        if(delayHrs > 0){
-          const delayDays = delayHrs / dailyCap;
-          const delayLeft = (aEnd-spanStart)/86400000/totalDays*100;
-          const delayWidth = Math.max(0.4, delayDays/totalDays*100);
-          delayBar = `<div class="gantt-bar gantt-bar-delay" style="left:${delayLeft}%;width:${delayWidth}%;top:${rowHeightPx*0.50}px;height:${barH}px;" title="Delay: ${delayHrs.toFixed(1)}h logged against ${esc(o.op_no)}"></div>`;
-        }
+      const opEntries = entriesByOp[o.id] || [];
+      let dayBars = '';
+      if(opEntries.length){
+        const dayWidth = Math.max(0.35, (1/totalDays*100)*0.85);
+        dayBars = opEntries.map(e=>{
+          const dayStart = new Date(e.activity_date+'T00:00:00').getTime();
+          const left = (dayStart-spanStart)/86400000/totalDays*100;
+          const cls = e.status==='Completed' ? 'completed' : e.status==='Hold' ? 'hold' : 'inprogress';
+          const delayShadow = e.delay_hours ? 'box-shadow:0 1px 2px rgba(0,0,0,.15), inset 0 -3px 0 #c0392b;' : '';
+          const titleParts = [`${e.activity_date} — ${e.status}`];
+          if(e.delay_hours) titleParts.push(e.delay_hours+'h delay');
+          if(e.responsibility) titleParts.push(e.responsibility);
+          if(e.issue_reason) titleParts.push(e.issue_reason);
+          return `<div class="gantt-bar gantt-day ${cls}" style="left:${left}%;width:${dayWidth}%;top:${rowHeightPx*0.50}px;height:${barH}px;${delayShadow}" title="${esc(titleParts.join(' · '))}"></div>`;
+        }).join('');
       } else {
-        actualBar = `<div class="gantt-bar gantt-bar-actual notstarted" style="left:0%;width:1.2%;top:${rowHeightPx*0.50}px;height:${barH}px;"></div>`;
+        dayBars = `<div class="gantt-bar gantt-bar-actual notstarted" style="left:0%;width:1.2%;top:${rowHeightPx*0.50}px;height:${barH}px;"></div>`;
       }
       return `<div class="gantt-row" style="height:${rowHeightPx}px;">
         <div class="gantt-row-label" style="height:${rowHeightPx}px;">${esc(o.op_no)} — ${esc(o.description)}</div>
-        <div class="gantt-row-track" style="height:${rowHeightPx}px;">${plannedBar}${actualBar}${delayBar}</div>
+        <div class="gantt-row-track" style="height:${rowHeightPx}px;">${plannedBar}${dayBars}</div>
       </div>`;
     }).join('');
 
