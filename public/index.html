@@ -342,6 +342,12 @@
 
   .tv-ops-compact td, .tv-ops-compact th{padding:5px 8px;}
   .tv-more-ops-note{font-size:11px;color:var(--steel-300);margin-top:8px;}
+
+  /* ---------- Gantt chart (Plan vs Actual) ---------- */
+  .gantt-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--steel-600);}
+  .gantt-legend span{display:inline-flex;align-items:center;gap:6px;}
+  .gantt-legend .sw{width:12px;height:12px;border-radius:2px;display:inline-block;}
+  .gantt-wrap{overflow-x:auto;}
   .tv-top-grid{display:grid;grid-template-columns:1.1fr 1.3fr 1.3fr;gap:16px;width:100%;max-width:1300px;align-items:stretch;}
   @media(max-width:1000px){.tv-top-grid{grid-template-columns:1fr;}}
   .tv-panel{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:16px 18px;text-align:left;}
@@ -558,7 +564,7 @@ function setNav(){
   const bar=document.getElementById('navBar');
   if(tvDisplay || scanToken){ bar.innerHTML=''; return; }
   if(!session){ bar.innerHTML=''; return; }
-  const items=[['dashboard','Dashboard'],['issues','Delay / Issue Log'],['entries','Production Entries'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels']];
+  const items=[['dashboard','Dashboard'],['issues','Delay / Issue Log'],['entries','Production Entries'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels'],['manual','Manual Entry'],['gantt','Gantt Chart']];
   bar.innerHTML = items.map(([id,l])=>`<button data-v="${id}" class="${view===id?'active':''}">${l}</button>`).join('')
     + `<button id="logoutBtn" class="small">Log Out</button>`;
   bar.querySelectorAll('button[data-v]').forEach(b=> b.onclick=()=> switchView(b.dataset.v));
@@ -582,6 +588,8 @@ async function render(){
   if(view==='models') return renderModels(app);
   if(view==='newjob') return renderNewJob(app);
   if(view==='jobs') return renderJobsQr(app);
+  if(view==='manual') return renderManualEntry(app);
+  if(view==='gantt') return renderGanttChart(app);
   if(view==='issues') return renderIssueLog(app);
   if(view==='entries') return renderProductionEntries(app);
   return renderDashboard(app);
@@ -1184,6 +1192,12 @@ async function renderScan(app, token){
     app.innerHTML = `<div class="panel"><div class="empty">${job ? 'This job is completed. QR is no longer active — check with your supervisor.' : 'Invalid QR code.'}</div></div>`;
     return;
   }
+  await renderEntryFormForJob(app, job);
+}
+
+// Shared by the QR-scan flow (public, job found via token) and the supervisor's
+// Manual Entry tab (job picked from a dropdown) — identical form, identical rules.
+async function renderEntryFormForJob(app, job){
   const { data: ops } = await sb.from('job_operations').select('*').eq('job_id', job.id).order('sequence');
   const { data: resp } = await sb.from('responsibilities').select('*').order('name');
   const today = new Date().toISOString().slice(0,10);
@@ -1382,7 +1396,172 @@ async function renderScan(app, token){
 
     app.innerHTML = `<div class="panel"><div class="empty"><span class="lamp green" style="width:16px;height:16px;"></span><br><br>Entry submitted for <b>${esc(job.machine_no)}</b>.<br><br>
       <button class="btn amber" id="another">Log Another Entry</button></div></div>`;
-    document.getElementById('another').onclick=()=>renderScan(app, token);
+    document.getElementById('another').onclick=()=>renderEntryFormForJob(app, job);
+  });
+}
+
+/* ================= MANUAL ENTRY (supervisor tab — same form, job picked from a list) ================= */
+async function renderManualEntry(app){
+  const { data: jobs } = await sb.from('jobs').select('*, models(model_name)').eq('status','Active').order('machine_no');
+  app.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">Manual Entry</div>
+      <div class="stat-line">For backfilling or logging on behalf of an operator without scanning a QR — same form, same rules as the shop-floor scan screen.</div>
+      <label>Machine / Job</label>
+      <select id="manualJobSelect">
+        <option value="">— Select a machine —</option>
+        ${(jobs||[]).map(j=>`<option value="${j.id}">${esc(j.machine_no)} — ${esc(j.customer||'')} — ${esc(j.models?.model_name||'')}</option>`).join('')}
+      </select>
+      ${(!jobs || jobs.length===0) ? '<div class="stat-line" style="color:var(--red-600);">No active jobs to log against — create one in New Job first.</div>' : ''}
+    </div>
+    <div id="manualEntryFormArea"></div>
+  `;
+  document.getElementById('manualJobSelect').onchange = async (e)=>{
+    const formArea = document.getElementById('manualEntryFormArea');
+    if(!e.target.value){ formArea.innerHTML=''; return; }
+    const job = (jobs||[]).find(j=>j.id===e.target.value);
+    if(!job) return;
+    await renderEntryFormForJob(formArea, job);
+  };
+}
+
+/* ================= GANTT CHART (Plan vs Actual, one machine at a time) ================= */
+async function renderGanttChart(app){
+  const { data: jobs } = await sb.from('jobs').select('*, models(model_name)').order('machine_no');
+  app.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">Gantt Chart — Plan vs Actual</div>
+      <label>Machine / Job</label>
+      <select id="ganttJobSelect">
+        <option value="">— Select a machine —</option>
+        ${(jobs||[]).map(j=>`<option value="${j.id}">${esc(j.machine_no)} — ${esc(j.customer||'')} — ${esc(j.models?.model_name||'')}${j.status==='Completed'?' (Completed)':''}</option>`).join('')}
+      </select>
+      ${(!jobs || jobs.length===0) ? '<div class="stat-line">No jobs yet.</div>' : ''}
+    </div>
+    <div id="ganttArea"></div>
+  `;
+  document.getElementById('ganttJobSelect').onchange = async (e)=>{
+    const area = document.getElementById('ganttArea');
+    if(!e.target.value){ area.innerHTML=''; return; }
+    const job = (jobs||[]).find(j=>j.id===e.target.value);
+    if(job) await drawGanttForJob(area, job);
+  };
+}
+
+async function drawGanttForJob(area, job){
+  area.innerHTML = `<div class="panel"><div class="empty">Loading…</div></div>`;
+  const { data: ops } = await sb.from('job_operations').select('*').eq('job_id', job.id).order('sequence');
+  const { data: entries } = await sb.from('entries').select('*').eq('job_id', job.id);
+
+  if(!ops || ops.length===0){
+    area.innerHTML = `<div class="panel"><div class="empty">No operations set up for this job yet — add some in Jobs / QR Labels → Edit Ops first.</div></div>`;
+    return;
+  }
+
+  // Planned schedule: walk Series operations sequentially, consuming daily shift
+  // capacity and skipping Sundays. Parallel operations share the window of
+  // whichever Series operation they run alongside, so they don't extend the timeline.
+  const dailyCap = Math.max(0.1, (job.shift_count||1) * (job.hours_per_shift||8));
+  let cursor = new Date((job.start_date || new Date().toISOString().slice(0,10)) + 'T00:00:00');
+  while(cursor.getDay()===0) cursor.setDate(cursor.getDate()+1);
+  let dayRemaining = dailyCap;
+  const planned = {};
+  let lastSeriesWindow = null;
+  ops.forEach(op=>{
+    if(op.execution_mode==='Parallel' && lastSeriesWindow){
+      planned[op.id] = { start: lastSeriesWindow.start, end: lastSeriesWindow.end };
+      return;
+    }
+    const opStart = new Date(cursor);
+    let remainingHrs = parseFloat(op.std_hours)||0;
+    while(remainingHrs > 0){
+      if(dayRemaining <= 0){
+        cursor.setDate(cursor.getDate()+1);
+        while(cursor.getDay()===0) cursor.setDate(cursor.getDate()+1);
+        dayRemaining = dailyCap;
+      }
+      const consume = Math.min(dayRemaining, remainingHrs);
+      dayRemaining -= consume;
+      remainingHrs -= consume;
+    }
+    const window = { start: opStart, end: new Date(cursor) };
+    planned[op.id] = window;
+    lastSeriesWindow = window;
+    if(dayRemaining <= 0){
+      cursor.setDate(cursor.getDate()+1);
+      while(cursor.getDay()===0) cursor.setDate(cursor.getDate()+1);
+      dayRemaining = dailyCap;
+    }
+  });
+
+  // Actual schedule: earliest/latest activity_date actually logged per operation.
+  const actual = {};
+  (entries||[]).forEach(e=>{
+    if(!e.job_operation_id || !e.activity_date) return;
+    if(!actual[e.job_operation_id]) actual[e.job_operation_id] = { start:e.activity_date, end:e.activity_date };
+    else {
+      if(e.activity_date < actual[e.job_operation_id].start) actual[e.job_operation_id].start = e.activity_date;
+      if(e.activity_date > actual[e.job_operation_id].end) actual[e.job_operation_id].end = e.activity_date;
+    }
+  });
+
+  const labels = ops.map(o=>`${o.op_no} — ${o.description}`);
+  const plannedData = ops.map(o=>{
+    const p = planned[o.id];
+    return p ? [p.start.getTime(), p.end.getTime()] : [null,null];
+  });
+  const actualColors = ops.map(o=> o.is_completed ? '#3f8f63' : (actual[o.id] ? '#e0a300' : 'rgba(255,255,255,0.12)'));
+  const actualData = ops.map(o=>{
+    const a = actual[o.id];
+    if(!a) return [null,null];
+    return [new Date(a.start+'T00:00:00').getTime(), new Date(a.end+'T23:59:59').getTime()];
+  });
+
+  const canvasHeight = Math.max(220, ops.length * 30 + 60);
+
+  area.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">${esc(job.machine_no)} — ${esc(job.customer||'')} — ${esc(job.models?.model_name||'')}</div>
+      <div class="gantt-legend">
+        <span><span class="sw" style="background:#57687a;"></span>Planned</span>
+        <span><span class="sw" style="background:#3f8f63;"></span>Actual — Completed</span>
+        <span><span class="sw" style="background:#e0a300;"></span>Actual — In Progress</span>
+        <span><span class="sw" style="background:rgba(0,0,0,.12);border:1px solid #ccc;"></span>Not started yet</span>
+      </div>
+      <div class="gantt-wrap"><canvas id="ganttCanvas" height="${canvasHeight}"></canvas></div>
+    </div>
+  `;
+
+  if(window.__ganttChart) window.__ganttChart.destroy();
+  window.__ganttChart = new Chart(document.getElementById('ganttCanvas'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label:'Planned', data: plannedData, backgroundColor:'rgba(87,104,122,0.45)', borderColor:'#57687a', borderWidth:1, barPercentage:0.5, categoryPercentage:0.7 },
+        { label:'Actual', data: actualData, backgroundColor: actualColors, barPercentage:0.5, categoryPercentage:0.7 }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { type:'linear', ticks: { callback:(val)=> new Date(val).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) } }
+      },
+      plugins: {
+        legend: { display:false },
+        tooltip: {
+          callbacks: {
+            label: (ctx)=>{
+              const [s,e] = ctx.raw || [null,null];
+              if(s==null) return ctx.dataset.label+': not scheduled yet';
+              return ctx.dataset.label+': '+new Date(s).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' → '+new Date(e).toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+            }
+          }
+        }
+      }
+    }
   });
 }
 
