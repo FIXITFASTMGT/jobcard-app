@@ -398,6 +398,17 @@
   .tv-op-status-pill.InProgress{background:rgba(242,163,15,.22);color:#ffc857;border:1px solid rgba(242,163,15,.5);}
   .tv-op-status-pill.Hold{background:rgba(192,57,43,.22);color:#ff8a7a;border:1px solid rgba(192,57,43,.5);}
   .tv-op-status-pill.Pending{background:rgba(255,255,255,.08);color:var(--steel-300);border:1px solid rgba(255,255,255,.18);}
+  .tv-3col{display:grid;}
+  @media(max-width:1100px){.tv-3col{grid-template-columns:1fr !important;}}
+  .tv-summary-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(255,255,255,.07);color:var(--amber-500);}
+  .tv-summary-row:first-child{border-top:none;}
+  .tv-summary-row .lbl{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--steel-300);}
+  .tv-summary-row b{display:block;font-size:14px;color:#fff;font-family:var(--font-display);font-weight:700;margin-top:2px;}
+  .tv-summary-row b.amber{color:var(--amber-500);}
+  .tv-message-banner{display:flex;align-items:center;gap:10px;width:100%;max-width:1400px;margin-top:16px;
+    background:linear-gradient(90deg,rgba(242,163,15,.14),rgba(242,163,15,.03));border:1px solid rgba(242,163,15,.35);
+    border-radius:8px;padding:12px 20px;color:#ffd98a;font-size:13.5px;text-align:left;}
+  .tv-message-banner .mlbl{font-weight:700;text-transform:uppercase;letter-spacing:.4px;font-size:11px;color:var(--amber-500);}
   .tv-curop-title{font-family:var(--font-display);font-size:22px;font-weight:700;color:#fff;margin-top:4px;}
   .tv-curop-stats{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap;}
   .tv-curop-stat{font-size:11px;color:var(--steel-300);text-transform:uppercase;}
@@ -1897,6 +1908,7 @@ async function renderDashboard(app){
     .order('submitted_at', {ascending:false});
   if(error){ app.innerHTML = `<div class="panel"><div class="empty">Error loading entries: ${esc(error.message)}</div></div>`; return; }
   const { data: jobs } = await sb.from('jobs').select('id, machine_no, status').order('machine_no');
+  const { data: msgRow } = await sb.from('tv_message').select('message').eq('id',1).single();
 
   const activeMachines = (jobs||[]).filter(j=>j.status==='Active');
   const latestByMachine = {};
@@ -1926,7 +1938,20 @@ async function renderDashboard(app){
       <div class="panel-title">Floor Status <span class="sub">latest entry per active machine</span></div>
       <div class="floor-strip" id="floorStrip"></div>
     </div>
+    <div class="panel">
+      <div class="panel-title">TV "Message of the Day" <span class="sub">shown on the rotating floor display</span></div>
+      <textarea id="tvMsgInput" style="min-height:60px;">${esc((msgRow&&msgRow.message)||'')}</textarea>
+      <button class="btn amber small" id="saveTvMsgBtn" style="margin-top:8px;">Save Message</button>
+    </div>
   `;
+
+  document.getElementById('saveTvMsgBtn').onclick = async (e)=> withLock(e.target, 'Saving…', async ()=>{
+    const message = document.getElementById('tvMsgInput').value.trim();
+    const { error: msgErr } = await sb.from('tv_message').update({ message, updated_at:new Date().toISOString() }).eq('id',1);
+    if(msgErr) { toast(msgErr.message, true); return; }
+    toast('TV message updated');
+  });
+
 
   document.getElementById('floorStrip').innerHTML = activeMachines.map(j=>{
     const st = latestByMachine[j.machine_no];
@@ -2245,6 +2270,25 @@ function relTime(iso){
 }
 const TV_DEPT_COLORS = ['#f2a30f','#7ec4e0','#e0625a','#4fbf85','#b485c9','#5a9fd4'];
 
+function tvIcon(name, size){
+  size = size || 15;
+  const icons = {
+    station:'<path d="M3 21h18M9 21V9l3-6 3 6v12M9 9h6"/>',
+    machine:'<rect x="3" y="7" width="18" height="10" rx="1"/><circle cx="8" cy="12" r="1.4"/><path d="M3 10h2M3 14h2M19 10h2M19 14h2"/>',
+    model:'<path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"/>',
+    customer:'<circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.3 3-6 7-6s7 2.7 7 6M17 8a3 3 0 100 6M22 20c0-2.5-2-4.5-5-5"/>',
+    clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+    check:'<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
+    warning:'<path d="M12 3l10 18H2L12 3zM12 10v4M12 17h.01"/>',
+    calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    hourglass:'<path d="M6 3h12M6 21h12M8 3v4l4 5 4-5V3M8 21v-4l4-5 4 5v4"/>',
+    trending:'<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>',
+    star:'<path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/>',
+    arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>'
+  };
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">${icons[name]||''}</svg>`;
+}
+
 async function renderStationCard(app, s, idx, total){
   if(!s){
     app.innerHTML = `<div class="tv-empty">No active stations right now.</div>`;
@@ -2253,16 +2297,18 @@ async function renderStationCard(app, s, idx, total){
   const lamp = lampClass(s.latest_status);
   const todayStr = new Date().toISOString().slice(0,10);
 
-  const [deptRes, opsRes, issueRes, reasonsRes] = await Promise.all([
+  const [deptRes, opsRes, issueRes, reasonsRes, msgRes] = await Promise.all([
     sb.rpc('get_job_dept_delays', { p_job_id: s.job_id }),
     sb.rpc('get_job_operations_progress', { p_job_id: s.job_id }),
     sb.rpc('get_job_latest_issue', { p_job_id: s.job_id }),
-    sb.rpc('get_job_top_delay_reasons', { p_job_id: s.job_id, p_limit: 20 })
+    sb.rpc('get_job_top_delay_reasons', { p_job_id: s.job_id, p_limit: 20 }),
+    sb.from('tv_message').select('message').eq('id',1).single()
   ]);
   const deptDelays = deptRes.data || [];
   const ops = opsRes.data || [];
   const latestIssue = (issueRes.data && issueRes.data[0]) || null;
   const allReasons = reasonsRes.data || [];
+  const tvMessage = (msgRes.data && msgRes.data.message) || '';
 
   const remainingHours = Math.max(0, (s.std_hours||0) - (s.earned_hours||0));
   const estDate = computeTargetDate(todayStr, remainingHours, s.shift_count, s.hours_per_shift);
@@ -2288,6 +2334,15 @@ async function renderStationCard(app, s, idx, total){
   const currentOpRow = ops.find(o=>o.op_no===s.current_op_no);
   const currentStatus = !currentOpRow ? 'Pending' : (currentOpRow.has_hold ? 'Hold' : (currentOpRow.actual_hours>0 ? 'InProgress' : 'Pending'));
   const currentStatusLabel = currentStatus==='InProgress' ? 'In Progress' : currentStatus;
+  const currentOpIdxAll = ops.findIndex(o=>o.op_no===s.current_op_no);
+  const nextOpRow = currentOpIdxAll>=0 ? ops[currentOpIdxAll+1] : null;
+
+  // "Days on this operation" — calendar days since the first entry logged against it.
+  // Not a live ticking clock: the app has no "checked in, not yet checked out" state,
+  // so a live elapsed timer would have to be faked. This is the honest version.
+  const daysOnOp = (currentOpRow && currentOpRow.first_activity_date)
+    ? Math.max(0, Math.round((new Date(todayStr+'T00:00:00') - new Date(currentOpRow.first_activity_date+'T00:00:00'))/86400000))
+    : null;
 
   const totalDelay = allReasons.reduce((s2,r)=>s2+Number(r.total_hours||0),0) || (s.delay_hours_total||0) || 1;
   const top3Reasons = allReasons.slice(0,3);
@@ -2316,14 +2371,14 @@ async function renderStationCard(app, s, idx, total){
     <div class="tv-card" style="justify-content:flex-start;padding-top:24px;">
 
       <div class="tv-hbar">
-        <div class="tv-hbar-item"><div class="lbl">Station</div><div class="val amber">${s.station_no ?? '—'} / ${idx+1}</div></div>
-        <div class="tv-hbar-item"><div class="lbl">Machine</div><div class="val">${esc(s.machine_no)}</div></div>
-        <div class="tv-hbar-item"><div class="lbl">Model</div><div class="val">${esc(s.model_name||'—')}</div></div>
-        <div class="tv-hbar-item" style="flex:1;"><div class="lbl">Customer</div><div class="val" style="font-size:14px;">${esc(s.customer||'—')}</div></div>
-        <div class="tv-hbar-item"><div class="lbl">Last Updated</div><div class="val" style="font-size:13px;">${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})} · ${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div></div>
+        <div class="tv-hbar-item"><div class="lbl">${tvIcon('station',12)} Station</div><div class="val amber">${s.station_no ?? '—'} / ${idx+1}</div></div>
+        <div class="tv-hbar-item"><div class="lbl">${tvIcon('machine',12)} Machine</div><div class="val">${esc(s.machine_no)}</div></div>
+        <div class="tv-hbar-item"><div class="lbl">${tvIcon('model',12)} Model</div><div class="val">${esc(s.model_name||'—')}</div></div>
+        <div class="tv-hbar-item" style="flex:1;"><div class="lbl">${tvIcon('customer',12)} Customer</div><div class="val" style="font-size:14px;">${esc(s.customer||'—')}</div></div>
+        <div class="tv-hbar-item"><div class="lbl">${tvIcon('clock',12)} Last Updated</div><div class="val" style="font-size:13px;">${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})} · ${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div><div class="caption" id="tvRefreshCountdown" style="font-size:9.5px;color:var(--steel-300);margin-top:2px;">Auto refresh in 60s</div></div>
         <div class="tv-hbar-status ${riskClass}">
           <div class="lbl">Overall Status</div>
-          <div class="val">${riskLabel}</div>
+          <div class="val">${tvIcon(risk==='ontrack'?'check':'warning',16)} ${riskLabel}</div>
           <div class="sub">${riskSub}</div>
         </div>
       </div>
@@ -2333,10 +2388,15 @@ async function renderStationCard(app, s, idx, total){
           <div class="tv-table-title">Current Operation</div>
           <div class="tv-curop-title">${s.current_op_no ? esc(s.current_op_no)+' — '+esc(s.current_op_description||'') : 'All operations completed'}</div>
           <span class="tv-op-status-pill ${currentStatus}">${esc(currentStatusLabel)}</span>
+          <div class="tv-curop-stats">
+            ${daysOnOp!==null ? `<div class="tv-curop-stat">${tvIcon('hourglass',12)} DAYS ON THIS OP<b>${daysOnOp}</b></div>` : ''}
+            ${s.current_op_group ? `<div class="tv-curop-stat">${tvIcon('customer',12)} DEPARTMENT<b style="font-size:13px;">${esc(s.current_op_group)}</b></div>` : ''}
+            ${nextOpRow ? `<div class="tv-curop-stat">${tvIcon('arrow',12)} NEXT UP<b style="font-size:13px;">${esc(nextOpRow.op_no)} — ${esc(nextOpRow.description)}</b></div>` : ''}
+          </div>
         </div>
         ${latestIssue ? `
         <div class="tv-panel tv-issue-panel">
-          <div class="hdr">⚠ Current Issue (Latest)</div>
+          <div class="hdr">${tvIcon('warning',14)} Current Issue (Latest)</div>
           <div class="issue-text">${esc(latestIssue.issue_reason)}</div>
           <div class="issue-meta">
             <div>REPORTED<b style="font-size:12px;">${new Date(latestIssue.submitted_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})} · ${new Date(latestIssue.submitted_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</b></div>
@@ -2347,31 +2407,31 @@ async function renderStationCard(app, s, idx, total){
 
       <div class="tv-metric-row">
         <div class="tv-mw">
-          <div class="lbl">Overall Progress</div>
+          <div class="lbl">${tvIcon('trending',12)} Overall Progress</div>
           <div class="tv-mw-donut-wrap">
             <div class="tv-mw-donut-canvas-wrap"><canvas id="progressDonut"></canvas><div class="tv-mw-donut-pct">${totalMachinePct}%</div></div>
             <div class="caption">${(s.earned_hours||0).toFixed(1)}h of ${(s.std_hours||0).toFixed(1)}h</div>
           </div>
         </div>
         <div class="tv-mw">
-          <div class="lbl">Actual vs Planned Hours</div>
+          <div class="lbl">${tvIcon('clock',12)} Actual vs Planned Hours</div>
           <div class="big split"><b>${(s.actual_hours||0).toFixed(0)}h</b><span class="slash">/</span>${(s.std_hours||0).toFixed(0)}h</div>
           <div class="caption">Actual / Planned (Std)</div>
         </div>
         <div class="tv-mw">
-          <div class="lbl">Delay Hours</div>
+          <div class="lbl">${tvIcon('warning',12)} Delay Hours</div>
           <div class="big red">${(s.delay_hours_total||0).toFixed(0)}h</div>
           <div class="caption">Across all operations</div>
         </div>
         <div class="tv-mw">
-          <div class="lbl">Est. Delivery</div>
+          <div class="lbl">${tvIcon('calendar',12)} Est. Delivery</div>
           <div class="big ${risk==='delayed'?'red':''}" style="font-size:19px;">${fmtDate(estDate)}</div>
           <div class="caption">Plan: ${fmtDate(s.delivery_date)}</div>
           ${lateBadge}
         </div>
       </div>
 
-      <div class="tv-row2">
+      <div style="display:grid;grid-template-columns:1.3fr 1fr 0.8fr;gap:14px;width:100%;max-width:1400px;margin-top:14px;" class="tv-3col">
         <div class="tv-panel">
           <div class="tv-table-title">Operation Progress (${ops.length} operations)</div>
           ${hiddenBeforeCt>0 ? `<div class="tv-more-ops-note">↑ ${hiddenBeforeCt} earlier operation${hiddenBeforeCt===1?'':'s'} completed</div>` : ''}
@@ -2381,7 +2441,7 @@ async function renderStationCard(app, s, idx, total){
               const pct = o.is_completed ? 100 : (o.std_hours>0 ? Math.min(100, Math.round(o.actual_hours/o.std_hours*100)) : 0);
               const st = o.is_completed ? 'Completed' : (o.op_no===s.current_op_no ? currentStatusLabel : (o.has_hold ? 'Hold' : 'Pending'));
               return `<tr class="${o.op_no===s.current_op_no?'current':''}">
-                <td>${esc(o.op_no)}</td><td class="name">${esc(o.description)}</td>
+                <td>${o.is_completed?tvIcon('check',13):''} ${esc(o.op_no)}</td><td class="name">${esc(o.description)}</td>
                 <td><span class="tv-mini-pct-bar"><span class="tv-mini-pct-fill" style="width:${pct}%;"></span></span>${pct}%</td>
                 <td><span class="tv-op-status-pill ${st==='In Progress'?'InProgress':st}" style="margin:0;">${esc(st)}</span></td>
               </tr>`;
@@ -2413,14 +2473,17 @@ async function renderStationCard(app, s, idx, total){
               </div>`).join('') : '<div class="tv-table-empty">No delays logged</div>'}
           </div>
         </div>
+
+        <div class="tv-panel">
+          <div class="tv-table-title">Summary</div>
+          <div class="tv-summary-row">${tvIcon('clock',15)} <div><span class="lbl">Shift Capacity</span><b>${s.shift_count||1} shift × ${(s.hours_per_shift||8)}h = ${((s.shift_count||1)*(s.hours_per_shift||8)).toFixed(1)}h/day</b></div></div>
+          <div class="tv-summary-row">${tvIcon('calendar',15)} <div><span class="lbl">Working Days Left</span><b>${workingDaysLeft} Days</b></div></div>
+          <div class="tv-summary-row">${tvIcon('trending',15)} <div><span class="lbl">Efficiency</span><b class="amber">${(s.efficiency_pct===null || (s.actual_hours||0)<0.5) ? '—' : (s.efficiency_pct>300 ? '300%+' : s.efficiency_pct+'%')}</b></div></div>
+          <div class="tv-summary-row">${tvIcon('hourglass',15)} <div><span class="lbl">Remaining Hours</span><b>${remainingHours.toFixed(1)}h <span style="font-size:10px;color:var(--steel-300);font-weight:400;">to complete</span></b></div></div>
+        </div>
       </div>
 
-      <div class="tv-hbar" style="margin-top:14px;">
-        <div class="tv-hbar-item"><div class="lbl">Shift Capacity</div><div class="val" style="font-size:15px;">${s.shift_count||1} shift × ${(s.hours_per_shift||8)}h = ${((s.shift_count||1)*(s.hours_per_shift||8)).toFixed(1)}h/day</div></div>
-        <div class="tv-hbar-item"><div class="lbl">Working Days Left</div><div class="val">${workingDaysLeft} Days</div></div>
-        <div class="tv-hbar-item"><div class="lbl">Efficiency</div><div class="val amber">${(s.efficiency_pct===null || (s.actual_hours||0)<0.5) ? '—' : (s.efficiency_pct>300 ? '300%+' : s.efficiency_pct+'%')}</div></div>
-        <div class="tv-hbar-item"><div class="lbl">Remaining Hours</div><div class="val">${remainingHours.toFixed(1)}h <span style="font-size:10px;color:var(--steel-300);font-weight:400;">to complete</span></div></div>
-      </div>
+      ${tvMessage ? `<div class="tv-message-banner">${tvIcon('star',16)} <span class="mlbl">Message of the Day:</span> ${esc(tvMessage)}</div>` : ''}
 
     </div>
   `;
@@ -2435,10 +2498,12 @@ async function renderStationCard(app, s, idx, total){
     });
   }
 }
+let tvCountdownTimer=null, tvCountdownVal=60;
 async function renderStationDisplay(app){
   document.body.classList.add('tv-mode');
   if(tvRotateTimer) clearInterval(tvRotateTimer);
   if(tvRefreshTimer) clearInterval(tvRefreshTimer);
+  if(tvCountdownTimer) clearInterval(tvCountdownTimer);
 
   tvStations = await fetchStations();
   tvIndex = 0;
@@ -2450,9 +2515,17 @@ async function renderStationDisplay(app){
     await renderStationCard(app, tvStations[tvIndex], tvIndex, tvStations.length);
   }, tvInterval*1000);
 
+  tvCountdownVal = 60;
+  tvCountdownTimer = setInterval(()=>{
+    tvCountdownVal = tvCountdownVal>0 ? tvCountdownVal-1 : 60;
+    const el = document.getElementById('tvRefreshCountdown');
+    if(el) el.textContent = 'Auto refresh in ' + tvCountdownVal + 's';
+  }, 1000);
+
   tvRefreshTimer = setInterval(async ()=>{
     tvStations = await fetchStations();
     if(tvIndex >= tvStations.length) tvIndex = 0;
+    tvCountdownVal = 60;
     await renderStationCard(app, tvStations[tvIndex], tvIndex, tvStations.length);
   }, 60000); // re-pull fresh data every 60s regardless of rotation
 }
