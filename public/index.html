@@ -343,11 +343,41 @@
   .tv-ops-compact td, .tv-ops-compact th{padding:5px 8px;}
   .tv-more-ops-note{font-size:11px;color:var(--steel-300);margin-top:8px;}
 
-  /* ---------- Gantt chart (Plan vs Actual) ---------- */
-  .gantt-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--steel-600);}
+  /* ---------- Gantt chart v2 (custom HTML timeline, Plan vs Actual, A3-print-ready) ---------- */
+  .gantt-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--steel-600);align-items:center;}
   .gantt-legend span{display:inline-flex;align-items:center;gap:6px;}
-  .gantt-legend .sw{width:12px;height:12px;border-radius:2px;display:inline-block;}
-  .gantt-wrap{overflow-x:auto;}
+  .gantt-legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block;}
+  .gantt-v2{background:#fff;border:1px solid var(--plate-100);border-radius:6px;overflow:hidden;}
+  .gantt-v2-scroll{overflow-x:auto;}
+  .gantt-v2-inner{position:relative;}
+  .gantt-header{display:flex;border-bottom:2px solid var(--graphite-950);background:var(--plate-50);position:sticky;top:0;z-index:2;}
+  .gantt-label-col{flex-shrink:0;width:230px;padding:8px 10px;font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--steel-600);border-right:1px solid var(--plate-100);background:var(--plate-50);position:sticky;left:0;z-index:3;}
+  .gantt-ticks{position:relative;flex:1;height:32px;}
+  .gantt-tick{position:absolute;top:0;bottom:0;border-left:1px solid var(--plate-100);font-size:9.5px;color:var(--steel-600);padding:6px 0 0 4px;font-family:var(--font-mono);white-space:nowrap;}
+  .gantt-body{position:relative;}
+  .gantt-row{display:flex;align-items:stretch;border-bottom:1px solid var(--plate-100);}
+  .gantt-row:nth-child(even){background:#fbfcfc;}
+  .gantt-row-label{flex-shrink:0;width:230px;padding:6px 10px;font-size:11px;color:var(--graphite-950);border-right:1px solid var(--plate-100);position:sticky;left:0;background:inherit;display:flex;align-items:center;font-weight:600;}
+  .gantt-row-track{position:relative;flex:1;}
+  .gantt-gridline{position:absolute;top:0;bottom:0;border-left:1px solid var(--plate-100);}
+  .gantt-today-line{position:absolute;top:0;bottom:0;border-left:2px dashed var(--amber-500);z-index:2;}
+  .gantt-today-label{position:absolute;top:2px;font-size:9px;color:var(--amber-700);font-weight:700;background:var(--amber-100);padding:1px 4px;border-radius:3px;white-space:nowrap;transform:translateX(-50%);}
+  .gantt-bar{position:absolute;border-radius:5px;box-shadow:0 1px 2px rgba(0,0,0,.15);}
+  .gantt-bar-planned{background:linear-gradient(180deg,#8fa3b3,#57687a);opacity:.55;}
+  .gantt-bar-actual.completed{background:linear-gradient(180deg,#5cb98a,#3f8f63);}
+  .gantt-bar-actual.inprogress{background:linear-gradient(180deg,#f2bb4d,#e0a300);}
+  .gantt-bar-actual.hold{background:linear-gradient(180deg,#dd7468,#c0392b);}
+  .gantt-bar-actual.notstarted{background:rgba(0,0,0,.06);border:1px dashed #ccc;box-shadow:none;}
+  .gantt-controls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
+  #ganttPrintArea{display:none;}
+  @media print{
+    @page{ size:A3 landscape; margin:10mm; }
+    body *{ visibility:hidden; }
+    #ganttPrintArea, #ganttPrintArea *{ visibility:visible; }
+    #ganttPrintArea{ display:block !important; position:fixed; top:0; left:0; width:100%; }
+    .no-print{ display:none !important; }
+    body{ background:#fff; }
+  }
   .tv-top-grid{display:grid;grid-template-columns:1.1fr 1.3fr 1.3fr;gap:16px;width:100%;max-width:1300px;align-items:stretch;}
   @media(max-width:1000px){.tv-top-grid{grid-template-columns:1fr;}}
   .tv-panel{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:16px 18px;text-align:left;}
@@ -1484,9 +1514,9 @@ async function drawGanttForJob(area, job){
       dayRemaining -= consume;
       remainingHrs -= consume;
     }
-    const window = { start: opStart, end: new Date(cursor) };
-    planned[op.id] = window;
-    lastSeriesWindow = window;
+    const win = { start: opStart, end: new Date(cursor) };
+    planned[op.id] = win;
+    lastSeriesWindow = win;
     if(dayRemaining <= 0){
       cursor.setDate(cursor.getDate()+1);
       while(cursor.getDay()===0) cursor.setDate(cursor.getDate()+1);
@@ -1504,66 +1534,110 @@ async function drawGanttForJob(area, job){
       if(e.activity_date > actual[e.job_operation_id].end) actual[e.job_operation_id].end = e.activity_date;
     }
   });
+  const hasHoldByOp = {};
+  (entries||[]).forEach(e=>{ if(e.job_operation_id && e.status==='Hold') hasHoldByOp[e.job_operation_id]=true; });
 
-  const labels = ops.map(o=>`${o.op_no} — ${o.description}`);
-  const plannedData = ops.map(o=>{
-    const p = planned[o.id];
-    return p ? [p.start.getTime(), p.end.getTime()] : null;
-  });
-  const actualColors = ops.map(o=> o.is_completed ? '#3f8f63' : (actual[o.id] ? '#e0a300' : 'rgba(255,255,255,0.12)'));
-  const actualData = ops.map(o=>{
-    const a = actual[o.id];
-    if(!a) return null;
-    return [new Date(a.start+'T00:00:00').getTime(), new Date(a.end+'T23:59:59').getTime()];
-  });
-
-  const canvasHeight = Math.max(220, ops.length * 30 + 60);
+  // Overall date span across everything, so the timeline covers plan AND actual AND today.
+  const allDates = [];
+  Object.values(planned).forEach(w=>{ allDates.push(w.start.getTime(), w.end.getTime()); });
+  Object.values(actual).forEach(a=>{ allDates.push(new Date(a.start+'T00:00:00').getTime(), new Date(a.end+'T00:00:00').getTime()); });
+  allDates.push(Date.now());
+  const spanStart = Math.min(...allDates);
+  const spanEnd = Math.max(...allDates);
+  const totalDays = Math.max(1, Math.round((spanEnd - spanStart)/86400000) + 1);
 
   area.innerHTML = `
     <div class="panel">
-      <div class="panel-title">${esc(job.machine_no)} — ${esc(job.customer||'')} — ${esc(job.models?.model_name||'')}</div>
-      <div class="gantt-legend">
-        <span><span class="sw" style="background:#57687a;"></span>Planned</span>
-        <span><span class="sw" style="background:#3f8f63;"></span>Actual — Completed</span>
-        <span><span class="sw" style="background:#e0a300;"></span>Actual — In Progress</span>
-        <span><span class="sw" style="background:rgba(0,0,0,.12);border:1px solid #ccc;"></span>Not started yet</span>
+      <div class="gantt-controls">
+        <div class="panel-title" style="border:none;margin:0;padding:0;">${esc(job.machine_no)} — ${esc(job.customer||'')} — ${esc(job.models?.model_name||'')}</div>
+        <button class="btn amber small no-print" id="exportGanttPdfBtn">Export PDF (A3)</button>
       </div>
-      <div class="gantt-wrap"><canvas id="ganttCanvas" height="${canvasHeight}"></canvas></div>
+      <div class="gantt-legend">
+        <span><span class="sw" style="background:linear-gradient(180deg,#8fa3b3,#57687a);opacity:.7;"></span>Planned</span>
+        <span><span class="sw" style="background:linear-gradient(180deg,#5cb98a,#3f8f63);"></span>Actual — Completed</span>
+        <span><span class="sw" style="background:linear-gradient(180deg,#f2bb4d,#e0a300);"></span>Actual — In Progress</span>
+        <span><span class="sw" style="background:linear-gradient(180deg,#dd7468,#c0392b);"></span>Actual — Hold</span>
+        <span><span class="sw" style="background:rgba(0,0,0,.06);border:1px dashed #ccc;"></span>Not started</span>
+      </div>
+      <div class="gantt-v2" id="ganttOnscreen"></div>
     </div>
+    <div id="ganttPrintArea"></div>
   `;
 
-  if(window.__ganttChart) window.__ganttChart.destroy();
-  window.__ganttChart = new Chart(document.getElementById('ganttCanvas'), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label:'Planned', data: plannedData, backgroundColor:'rgba(87,104,122,0.45)', borderColor:'#57687a', borderWidth:1, barPercentage:0.5, categoryPercentage:0.7 },
-        { label:'Actual', data: actualData, backgroundColor: actualColors, barPercentage:0.5, categoryPercentage:0.7 }
-      ]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { type:'linear', ticks: { callback:(val)=> new Date(val).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) } }
-      },
-      plugins: {
-        legend: { display:false },
-        tooltip: {
-          callbacks: {
-            label: (ctx)=>{
-              const raw = ctx.raw;
-              if(!raw || raw[0]==null) return ctx.dataset.label+': not scheduled yet';
-              const [s,e] = raw;
-              return ctx.dataset.label+': '+new Date(s).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' → '+new Date(e).toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-            }
-          }
-        }
-      }
+  function buildGanttHtml(widthPx, rowHeightPx){
+    const pxPerDay = widthPx / totalDays;
+    const tickCount = Math.min(16, totalDays);
+    const tickEveryDays = Math.max(1, Math.round(totalDays / tickCount));
+    let ticksHtml = '';
+    for(let d=0; d<=totalDays; d+=tickEveryDays){
+      const t = new Date(spanStart + d*86400000);
+      ticksHtml += `<div class="gantt-tick" style="left:${d*pxPerDay}px;">${t.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</div>`;
     }
-  });
+    const todayOffsetDays = (Date.now() - spanStart)/86400000;
+    const todayLeft = todayOffsetDays * pxPerDay;
+
+    const barH = Math.max(6, Math.round(rowHeightPx*0.28));
+    const rowsHtml = ops.map(o=>{
+      const p = planned[o.id];
+      const a = actual[o.id];
+      let plannedBar = '';
+      if(p){
+        const left = (p.start.getTime()-spanStart)/86400000*pxPerDay;
+        const width = Math.max(2, (p.end.getTime()-p.start.getTime())/86400000*pxPerDay);
+        plannedBar = `<div class="gantt-bar gantt-bar-planned" style="left:${left}px;width:${width}px;top:${rowHeightPx*0.12}px;height:${barH}px;" title="Planned: ${esc(o.op_no)} — ${p.start.toLocaleDateString('en-GB')} to ${p.end.toLocaleDateString('en-GB')}"></div>`;
+      }
+      let actualBar = '';
+      if(a){
+        const aStart = new Date(a.start+'T00:00:00').getTime();
+        const aEnd = new Date(a.end+'T00:00:00').getTime();
+        const left = (aStart-spanStart)/86400000*pxPerDay;
+        const width = Math.max(2, (aEnd-aStart)/86400000*pxPerDay + pxPerDay*0.6);
+        const cls = o.is_completed ? 'completed' : (hasHoldByOp[o.id] ? 'hold' : 'inprogress');
+        actualBar = `<div class="gantt-bar gantt-bar-actual ${cls}" style="left:${left}px;width:${width}px;top:${rowHeightPx*0.52}px;height:${barH}px;" title="Actual: ${esc(o.op_no)} — ${a.start} to ${a.end}"></div>`;
+      } else {
+        actualBar = `<div class="gantt-bar gantt-bar-actual notstarted" style="left:0px;width:14px;top:${rowHeightPx*0.52}px;height:${barH}px;"></div>`;
+      }
+      return `<div class="gantt-row" style="height:${rowHeightPx}px;">
+        <div class="gantt-row-label" style="height:${rowHeightPx}px;">${esc(o.op_no)} — ${esc(o.description)}</div>
+        <div class="gantt-row-track" style="height:${rowHeightPx}px;">${plannedBar}${actualBar}</div>
+      </div>`;
+    }).join('');
+
+    return `
+      <div class="gantt-v2-scroll"><div class="gantt-v2-inner" style="width:${230+widthPx}px;">
+        <div class="gantt-header">
+          <div class="gantt-label-col">Operation</div>
+          <div class="gantt-ticks" style="width:${widthPx}px;">${ticksHtml}</div>
+        </div>
+        <div class="gantt-body" style="position:relative;">
+          <div class="gantt-gridline gantt-today-line" style="left:${230+todayLeft}px;"></div>
+          <div class="gantt-today-label" style="left:${230+todayLeft}px;">TODAY</div>
+          ${rowsHtml}
+        </div>
+      </div></div>`;
+  }
+
+  function paintOnscreen(){
+    const host = document.getElementById('ganttOnscreen');
+    const widthPx = Math.max(600, host.parentElement.clientWidth - 260);
+    host.innerHTML = buildGanttHtml(widthPx, 30);
+  }
+  paintOnscreen();
+  window.addEventListener('resize', paintOnscreen);
+
+  document.getElementById('exportGanttPdfBtn').onclick = ()=>{
+    // A3 landscape at 96dpi minus 10mm margins each side ≈ 1500px usable content width.
+    const A3_CONTENT_WIDTH = 1500;
+    const A3_CONTENT_HEIGHT = 900;
+    const rowHeightPx = Math.max(14, Math.min(30, Math.floor((A3_CONTENT_HEIGHT-60)/ops.length)));
+    document.getElementById('ganttPrintArea').innerHTML = `
+      <div style="padding:10px;font-family:Arial,sans-serif;">
+        <h2 style="margin:0 0 4px;">${esc(job.machine_no)} — ${esc(job.customer||'')} — ${esc(job.models?.model_name||'')}</h2>
+        <div style="font-size:12px;color:#555;margin-bottom:8px;">Gantt Chart — Plan vs Actual · Printed ${new Date().toLocaleDateString('en-GB')}</div>
+        ${buildGanttHtml(A3_CONTENT_WIDTH, rowHeightPx)}
+      </div>`;
+    window.print();
+  };
 }
 
 /* ================= ENTRY EDITOR (supervisor corrects/moves an entry) ================= */
