@@ -1508,12 +1508,12 @@ async function drawGanttForJob(area, job){
   const labels = ops.map(o=>`${o.op_no} — ${o.description}`);
   const plannedData = ops.map(o=>{
     const p = planned[o.id];
-    return p ? [p.start.getTime(), p.end.getTime()] : [null,null];
+    return p ? [p.start.getTime(), p.end.getTime()] : null;
   });
   const actualColors = ops.map(o=> o.is_completed ? '#3f8f63' : (actual[o.id] ? '#e0a300' : 'rgba(255,255,255,0.12)'));
   const actualData = ops.map(o=>{
     const a = actual[o.id];
-    if(!a) return [null,null];
+    if(!a) return null;
     return [new Date(a.start+'T00:00:00').getTime(), new Date(a.end+'T23:59:59').getTime()];
   });
 
@@ -1554,8 +1554,9 @@ async function drawGanttForJob(area, job){
         tooltip: {
           callbacks: {
             label: (ctx)=>{
-              const [s,e] = ctx.raw || [null,null];
-              if(s==null) return ctx.dataset.label+': not scheduled yet';
+              const raw = ctx.raw;
+              if(!raw || raw[0]==null) return ctx.dataset.label+': not scheduled yet';
+              const [s,e] = raw;
               return ctx.dataset.label+': '+new Date(s).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' → '+new Date(e).toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
             }
           }
