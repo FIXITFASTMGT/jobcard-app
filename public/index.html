@@ -63,6 +63,7 @@
   .nav button:focus-visible{outline:2px solid var(--amber-500);outline-offset:2px;}
 
   .wrap{max-width:980px;margin:0 auto;padding:20px 16px 70px;}
+  .wrap.wide{max-width:1600px;}
 
   /* ---------- panels ---------- */
   .panel{background:#fff;border:1px solid var(--plate-100);border-left:3px solid var(--steel-700);
@@ -613,6 +614,7 @@ async function boot(){
 async function render(){
   setNav();
   const app=document.getElementById('app');
+  app.classList.toggle('wide', view==='gantt' && !tvDisplay && !scanToken);
   if(tvDisplay) return renderStationDisplay(app);
   if(scanToken) return renderScan(app, scanToken);
   if(view==='models') return renderModels(app);
