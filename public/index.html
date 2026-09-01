@@ -412,6 +412,67 @@
     background:linear-gradient(90deg,rgba(242,163,15,.14),rgba(242,163,15,.03));border:1px solid rgba(242,163,15,.35);
     border-radius:8px;padding:12px 20px;color:#ffd98a;font-size:13.5px;text-align:left;}
   .tv-message-banner .mlbl{font-weight:700;text-transform:uppercase;letter-spacing:.4px;font-size:11px;color:var(--amber-500);}
+
+  /* ---------- Station Overview (homepage grid) ---------- */
+  .tv-ov-wrap{width:100%;max-width:none;display:flex;flex-direction:column;align-items:center;}
+  .tv-ov-title{font-family:var(--font-display);font-size:min(4vw,32px);font-weight:700;letter-spacing:1px;color:#fff;}
+  .tv-ov-subtitle{font-size:13px;color:var(--steel-300);margin-top:2px;text-transform:uppercase;letter-spacing:1px;}
+  .tv-ov-kpi-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:16px;width:100%;}
+  .tv-ov-kpi{background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.12);
+    border-radius:10px;padding:10px 20px;text-align:center;min-width:110px;box-shadow:0 4px 14px rgba(0,0,0,.2);}
+  .tv-ov-kpi .n{font-family:var(--font-display);font-size:28px;font-weight:700;color:#fff;}
+  .tv-ov-kpi .l{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--steel-300);margin-top:2px;}
+  .tv-ov-kpi.green .n{color:#6fd39a;} .tv-ov-kpi.blue .n{color:#7ec4e0;}
+  .tv-ov-kpi.amber .n{color:#ffc857;} .tv-ov-kpi.red .n{color:#ff8a7a;}
+  .tv-ov-area-status{margin-top:14px;padding:8px 24px;border-radius:8px;border-left:3px solid;font-family:var(--font-display);
+    font-size:16px;font-weight:700;letter-spacing:.5px;}
+  .tv-ov-area-status.ontrack{border-color:var(--green-600);background:rgba(63,143,99,.14);color:#6fd39a;}
+  .tv-ov-area-status.atrisk{border-color:var(--amber-signal);background:rgba(224,163,0,.14);color:#ffc857;}
+  .tv-ov-area-status.delayed{border-color:var(--red-600);background:rgba(192,57,43,.16);color:#ff8a7a;}
+  .tv-ov-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;width:100%;margin-top:20px;}
+  @media(max-width:1300px){.tv-ov-grid{grid-template-columns:repeat(3,1fr);}}
+  .tv-ov-card{border-radius:8px;padding:10px 12px;text-align:left;min-height:118px;cursor:pointer;
+    border-left:4px solid; background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.015));
+    border-top:1px solid rgba(255,255,255,.1);border-right:1px solid rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.1);
+    box-shadow:0 4px 14px rgba(0,0,0,.22);display:flex;flex-direction:column;justify-content:space-between;}
+  .tv-ov-card.green{border-left-color:var(--green-600);}
+  .tv-ov-card.blue{border-left-color:#7ec4e0;}
+  .tv-ov-card.amber{border-left-color:var(--amber-signal);}
+  .tv-ov-card.red{border-left-color:var(--red-600);}
+  .tv-ov-card-top{display:flex;justify-content:space-between;align-items:baseline;}
+  .tv-ov-station-no{font-family:var(--font-mono);font-size:11px;color:var(--amber-500);letter-spacing:1px;}
+  .tv-ov-machine{font-family:var(--font-display);font-size:17px;font-weight:700;color:#fff;margin-top:1px;}
+  .tv-ov-customer{font-size:10px;color:var(--steel-300);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tv-ov-op{font-size:11px;color:#fff;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tv-ov-progress-track{background:rgba(255,255,255,.1);border-radius:3px;height:7px;margin-top:6px;overflow:hidden;}
+  .tv-ov-progress-fill{height:100%;border-radius:3px;}
+  .tv-ov-card.green .tv-ov-progress-fill{background:var(--green-600);}
+  .tv-ov-card.blue .tv-ov-progress-fill{background:#7ec4e0;}
+  .tv-ov-card.amber .tv-ov-progress-fill{background:var(--amber-signal);}
+  .tv-ov-card.red .tv-ov-progress-fill{background:var(--red-600);}
+  .tv-ov-card-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
+  .tv-ov-pct{font-family:var(--font-mono);font-size:11px;color:var(--steel-200);}
+  .tv-ov-status-badge{font-size:9px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:8px;letter-spacing:.3px;}
+  .tv-ov-status-badge.green{background:rgba(63,143,99,.25);color:#6fd39a;}
+  .tv-ov-status-badge.blue{background:rgba(126,196,224,.22);color:#7ec4e0;}
+  .tv-ov-status-badge.amber{background:rgba(224,163,0,.25);color:#ffc857;}
+  .tv-ov-status-badge.red{background:rgba(192,57,43,.25);color:#ff8a7a;}
+  .tv-ov-card.empty{border-left-color:rgba(255,255,255,.18);border-left-style:dashed;background:rgba(255,255,255,.02);
+    align-items:center;justify-content:center;text-align:center;cursor:default;opacity:.55;box-shadow:none;}
+  .tv-ov-card.empty .tv-ov-station-no{color:var(--steel-300);}
+  .tv-ov-empty-plus{font-size:22px;color:var(--steel-300);margin:4px 0;}
+  .tv-ov-empty-label{font-size:10px;color:var(--steel-300);text-transform:uppercase;letter-spacing:.5px;}
+  .tv-ov-summary-bar{display:flex;gap:0;width:100%;margin-top:18px;background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.015));
+    border:1px solid rgba(255,255,255,.12);border-radius:10px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.2);}
+  .tv-ov-summary-item{flex:1;padding:10px 8px;text-align:center;border-right:1px solid rgba(255,255,255,.08);}
+  .tv-ov-summary-item:last-child{border-right:none;}
+  .tv-ov-summary-item .n{font-family:var(--font-display);font-size:20px;font-weight:700;color:#fff;}
+  .tv-ov-summary-item .l{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--steel-300);margin-top:2px;}
+  .tv-floating-controls{position:fixed;top:14px;right:16px;display:flex;gap:8px;z-index:50;}
+  .tv-float-btn{background:rgba(20,24,28,.85);border:1px solid rgba(255,255,255,.2);color:#fff;padding:8px 14px;
+    border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;
+    backdrop-filter:blur(4px);}
+  .tv-float-btn:hover{background:rgba(40,46,52,.9);}
   .tv-curop-title{font-family:var(--font-display);font-size:22px;font-weight:700;color:#fff;margin-top:4px;}
   .tv-curop-stats{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap;}
   .tv-curop-stat{font-size:11px;color:var(--steel-300);text-transform:uppercase;}
@@ -706,7 +767,8 @@ async function renderModels(app){
     const s = statsByModel[m.id] || {count:0, stdHours:0, labourHours:0};
     return `
     <div class="job-card">
-      <div class="job-head">
+      <div class="job-head" style="align-items:center;">
+        ${m.image_url ? `<img src="${esc(m.image_url)}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:4px;border:1px solid var(--plate-100);flex-shrink:0;">` : `<div style="width:44px;height:44px;border-radius:4px;border:1.5px dashed var(--steel-200);flex-shrink:0;"></div>`}
         <span class="grp">${esc(m.base_model)}</span>
         <b>${esc(m.model_name)}</b>
       </div>
@@ -717,9 +779,30 @@ async function renderModels(app){
       </div>
       <div class="job-actions" style="margin-top:8px;">
         <button data-open="${m.id}" data-name="${esc(m.model_name)}">Edit Ops →</button>
+        <label class="file-btn" style="margin:0;">${m.image_url ? 'Change Image' : 'Upload Image'}
+          <input type="file" accept="image/*" class="modelImgInput" data-modelid="${m.id}" style="display:none;">
+        </label>
       </div>
     </div>`;
   }).join('') || '<div class="empty">No models yet — add your first variant above.</div>';
+
+  document.querySelectorAll('.modelImgInput').forEach(inp=>{
+    inp.onchange = async (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      const modelId = inp.dataset.modelid;
+      const ext = (file.name.split('.').pop()||'jpg').toLowerCase();
+      const path = modelId + '/' + Date.now() + '.' + ext;
+      toast('Uploading image…');
+      const { error: upErr } = await sb.storage.from('model-images').upload(path, file, { upsert:true });
+      if(upErr) { toast('Upload failed: '+upErr.message, true); return; }
+      const { data: pub } = sb.storage.from('model-images').getPublicUrl(path);
+      const { error: saveErr } = await sb.from('models').update({ image_url: pub.publicUrl }).eq('id', modelId);
+      if(saveErr) { toast('Saved image but failed to link it: '+saveErr.message, true); return; }
+      toast('Image uploaded');
+      renderModels(app);
+    };
+  });
 
   document.querySelectorAll('[data-open]').forEach(b=>{
     b.onclick=()=>openOpsEditor({
@@ -2234,7 +2317,7 @@ async function renderProductionEntries(app){
 }
 
 /* ================= STATION DISPLAY (rotating floor TV — public, no login) ================= */
-let tvRotateTimer=null, tvRefreshTimer=null, tvStations=[], tvIndex=0;
+let tvRefreshTimer=null, tvStations=[];
 
 async function fetchStations(){
   const { data, error } = await sb.rpc('get_station_summary');
@@ -2537,21 +2620,182 @@ async function renderStationCard(app, s, idx, total){
   }
 }
 let tvCountdownTimer=null, tvCountdownVal=60;
+const TOTAL_STATIONS = 18; // change this constant if the floor grows/shrinks — nothing else to touch
+
+// Computes an overview card's color/label entirely from data get_station_summary() already
+// returns — no extra per-station queries needed for 18 cards at once.
+function computeOverviewStatus(s){
+  const remainingHours = Math.max(0, (s.std_hours||0)-(s.earned_hours||0));
+  const totalMachinePct = (s.std_hours||0)>0 ? Math.min(100, Math.round((s.earned_hours||0)/s.std_hours*100)) : 0;
+  const isComplete = totalMachinePct>=100;
+  const todayStr = new Date().toISOString().slice(0,10);
+  const estDate = computeTargetDate(todayStr, remainingHours, s.shift_count, s.hours_per_shift);
+  const risk = deliveryRiskLevel(estDate, s.delivery_date, 3);
+  let color, label;
+  if(isComplete){ color='green'; label='COMPLETED'; }
+  else if(risk==='delayed'){ color='red'; label='DELAYED'; }
+  else if(s.latest_status==='Hold'){ color='amber'; label='ON HOLD'; }
+  else { color='blue'; label = (s.actual_hours>0 ? 'RUNNING' : 'PENDING'); }
+  return { color, label, totalMachinePct, isComplete, risk };
+}
+
+async function renderStationOverview(app){
+  const stations = tvStations || [];
+  const byStationNo = {};
+  stations.forEach(s=>{ if(s.station_no) byStationNo[s.station_no] = s; });
+
+  let runningCt=0, holdCt=0, completedCt=0, delayedCt=0, pendingCt=0, totalDelayHours=0;
+  const computed = stations.map(s=>{
+    const st = computeOverviewStatus(s);
+    if(st.isComplete) completedCt++;
+    else if(st.color==='red') delayedCt++;
+    else if(st.color==='amber') holdCt++;
+    else if(st.label==='PENDING') pendingCt++;
+    else runningCt++;
+    totalDelayHours += (s.delay_hours_total||0);
+    return { s, st };
+  });
+  const emptyCt = TOTAL_STATIONS - stations.length;
+  const areaRisk = delayedCt>0 ? 'delayed' : (holdCt>0 || runningCt===0 && completedCt===0 ? 'atrisk' : (holdCt>0?'atrisk':'ontrack'));
+  const areaLabel = areaRisk==='delayed'?'DELAYED':areaRisk==='atrisk'?'AT RISK':'ON TRACK';
+
+  let cardsHtml = '';
+  for(let i=1;i<=TOTAL_STATIONS;i++){
+    const s = byStationNo[i];
+    if(!s){
+      cardsHtml += `<div class="tv-ov-card empty">
+        <div class="tv-ov-station-no">STATION ${String(i).padStart(2,'0')}</div>
+        <div class="tv-ov-empty-plus">+</div>
+        <div class="tv-ov-empty-label">No Job Assigned<br>Station Empty</div>
+      </div>`;
+      continue;
+    }
+    const st = computeOverviewStatus(s);
+    cardsHtml += `<div class="tv-ov-card ${st.color}" data-jobid="${s.job_id}">
+      <div>
+        <div class="tv-ov-card-top">
+          <div class="tv-ov-station-no">STATION ${String(i).padStart(2,'0')}</div>
+        </div>
+        <div class="tv-ov-machine">${esc(s.machine_no)}</div>
+        <div class="tv-ov-customer">${esc(s.customer||'')} · ${esc(s.model_name||'')}</div>
+        <div class="tv-ov-op">${s.current_op_no ? esc(s.current_op_no)+' — '+esc(s.current_op_description||'') : 'All ops complete'}</div>
+        <div class="tv-ov-progress-track"><div class="tv-ov-progress-fill" style="width:${st.totalMachinePct}%;"></div></div>
+      </div>
+      <div class="tv-ov-card-bottom">
+        <span class="tv-ov-pct">${st.totalMachinePct}%</span>
+        <span class="tv-ov-status-badge ${st.color}">${st.label}</span>
+      </div>
+    </div>`;
+  }
+
+  app.innerHTML = `
+    <div class="tv-card" style="justify-content:flex-start;padding-top:24px;">
+      <div class="tv-ov-wrap">
+        <div class="tv-ov-title">HYD ASSEMBLY AREA</div>
+        <div class="tv-ov-subtitle">All Stations Overview</div>
+        <div class="tv-ov-kpi-row">
+          <div class="tv-ov-kpi"><div class="n">${TOTAL_STATIONS}</div><div class="l">Total Stations</div></div>
+          <div class="tv-ov-kpi blue"><div class="n">${runningCt}</div><div class="l">Running</div></div>
+          <div class="tv-ov-kpi amber"><div class="n">${holdCt}</div><div class="l">On Hold</div></div>
+          <div class="tv-ov-kpi green"><div class="n">${completedCt}</div><div class="l">Completed</div></div>
+          <div class="tv-ov-kpi red"><div class="n">${delayedCt}</div><div class="l">Delayed</div></div>
+          <div class="tv-ov-kpi"><div class="n">${emptyCt}</div><div class="l">Empty</div></div>
+        </div>
+        <div class="tv-ov-area-status ${areaRisk}">AREA STATUS: ${areaLabel}</div>
+
+        <div class="tv-ov-grid" id="tvOvGrid"></div>
+
+        <div class="tv-ov-summary-bar">
+          <div class="tv-ov-summary-item"><div class="n">${stations.length}</div><div class="l">Total Jobs</div></div>
+          <div class="tv-ov-summary-item"><div class="n">${completedCt}</div><div class="l">Completed</div></div>
+          <div class="tv-ov-summary-item"><div class="n">${runningCt}</div><div class="l">Running</div></div>
+          <div class="tv-ov-summary-item"><div class="n">${holdCt}</div><div class="l">On Hold</div></div>
+          <div class="tv-ov-summary-item"><div class="n">${delayedCt}</div><div class="l">Delayed</div></div>
+          <div class="tv-ov-summary-item"><div class="n">${pendingCt}</div><div class="l">Pending</div></div>
+          <div class="tv-ov-summary-item"><div class="n">${emptyCt}</div><div class="l">Empty Stations</div></div>
+          <div class="tv-ov-summary-item"><div class="n">${totalDelayHours.toFixed(1)}h</div><div class="l">Total Delay Hours</div></div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('tvOvGrid').innerHTML = cardsHtml;
+  document.querySelectorAll('.tv-ov-card[data-jobid]').forEach(card=>{
+    card.onclick = ()=>{
+      const jobId = card.dataset.jobid;
+      const idx = tvStations.findIndex(s=>s.job_id===jobId);
+      if(idx>=0) tvJumpToDetail(idx);
+    };
+  });
+}
+
+/* ================= TV rotation controller: Overview + each station's detail, in sequence ================= */
+let tvPageIdx = 0;       // 0 = overview, 1..N = detail page for tvStations[idx-1]
+let tvPaused = false;
+let tvPageTimer = null;
+const tvOverviewSeconds = parseInt(params.get('overviewSeconds')) || 15;
+
+function renderTvControls(app){
+  let bar = document.getElementById('tvFloatingControls');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'tvFloatingControls';
+    bar.className = 'tv-floating-controls no-print';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML = `
+    ${tvPageIdx>0 ? `<button class="tv-float-btn" id="tvHomeBtn">⌂ Overview</button>` : ''}
+    <button class="tv-float-btn" id="tvPauseBtn">${tvPaused?'▶ Resume':'⏸ Pause'}</button>
+  `;
+  const homeBtn = document.getElementById('tvHomeBtn');
+  if(homeBtn) homeBtn.onclick = ()=>{ tvPageIdx=0; tvPaused=false; tvRenderCurrentPage(document.getElementById('app')); tvScheduleNext(); };
+  document.getElementById('tvPauseBtn').onclick = ()=>{
+    tvPaused = !tvPaused;
+    renderTvControls(document.getElementById('app'));
+    if(!tvPaused) tvScheduleNext();
+    else if(tvPageTimer) clearTimeout(tvPageTimer);
+  };
+}
+
+function tvJumpToDetail(idx){
+  tvPageIdx = idx+1;
+  tvPaused = true;
+  tvRenderCurrentPage(document.getElementById('app'));
+}
+
+async function tvRenderCurrentPage(app){
+  renderTvControls(app);
+  if(tvPageIdx===0){
+    await renderStationOverview(app);
+  } else {
+    const idx = tvPageIdx-1;
+    if(idx>=tvStations.length){ tvPageIdx=0; await renderStationOverview(app); return; }
+    await renderStationCard(app, tvStations[idx], idx, tvStations.length);
+  }
+}
+
+function tvScheduleNext(){
+  if(tvPageTimer) clearTimeout(tvPageTimer);
+  if(tvPaused) return;
+  const duration = (tvPageIdx===0 ? tvOverviewSeconds : tvInterval) * 1000;
+  tvPageTimer = setTimeout(async ()=>{
+    if(tvPaused) return;
+    tvPageIdx = (tvPageIdx+1) % (tvStations.length+1); // +1 slot for the overview page itself
+    await tvRenderCurrentPage(document.getElementById('app'));
+    tvScheduleNext();
+  }, duration);
+}
+
 async function renderStationDisplay(app){
   document.body.classList.add('tv-mode');
-  if(tvRotateTimer) clearInterval(tvRotateTimer);
+  if(tvPageTimer) clearTimeout(tvPageTimer);
   if(tvRefreshTimer) clearInterval(tvRefreshTimer);
   if(tvCountdownTimer) clearInterval(tvCountdownTimer);
 
   tvStations = await fetchStations();
-  tvIndex = 0;
-  await renderStationCard(app, tvStations[0], 0, tvStations.length);
-
-  tvRotateTimer = setInterval(async ()=>{
-    if(tvStations.length===0) return;
-    tvIndex = (tvIndex+1) % tvStations.length;
-    await renderStationCard(app, tvStations[tvIndex], tvIndex, tvStations.length);
-  }, tvInterval*1000);
+  tvPageIdx = 0;
+  tvPaused = false;
+  await tvRenderCurrentPage(app);
+  tvScheduleNext();
 
   tvCountdownVal = 60;
   tvCountdownTimer = setInterval(()=>{
@@ -2562,9 +2806,8 @@ async function renderStationDisplay(app){
 
   tvRefreshTimer = setInterval(async ()=>{
     tvStations = await fetchStations();
-    if(tvIndex >= tvStations.length) tvIndex = 0;
     tvCountdownVal = 60;
-    await renderStationCard(app, tvStations[tvIndex], tvIndex, tvStations.length);
+    if(!tvPaused) await tvRenderCurrentPage(app);
   }, 60000); // re-pull fresh data every 60s regardless of rotation
 }
 
