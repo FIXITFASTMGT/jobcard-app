@@ -439,7 +439,8 @@
   .tv-ov-card.blue{border-left-color:#7ec4e0;}
   .tv-ov-card.amber{border-left-color:var(--amber-signal);}
   .tv-ov-card.red{border-left-color:var(--red-600);}
-  .tv-ov-card-top{display:flex;justify-content:space-between;align-items:baseline;}
+  .tv-ov-card-top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .tv-ov-thumb{width:32px;height:32px;object-fit:cover;border-radius:4px;border:1px solid rgba(255,255,255,.2);flex-shrink:0;}
   .tv-ov-station-no{font-family:var(--font-mono);font-size:11px;color:var(--amber-500);letter-spacing:1px;}
   .tv-ov-machine{font-family:var(--font-display);font-size:17px;font-weight:700;color:#fff;margin-top:1px;}
   .tv-ov-customer{font-size:10px;color:var(--steel-300);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -2675,6 +2676,7 @@ async function renderStationOverview(app){
       <div>
         <div class="tv-ov-card-top">
           <div class="tv-ov-station-no">STATION ${String(i).padStart(2,'0')}</div>
+          ${s.model_image_url ? `<img src="${esc(s.model_image_url)}" alt="" class="tv-ov-thumb">` : ''}
         </div>
         <div class="tv-ov-machine">${esc(s.machine_no)}</div>
         <div class="tv-ov-customer">${esc(s.customer||'')} · ${esc(s.model_name||'')}</div>
