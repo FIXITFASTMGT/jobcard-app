@@ -1098,6 +1098,15 @@ async function openOpsEditor({ title, loadFn, saveFn, filenamePrefix }){
       });
     });
 
+    // After any bulk paste/import, always re-derive the true work order from the operation
+    // numbers themselves (ascending) rather than trusting whatever row order the source
+    // Excel file happened to use — some shop templates list rows highest-number-first,
+    // which is a valid way to type a sheet but is not the actual chronological order.
+    function resequenceByOpNo(){
+      list.sort((a,b)=> (parseFloat(a.op_no)||0) - (parseFloat(b.op_no)||0));
+      list.forEach((o,i)=> o.sequence=i);
+    }
+
     document.getElementById('addOpBtn').onclick=()=>{
       const op=document.getElementById('a_op').value.trim();
       const grp=document.getElementById('a_grp').value.trim();
@@ -1113,7 +1122,7 @@ async function openOpsEditor({ title, loadFn, saveFn, filenamePrefix }){
     document.getElementById('importFile').onchange=(e)=>{
       const file = e.target.files[0];
       if(!file) return;
-      importOpsFromExcel(file, (imported)=>{ list = list.concat(imported.map(o=>({...o, sequence:list.length}))); paint(); });
+      importOpsFromExcel(file, (imported)=>{ list = list.concat(imported.map(o=>({...o, sequence:0}))); resequenceByOpNo(); paint(); });
     };
     document.getElementById('pasteBtn').onclick=()=>{
       const box = document.getElementById('pasteBox');
@@ -1123,9 +1132,10 @@ async function openOpsEditor({ title, loadFn, saveFn, filenamePrefix }){
       const text = document.getElementById('pasteInput').value;
       const parsed = parsePastedExcel(text);
       if(parsed.length===0){ toast('No valid rows found in pasted text', true); return; }
-      list = list.concat(parsed.map(o=>({...o, sequence:list.length})));
+      list = list.concat(parsed.map(o=>({...o, sequence:0})));
+      resequenceByOpNo();
       document.getElementById('pasteInput').value='';
-      toast('Added '+parsed.length+' rows');
+      toast('Added '+parsed.length+' rows, ordered by operation number');
       paint();
     };
     document.getElementById('closeOpsBtn').onclick = ()=>{
