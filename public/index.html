@@ -1148,10 +1148,41 @@ async function openOpsEditor({ title, loadFn, saveFn, filenamePrefix }){
 // e.g. your real shop-floor template with "Std. Man" / "Std. Time (Hrs.)" and extra
 // Day-1..Day-38 columns), read by header meaning. Otherwise falls back to the old
 // fixed OpNo/Group/Description/StdHours/StdManpower/Mode column order for simple pastes.
+// A real TSV tokenizer, not naive line-splitting — Excel wraps a cell containing a
+// literal newline/comma in double-quotes (doubling any internal quote), and a plain
+// newline-split would incorrectly treat that embedded newline as a new row, mangling
+// the cell. This respects quoted fields properly.
+function tsvToRows(text){
+  const rows = []; let row = []; let field = ''; let inQuotes = false;
+  for(let i=0; i<text.length; i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; }
+        else { inQuotes = false; }
+      } else { field += c; }
+    } else {
+      if(c === '"'){ inQuotes = true; }
+      else if(c === '\t'){ row.push(field); field=''; }
+      else if(c === '\r'){ /* ignore — \n handles the actual row break */ }
+      else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else { field += c; }
+    }
+  }
+  if(field.length>0 || row.length>0){ row.push(field); rows.push(row); }
+  return rows.filter(r=> r.some(cell=>(cell||'').trim()!==''));
+}
+
+// If the pasted data has recognizable column headers (any naming, any column order —
+// e.g. your real shop-floor template with "Std. Man" / "Std. Time (Hrs.)" and extra
+// day-by-day columns), read by header meaning. Otherwise falls back to the old
+// fixed OpNo/Group/Description/StdHours/StdManpower/Mode column order for simple pastes.
+// Also skips any OTHER row later in the paste that itself looks like a header row —
+// e.g. if you paste several machines' Gantt charts stacked together in one go, each
+// one's header line gets recognized and skipped instead of imported as a fake operation.
 function parsePastedExcel(text){
-  const lines = text.split(/\r?\n/).filter(l=>l.trim()!=='');
-  if(lines.length===0) return [];
-  let rows = lines.map(l=>l.split('\t'));
+  let rows = tsvToRows(text);
+  if(rows.length===0) return [];
   let colMap;
   const headerMap = mapOpsHeaderRow(rows[0]);
   if(headerMap.op_no !== undefined && headerMap.description !== undefined){
@@ -1160,14 +1191,17 @@ function parsePastedExcel(text){
   } else {
     colMap = { op_no:0, group_name:1, description:2, std_hours:3, std_manpower:4, execution_mode:5 };
   }
-  return rows.map(cols=>({
-    op_no:(cols[colMap.op_no] ?? '').trim(),
-    group_name:(cols[colMap.group_name] ?? '').trim(),
-    description:(cols[colMap.description] ?? '').trim(),
-    std_hours:parseFloat(cols[colMap.std_hours])||0,
-    std_manpower:parseInt(cols[colMap.std_manpower])||1,
-    execution_mode:(cols[colMap.execution_mode]||'').trim()==='Parallel' ? 'Parallel' : 'Series'
-  })).filter(r=>r.description);
+  return rows
+    .filter(cols => mapOpsHeaderRow(cols).op_no === undefined) // drop any embedded repeat header row
+    .map(cols=>({
+      op_no:(cols[colMap.op_no] ?? '').trim(),
+      group_name:(cols[colMap.group_name] ?? '').trim(),
+      description:(cols[colMap.description] ?? '').replace(/\s*\n\s*/g,' ').trim(),
+      std_hours:parseFloat(cols[colMap.std_hours])||0,
+      std_manpower:parseInt(cols[colMap.std_manpower])||1,
+      execution_mode:(cols[colMap.execution_mode]||'').trim()==='Parallel' ? 'Parallel' : 'Series'
+    }))
+    .filter(r=>r.description);
 }
 
 /* ================= NEW JOB ================= */
