@@ -682,7 +682,7 @@ function setNav(){
   const bar=document.getElementById('navBar');
   if(tvDisplay || scanToken){ bar.innerHTML=''; return; }
   if(!session){ bar.innerHTML=''; return; }
-  const items=[['dashboard','Dashboard'],['issues','Delay / Issue Log'],['entries','Production Entries'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels'],['manual','Manual Entry'],['gantt','Gantt Chart'],['dispatch','Dispatch Report']];
+  const items=[['dashboard','Dashboard'],['issues','Delay / Issue Log'],['entries','Production Entries'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels'],['manual','Manual Entry'],['gantt','Gantt Chart'],['dispatch','Dispatch Dashboard']];
   bar.innerHTML = items.map(([id,l])=>`<button data-v="${id}" class="${view===id?'active':''}">${l}</button>`).join('')
     + `<button id="logoutBtn" class="small">Log Out</button>`;
   bar.querySelectorAll('button[data-v]').forEach(b=> b.onclick=()=> switchView(b.dataset.v));
@@ -948,61 +948,52 @@ function openJobDetailsEditor(job, app){
 function openDispatchEditor(job, app){
   const panel = document.getElementById('opsPanel');
   panel.style.display='block';
-  const stage = job.dispatched_at ? 'dispatched' : job.packed_at ? 'packed' : job.packing_started_at ? 'packing' : 'ready';
+  const packingStatus = job.packing_end_date ? 'Packed' : job.packing_start_date ? 'Under Packing' : 'Not started';
   panel.innerHTML = `
-    <div class="panel-title">Dispatch Workflow — ${esc(job.machine_no)}</div>
-    <div class="stat-line">This job stays Active in the system after being dispatched — use "Mark Completed" on the Jobs list separately when you're ready to formally close it out and retire its QR code.</div>
-    <div class="row3" style="margin-top:10px;">
-      <div class="tv-mw" style="background:${stage==='ready'?'var(--amber-100)':'var(--plate-50)'};border:1px solid var(--plate-100);border-radius:6px;padding:12px;">
-        <div class="lbl" style="color:var(--steel-600);">1. Ready to Dispatch</div>
-        <div style="font-size:13px;margin-top:4px;">${stage==='ready' ? 'Current stage' : (job.packing_started_at ? '✓ Passed' : 'Not yet')}</div>
-      </div>
-      <div class="tv-mw" style="background:${stage==='packing'?'var(--amber-100)':'var(--plate-50)'};border:1px solid var(--plate-100);border-radius:6px;padding:12px;">
-        <div class="lbl" style="color:var(--steel-600);">2. Packing</div>
-        <div style="font-size:13px;margin-top:4px;">${job.packing_started_at ? 'Started '+fmtDate(job.packing_started_at.slice(0,10)) : 'Not started'}</div>
-      </div>
-      <div class="tv-mw" style="background:${stage==='packed'?'var(--amber-100)':'var(--plate-50)'};border:1px solid var(--plate-100);border-radius:6px;padding:12px;">
-        <div class="lbl" style="color:var(--steel-600);">3. Packed</div>
-        <div style="font-size:13px;margin-top:4px;">${job.packed_at ? 'Packed '+fmtDate(job.packed_at.slice(0,10)) : 'Not yet'}</div>
-      </div>
-    </div>
+    <div class="panel-title">Dispatch — ${esc(job.machine_no)}</div>
+    <div class="stat-line">This job stays open in the system after being dispatched — use "Mark Completed" on the Jobs list separately when you're ready to formally close it out and retire its QR code. Once you mark it Dispatched below, it moves off the floor display into the Dispatch Dashboard.</div>
 
+    <div class="panel-title" style="margin-top:16px;font-size:14px;">Packing <span class="model-tag" style="background:${packingStatus==='Packed'?'var(--green-600)':packingStatus==='Under Packing'?'var(--amber-600)':'var(--steel-300)'};">${packingStatus.toUpperCase()}</span></div>
+    <div class="row2">
+      <div><label>Packing Start Date</label><input id="packStartInput" type="date" value="${job.packing_start_date||''}"></div>
+      <div><label>Packing End Date <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(leave blank while still packing)</span></label><input id="packEndInput" type="date" value="${job.packing_end_date||''}"></div>
+    </div>
+    <button class="btn amber small" id="savePackingBtn" style="margin-top:8px;">Save Packing Dates</button>
+
+    <div class="panel-title" style="margin-top:20px;font-size:14px;">Dispatch</div>
     <label>Dispatch Date</label>
     <input id="dispatchDateInput" type="date" value="${job.dispatch_date||''}">
-    <button class="btn ghost small" id="saveDispatchDateBtn" style="margin-top:6px;">Save Date</button>
+    ${job.dispatched_at ? `
+      <div class="stat-line" style="color:var(--green-600);font-weight:700;margin-top:8px;">✓ Dispatched on ${fmtDate(job.dispatch_date||job.dispatched_at.slice(0,10))}</div>
+      <button class="btn ghost small" id="saveDispatchDateBtn" style="margin-top:6px;">Update Dispatch Date</button>
+    ` : `
+      <button class="btn amber" id="markDispatchedBtn" style="margin-top:8px;">Mark Dispatched → moves to Dispatch Dashboard</button>
+    `}
 
-    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
-      ${!job.packing_started_at ? `<button class="btn amber" id="startPackingBtn">Start Packing</button>` : ''}
-      ${job.packing_started_at && !job.packed_at ? `<button class="btn amber" id="markPackedBtn">Mark Packed</button>` : ''}
-      ${job.packed_at && !job.dispatched_at ? `<button class="btn amber" id="markDispatchedBtn">Mark Dispatched</button>` : ''}
-      ${job.dispatched_at ? `<div class="stat-line" style="color:var(--green-600);font-weight:700;">✓ Dispatched on ${fmtDate(job.dispatched_at.slice(0,10))}</div>` : ''}
-      <button class="btn ghost small" id="closeDispatchBtn" type="button">Close</button>
-    </div>
+    <div style="margin-top:16px;"><button class="btn ghost small" id="closeDispatchBtn" type="button">Close</button></div>
   `;
-  const startBtn = document.getElementById('startPackingBtn');
-  if(startBtn) startBtn.onclick = (e)=> withLock(e.target, 'Saving…', async ()=>{
-    const { error } = await sb.from('jobs').update({ packing_started_at: new Date().toISOString() }).eq('id', job.id);
+  document.getElementById('savePackingBtn').onclick = (e)=> withLock(e.target, 'Saving…', async ()=>{
+    const packing_start_date = document.getElementById('packStartInput').value || null;
+    const packing_end_date = document.getElementById('packEndInput').value || null;
+    if(packing_end_date && !packing_start_date) { toast('Set a start date before an end date', true); return; }
+    const { error } = await sb.from('jobs').update({ packing_start_date, packing_end_date }).eq('id', job.id);
     if(error) { toast(error.message, true); return; }
-    toast('Marked as Packing'); renderJobsQr(app);
-  });
-  document.getElementById('saveDispatchDateBtn').onclick = (e)=> withLock(e.target, 'Saving…', async ()=>{
-    const dispatch_date = document.getElementById('dispatchDateInput').value || null;
-    const { error } = await sb.from('jobs').update({ dispatch_date }).eq('id', job.id);
-    if(error) { toast(error.message, true); return; }
-    toast('Dispatch date saved'); renderJobsQr(app);
-  });
-  const packedBtn = document.getElementById('markPackedBtn');
-  if(packedBtn) packedBtn.onclick = (e)=> withLock(e.target, 'Saving…', async ()=>{
-    const { error } = await sb.from('jobs').update({ packed_at: new Date().toISOString() }).eq('id', job.id);
-    if(error) { toast(error.message, true); return; }
-    toast('Marked as Packed'); renderJobsQr(app);
+    toast('Packing dates saved'); renderJobsQr(app);
   });
   const dispatchBtn = document.getElementById('markDispatchedBtn');
   if(dispatchBtn) dispatchBtn.onclick = (e)=> withLock(e.target, 'Saving…', async ()=>{
-    const dispatch_date = document.getElementById('dispatchDateInput').value || new Date().toISOString().slice(0,10);
+    const dispatch_date = document.getElementById('dispatchDateInput').value;
+    if(!dispatch_date){ toast('Enter a dispatch date first', true); return; }
     const { error } = await sb.from('jobs').update({ dispatch_date, dispatched_at: new Date().toISOString() }).eq('id', job.id);
     if(error) { toast(error.message, true); return; }
-    toast('Marked as Dispatched'); renderJobsQr(app);
+    toast('Marked Dispatched — moved to Dispatch Dashboard'); renderJobsQr(app);
+  });
+  const saveDateBtn = document.getElementById('saveDispatchDateBtn');
+  if(saveDateBtn) saveDateBtn.onclick = (e)=> withLock(e.target, 'Saving…', async ()=>{
+    const dispatch_date = document.getElementById('dispatchDateInput').value || null;
+    const { error } = await sb.from('jobs').update({ dispatch_date }).eq('id', job.id);
+    if(error) { toast(error.message, true); return; }
+    toast('Dispatch date updated'); renderJobsQr(app);
   });
   document.getElementById('closeDispatchBtn').onclick = ()=>{ panel.style.display='none'; panel.innerHTML=''; };
   panel.scrollIntoView({behavior:'smooth'});
@@ -1349,8 +1340,8 @@ async function renderJobsQr(app){
   const activeJobs = (jobs||[]).filter(j=>j.status==='Active');
   function dispatchStageLabel(j){
     if(j.dispatched_at) return 'DISPATCHED';
-    if(j.packed_at) return 'PACKED';
-    if(j.packing_started_at) return 'PACKING';
+    if(j.packing_end_date) return 'PACKED';
+    if(j.packing_start_date) return 'UNDER PACKING';
     return null;
   }
   document.getElementById('jobList').innerHTML = (jobs||[]).map(j=>{
@@ -1365,12 +1356,12 @@ async function renderJobsQr(app){
         ${stage ? `<span class="model-tag" style="background:var(--amber-600);">${stage}</span>` : ''}
       </div>
       <div class="job-actions">
-        ${j.status==='Active' ? `
+        ${!j.dispatched_at ? `
           <button data-editdetails="${j.id}">Edit Details</button>
           <button data-edit="${j.id}" data-machine="${esc(j.machine_no)}">Edit Ops</button>
           <button data-dispatch="${j.id}">Dispatch →</button>
-          <button class="warn" data-close="${j.id}">Mark Completed</button>
         ` : ''}
+        ${j.status==='Active' ? `<button class="warn" data-close="${j.id}">Mark Completed</button>` : ''}
         <button class="danger" data-delete="${j.id}" data-machine="${esc(j.machine_no)}">Delete</button>
       </div>
     </div>`;
@@ -1928,10 +1919,19 @@ async function drawGanttForJob(area, job){
 
 /* ================= DISPATCH REPORT ================= */
 async function renderDispatchReport(app){
-  const { data: jobs } = await sb.from('jobs').select('*, models(model_name)').not('dispatched_at','is',null).order('dispatched_at', {ascending:false});
+  const { data: rows } = await sb.rpc('get_dispatch_summary');
+  const dispatched = rows || [];
+
   app.innerHTML = `
     <div class="panel">
-      <div class="panel-title">Dispatch Report <span class="sub">machines marked Dispatched</span></div>
+      <div class="panel-title">Dispatch Dashboard</div>
+      <div class="stat-line">Every machine marked Dispatched, with plan-vs-actual dates.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Machines Dispatched by Month</div>
+      <div id="dispatchChartArea"></div>
+    </div>
+    <div class="panel">
       <div class="row2">
         <div><label>From Date</label><input id="dispFrom" type="date"></div>
         <div><label>To Date</label><input id="dispTo" type="date"></div>
@@ -1940,40 +1940,77 @@ async function renderDispatchReport(app){
       <div class="table-scroll"><table class="entries" id="dispTable"></table></div>
     </div>
   `;
-  function paint(){
+
+  function computeOnTime(r){
+    if(!r.actual_end || !r.plan_end) return null;
+    return r.actual_end <= r.plan_end;
+  }
+
+  function filteredRows(){
     const from = document.getElementById('dispFrom').value;
     const to = document.getElementById('dispTo').value;
-    const rows = (jobs||[]).filter(j=>{
-      const d = j.dispatched_at.slice(0,10);
+    return dispatched.filter(r=>{
+      const d = r.actual_end || r.dispatched_at.slice(0,10);
       return (!from || d>=from) && (!to || d<=to);
     });
+  }
+
+  function paintChart(rows){
+    const byMonth = {};
+    rows.forEach(r=>{
+      const d = r.actual_end || r.dispatched_at.slice(0,10);
+      const key = d.slice(0,7); // YYYY-MM
+      byMonth[key] = (byMonth[key]||0) + 1;
+    });
+    const months = Object.keys(byMonth).sort();
+    const chartArea = document.getElementById('dispatchChartArea');
+    if(months.length===0){ chartArea.innerHTML = '<div class="empty">No dispatched machines in this range.</div>'; return; }
+    chartArea.innerHTML = '<canvas id="dispatchChartCanvas" height="90"></canvas>';
+    if(window.__dispatchChart) window.__dispatchChart.destroy();
+    window.__dispatchChart = new Chart(document.getElementById('dispatchChartCanvas'), {
+      type:'bar',
+      data:{ labels:months, datasets:[{ label:'Machines Dispatched', data:months.map(m=>byMonth[m]), backgroundColor:'#f2a30f' }] },
+      options:{ responsive:true, plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } } } }
+    });
+  }
+
+  function paintTable(rows){
     const table = document.getElementById('dispTable');
     if(rows.length===0){ table.innerHTML = `<tr><td class="empty">No dispatched machines in this range.</td></tr>`; return; }
-    table.innerHTML = `<tr><th>Machine</th><th>Customer</th><th>Model</th><th>Planned Dispatch</th><th>Dispatched At</th></tr>
-      ${rows.map(j=>`<tr>
-        <td><b>${esc(j.machine_no)}</b></td>
-        <td>${esc(j.customer||'')}</td>
-        <td>${esc(j.models?.model_name||'')}</td>
-        <td class="mono">${j.dispatch_date ? esc(j.dispatch_date) : '—'}</td>
-        <td class="mono">${new Date(j.dispatched_at).toLocaleString()}</td>
-      </tr>`).join('')}`;
+    table.innerHTML = `<tr><th>Machine</th><th>Customer</th><th>Model</th><th>Plan Start</th><th>Plan End</th><th>Actual Start</th><th>Actual End (Dispatch)</th><th>On-time / Delay</th></tr>
+      ${rows.map(r=>{
+        const onTime = computeOnTime(r);
+        const badge = onTime===null ? '—' : onTime ? '<span style="color:var(--green-600);font-weight:700;">ON-TIME</span>' : '<span style="color:var(--red-600);font-weight:700;">DELAYED</span>';
+        return `<tr>
+          <td><b>${esc(r.machine_no)}</b></td>
+          <td>${esc(r.customer||'')}</td>
+          <td>${esc(r.model_name||'')}</td>
+          <td class="mono">${r.plan_start ? esc(r.plan_start) : '—'}</td>
+          <td class="mono">${r.plan_end ? esc(r.plan_end) : '—'}</td>
+          <td class="mono">${r.actual_start ? esc(r.actual_start) : '—'}</td>
+          <td class="mono">${r.actual_end ? esc(r.actual_end) : '—'}</td>
+          <td>${badge}</td>
+        </tr>`;
+      }).join('')}`;
   }
-  paint();
-  document.getElementById('dispFrom').onchange = paint;
-  document.getElementById('dispTo').onchange = paint;
+
+  function repaint(){
+    const rows = filteredRows();
+    paintChart(rows);
+    paintTable(rows);
+  }
+  repaint();
+  document.getElementById('dispFrom').onchange = repaint;
+  document.getElementById('dispTo').onchange = repaint;
   document.getElementById('dispExportBtn').onclick = ()=>{
-    const from = document.getElementById('dispFrom').value;
-    const to = document.getElementById('dispTo').value;
-    const rows = (jobs||[]).filter(j=>{
-      const d = j.dispatched_at.slice(0,10);
-      return (!from || d>=from) && (!to || d<=to);
-    });
-    const ws = XLSX.utils.json_to_sheet(rows.map(j=>({
-      Machine:j.machine_no, Customer:j.customer, Model:j.models?.model_name,
-      PlannedDispatch:j.dispatch_date, DispatchedAt:j.dispatched_at
+    const rows = filteredRows();
+    const ws = XLSX.utils.json_to_sheet(rows.map(r=>({
+      Machine:r.machine_no, Customer:r.customer, Model:r.model_name,
+      PlanStart:r.plan_start, PlanEnd:r.plan_end, ActualStart:r.actual_start, ActualEnd:r.actual_end,
+      OnTime: computeOnTime(r)===null ? '' : (computeOnTime(r) ? 'On-time' : 'Delayed')
     })));
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Dispatched');
-    XLSX.writeFile(wb, 'dispatch_report_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    XLSX.writeFile(wb, 'dispatch_dashboard_'+new Date().toISOString().slice(0,10)+'.xlsx');
   };
 }
 
@@ -2720,15 +2757,12 @@ async function renderStationCard(app, s, idx, total){
         <div class="tv-panel ${isJobComplete?'tv-ready-panel':''}">
           <div class="tv-table-title">Current Operation</div>
           ${isJobComplete ? `
-            ${s.dispatched_at ? `
-              <div class="tv-curop-title" style="color:#6fd39a;">${tvIcon('check',20)} DISPATCHED</div>
-              <span class="tv-op-status-pill Completed">DISPATCHED ${fmtDate((s.dispatch_date||s.dispatched_at.slice(0,10)))}</span>
-            ` : s.packed_at ? `
+            ${s.packing_end_date ? `
               <div class="tv-curop-title" style="color:#ffc857;">${tvIcon('check',20)} PACKED — AWAITING DISPATCH</div>
-              <span class="tv-op-status-pill InProgress">${s.dispatch_date ? 'PLANNED '+fmtDate(s.dispatch_date) : 'NO DATE SET YET'}</span>
-            ` : s.packing_started_at ? `
-              <div class="tv-curop-title" style="color:#ffc857;">${tvIcon('hourglass',20)} PACKING IN PROGRESS</div>
-              <span class="tv-op-status-pill InProgress">PACKING</span>
+              <span class="tv-op-status-pill InProgress">PACKED ${fmtDate(s.packing_end_date)}</span>
+            ` : s.packing_start_date ? `
+              <div class="tv-curop-title" style="color:#ffc857;">${tvIcon('hourglass',20)} UNDER PACKING</div>
+              <span class="tv-op-status-pill InProgress">SINCE ${fmtDate(s.packing_start_date)}</span>
             ` : `
               <div class="tv-curop-title" style="color:#6fd39a;">${tvIcon('check',20)} MACHINE READY TO DISPATCH</div>
               <span class="tv-op-status-pill Completed">ALL ${ops.length} OPERATIONS COMPLETE</span>
@@ -2862,7 +2896,7 @@ function computeOverviewStatus(s){
   let color, label;
   if(isComplete){
     color='green';
-    label = s.dispatched_at ? 'DISPATCHED' : s.packed_at ? 'PACKED' : s.packing_started_at ? 'PACKING' : 'COMPLETED';
+    label = s.packing_end_date ? 'PACKED' : s.packing_start_date ? 'UNDER PACKING' : 'COMPLETED';
   }
   else if(risk==='delayed'){ color='red'; label='DELAYED'; }
   else if(s.latest_status==='Hold'){ color='amber'; label='ON HOLD'; }
@@ -2994,12 +3028,68 @@ function tvJumpToDetail(idx){
   tvRenderCurrentPage(document.getElementById('app'));
 }
 
+async function renderDispatchDashboardTV(app){
+  const { data: rows } = await sb.rpc('get_dispatch_summary');
+  const dispatched = rows || [];
+  const byMonth = {};
+  dispatched.forEach(r=>{
+    const d = r.actual_end || r.dispatched_at.slice(0,10);
+    const key = d.slice(0,7);
+    byMonth[key] = (byMonth[key]||0) + 1;
+  });
+  const months = Object.keys(byMonth).sort().slice(-12); // last 12 months with activity
+  const recent = dispatched.slice(0, 10); // most recently dispatched, already ordered desc
+
+  app.innerHTML = `
+    <div class="tv-card" style="justify-content:center;padding-top:24px;">
+      <div class="tv-ov-wrap">
+        <div class="tv-ov-title">DISPATCH DASHBOARD</div>
+        <div class="tv-ov-subtitle">${dispatched.length} Machines Dispatched All-Time</div>
+
+        <div class="tv-panel" style="margin-top:20px;width:100%;max-width:900px;">
+          <div class="tv-table-title">Dispatched by Month</div>
+          ${months.length ? `<canvas id="tvDispatchChart" height="70"></canvas>` : `<div class="tv-table-empty">No dispatches yet</div>`}
+        </div>
+
+        <div class="tv-panel" style="margin-top:16px;width:100%;">
+          <div class="tv-table-title">Recently Dispatched</div>
+          <table class="tv-ops tv-ops-compact">
+            <tr><th>Machine</th><th>Customer</th><th>Plan End</th><th>Actual End</th><th>On-time / Delay</th></tr>
+            ${recent.length ? recent.map(r=>{
+              const onTime = (r.actual_end && r.plan_end) ? r.actual_end <= r.plan_end : null;
+              const badge = onTime===null ? '<span class="tv-op-status-pill Pending">—</span>' : onTime ? '<span class="tv-op-status-pill Completed">ON-TIME</span>' : '<span class="tv-op-status-pill Hold">DELAYED</span>';
+              return `<tr>
+                <td><b>${esc(r.machine_no)}</b></td>
+                <td>${esc(r.customer||'')}</td>
+                <td>${r.plan_end ? esc(r.plan_end) : '—'}</td>
+                <td>${r.actual_end ? esc(r.actual_end) : '—'}</td>
+                <td>${badge}</td>
+              </tr>`;
+            }).join('') : '<tr><td colspan="5" class="tv-table-empty">No dispatches yet</td></tr>'}
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+  if(months.length){
+    if(window.__tvDispatchChart) window.__tvDispatchChart.destroy();
+    window.__tvDispatchChart = new Chart(document.getElementById('tvDispatchChart'), {
+      type:'bar',
+      data:{ labels:months, datasets:[{ label:'Dispatched', data:months.map(m=>byMonth[m]), backgroundColor:'#f2a30f' }] },
+      options:{ responsive:true, plugins:{legend:{display:false}},
+        scales:{ x:{ ticks:{color:'#cbd5c0'} }, y:{ beginAtZero:true, ticks:{stepSize:1, color:'#cbd5c0'} } } }
+    });
+  }
+}
+
 async function tvRenderCurrentPage(app){
   renderTvControls(app);
   if(tvPageIdx===0){
     await renderStationOverview(app);
+  } else if(tvPageIdx===1){
+    await renderDispatchDashboardTV(app);
   } else {
-    const idx = tvPageIdx-1;
+    const idx = tvPageIdx-2;
     if(idx>=tvStations.length){ tvPageIdx=0; await renderStationOverview(app); return; }
     await renderStationCard(app, tvStations[idx], idx, tvStations.length);
   }
@@ -3008,10 +3098,10 @@ async function tvRenderCurrentPage(app){
 function tvScheduleNext(){
   if(tvPageTimer) clearTimeout(tvPageTimer);
   if(tvPaused) return;
-  const duration = (tvPageIdx===0 ? tvOverviewSeconds : tvInterval) * 1000;
+  const duration = (tvPageIdx===0 || tvPageIdx===1 ? tvOverviewSeconds : tvInterval) * 1000;
   tvPageTimer = setTimeout(async ()=>{
     if(tvPaused) return;
-    tvPageIdx = (tvPageIdx+1) % (tvStations.length+1); // +1 slot for the overview page itself
+    tvPageIdx = (tvPageIdx+1) % (tvStations.length+2); // +2 slots: Overview and Dispatch Dashboard
     await tvRenderCurrentPage(document.getElementById('app'));
     tvScheduleNext();
   }, duration);
