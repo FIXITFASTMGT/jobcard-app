@@ -794,7 +794,7 @@ async function renderModels(app){
       const ext = (file.name.split('.').pop()||'jpg').toLowerCase();
       const path = modelId + '/' + Date.now() + '.' + ext;
       toast('Uploading image…');
-      const { error: upErr } = await sb.storage.from('model-images').upload(path, file, { upsert:true });
+      const { error: upErr } = await sb.storage.from('model-images').upload(path, file);
       if(upErr) { toast('Upload failed: '+upErr.message, true); return; }
       const { data: pub } = sb.storage.from('model-images').getPublicUrl(path);
       const { error: saveErr } = await sb.from('models').update({ image_url: pub.publicUrl }).eq('id', modelId);
