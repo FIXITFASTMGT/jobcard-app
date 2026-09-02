@@ -474,6 +474,8 @@
     border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;
     backdrop-filter:blur(4px);}
   .tv-float-btn:hover{background:rgba(40,46,52,.9);}
+  .tv-float-btn.active{background:var(--amber-500);border-color:var(--amber-500);color:#1a1400;}
+  .tv-float-btn.active:hover{background:var(--amber-500);}
   .tv-curop-title{font-family:var(--font-display);font-size:22px;font-weight:700;color:#fff;margin-top:4px;}
   .tv-curop-stats{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap;}
   .tv-curop-stat{font-size:11px;color:var(--steel-300);text-transform:uppercase;}
@@ -1921,51 +1923,71 @@ async function drawGanttForJob(area, job){
 async function renderDispatchReport(app){
   const { data: rows } = await sb.rpc('get_dispatch_summary');
   const dispatched = rows || [];
+  const models = [...new Set(dispatched.map(r=>r.model_name).filter(Boolean))].sort();
+  const fy = getCurrentFYRange();
 
   app.innerHTML = `
     <div class="panel">
-      <div class="panel-title">Dispatch Dashboard</div>
-      <div class="stat-line">Every machine marked Dispatched, with plan-vs-actual dates.</div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">Machines Dispatched by Month</div>
-      <div id="dispatchChartArea"></div>
-    </div>
-    <div class="panel">
-      <div class="row2">
-        <div><label>From Date</label><input id="dispFrom" type="date"></div>
-        <div><label>To Date</label><input id="dispTo" type="date"></div>
+      <div class="panel-title">Dispatch Dashboard <span class="sub">defaulted to current financial year (Apr–Mar) — change below anytime</span></div>
+      <div class="row3">
+        <div><label>From Date</label><input id="dispFrom" type="date" value="${fy.from}"></div>
+        <div><label>To Date</label><input id="dispTo" type="date" value="${fy.to}"></div>
+        <div><label>Model</label><select id="dispModel"><option value="">All Models</option>${models.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select></div>
       </div>
-      <div class="stat-line" style="margin-top:10px;"><button class="btn ghost small" id="dispExportBtn">Export to Excel</button></div>
+    </div>
+    <div class="panel"><div class="kpi-strip" id="dispKpiStrip"></div></div>
+    <div class="row2">
+      <div class="panel"><div class="panel-title">Dispatched by Month</div><div id="dispatchChartArea"></div></div>
+      <div class="panel"><div class="panel-title">Dispatched by Model</div><div id="dispatchModelChartArea"></div></div>
+    </div>
+    <div class="panel">
+      <div class="stat-line"><button class="btn ghost small" id="dispExportBtn">Export to Excel</button></div>
       <div class="table-scroll"><table class="entries" id="dispTable"></table></div>
     </div>
   `;
 
-  function computeOnTime(r){
+  // Delay is measured in days here, not hours — dispatch/plan dates are calendar
+  // dates, not timestamps, so day-level precision is what the data actually supports.
+  function delayDays(r){
     if(!r.actual_end || !r.plan_end) return null;
-    return r.actual_end <= r.plan_end;
+    return Math.round((new Date(r.actual_end+'T00:00:00') - new Date(r.plan_end+'T00:00:00'))/86400000);
   }
+  function isOnTime(r){ const d = delayDays(r); return d===null ? null : d<=0; }
 
   function filteredRows(){
     const from = document.getElementById('dispFrom').value;
     const to = document.getElementById('dispTo').value;
+    const model = document.getElementById('dispModel').value;
     return dispatched.filter(r=>{
       const d = r.actual_end || r.dispatched_at.slice(0,10);
-      return (!from || d>=from) && (!to || d<=to);
+      return (!from || d>=from) && (!to || d<=to) && (!model || r.model_name===model);
     });
   }
 
-  function paintChart(rows){
+  function paintKpis(rows){
+    const total = rows.length;
+    const withKnownStatus = rows.filter(r=>isOnTime(r)!==null);
+    const onTimeCt = withKnownStatus.filter(r=>isOnTime(r)).length;
+    const lateCt = withKnownStatus.filter(r=>!isOnTime(r)).length;
+    const lateDelays = rows.map(delayDays).filter(d=>d!==null && d>0);
+    const avgDelay = lateDelays.length ? (lateDelays.reduce((a,b)=>a+b,0)/lateDelays.length) : 0;
+    const onTimePct = withKnownStatus.length ? Math.round(onTimeCt/withKnownStatus.length*100) : 0;
+    const latePct = withKnownStatus.length ? Math.round(lateCt/withKnownStatus.length*100) : 0;
+    document.getElementById('dispKpiStrip').innerHTML = `
+      <div class="kpi-card"><div class="kpi-num">${total}</div><div class="kpi-label">Total Dispatched</div></div>
+      <div class="kpi-card"><div class="kpi-num" style="color:var(--green-600);">${onTimePct}%</div><div class="kpi-label">On-Time (${onTimeCt})</div></div>
+      <div class="kpi-card warn"><div class="kpi-num" style="color:var(--red-600);">${latePct}%</div><div class="kpi-label">Late (${lateCt})</div></div>
+      <div class="kpi-card"><div class="kpi-num">${avgDelay.toFixed(1)}d</div><div class="kpi-label">Avg Delay (late machines only)</div></div>
+    `;
+  }
+
+  function paintMonthChart(rows){
     const byMonth = {};
-    rows.forEach(r=>{
-      const d = r.actual_end || r.dispatched_at.slice(0,10);
-      const key = d.slice(0,7); // YYYY-MM
-      byMonth[key] = (byMonth[key]||0) + 1;
-    });
+    rows.forEach(r=>{ const d=r.actual_end||r.dispatched_at.slice(0,10); const k=d.slice(0,7); byMonth[k]=(byMonth[k]||0)+1; });
     const months = Object.keys(byMonth).sort();
-    const chartArea = document.getElementById('dispatchChartArea');
-    if(months.length===0){ chartArea.innerHTML = '<div class="empty">No dispatched machines in this range.</div>'; return; }
-    chartArea.innerHTML = '<canvas id="dispatchChartCanvas" height="90"></canvas>';
+    const area = document.getElementById('dispatchChartArea');
+    if(months.length===0){ area.innerHTML='<div class="empty">No dispatched machines in this range.</div>'; return; }
+    area.innerHTML = '<canvas id="dispatchChartCanvas" height="180"></canvas>';
     if(window.__dispatchChart) window.__dispatchChart.destroy();
     window.__dispatchChart = new Chart(document.getElementById('dispatchChartCanvas'), {
       type:'bar',
@@ -1974,21 +1996,38 @@ async function renderDispatchReport(app){
     });
   }
 
+  function paintModelChart(rows){
+    const byModel = {};
+    rows.forEach(r=>{ const m=r.model_name||'Unknown'; byModel[m]=(byModel[m]||0)+1; });
+    const labels = Object.keys(byModel);
+    const area = document.getElementById('dispatchModelChartArea');
+    if(labels.length===0){ area.innerHTML='<div class="empty">No dispatched machines in this range.</div>'; return; }
+    area.innerHTML = '<canvas id="dispatchModelCanvas" height="180"></canvas>';
+    if(window.__dispatchModelChart) window.__dispatchModelChart.destroy();
+    window.__dispatchModelChart = new Chart(document.getElementById('dispatchModelCanvas'), {
+      type:'doughnut',
+      data:{ labels, datasets:[{ data:labels.map(l=>byModel[l]), backgroundColor:['#f2a30f','#7ec4e0','#8f6b9e','#4fbf85','#e0625a','#5a9fd4'] }] },
+      options:{ responsive:true, plugins:{legend:{position:'right'}} }
+    });
+  }
+
   function paintTable(rows){
     const table = document.getElementById('dispTable');
     if(rows.length===0){ table.innerHTML = `<tr><td class="empty">No dispatched machines in this range.</td></tr>`; return; }
-    table.innerHTML = `<tr><th>Machine</th><th>Customer</th><th>Model</th><th>Plan Start</th><th>Plan End</th><th>Actual Start</th><th>Actual End (Dispatch)</th><th>On-time / Delay</th></tr>
+    table.innerHTML = `<tr><th>Machine</th><th>Model</th><th>Customer</th><th>Plan Start</th><th>Plan End</th><th>Actual Start</th><th>Actual End</th><th>Delay (Days)</th><th>Status</th></tr>
       ${rows.map(r=>{
-        const onTime = computeOnTime(r);
-        const badge = onTime===null ? '—' : onTime ? '<span style="color:var(--green-600);font-weight:700;">ON-TIME</span>' : '<span style="color:var(--red-600);font-weight:700;">DELAYED</span>';
+        const dd = delayDays(r);
+        const onTime = isOnTime(r);
+        const badge = onTime===null ? '—' : onTime ? '<span style="color:var(--green-600);font-weight:700;">ON-TIME</span>' : '<span style="color:var(--red-600);font-weight:700;">LATE</span>';
         return `<tr>
           <td><b>${esc(r.machine_no)}</b></td>
-          <td>${esc(r.customer||'')}</td>
           <td>${esc(r.model_name||'')}</td>
+          <td>${esc(r.customer||'')}</td>
           <td class="mono">${r.plan_start ? esc(r.plan_start) : '—'}</td>
           <td class="mono">${r.plan_end ? esc(r.plan_end) : '—'}</td>
           <td class="mono">${r.actual_start ? esc(r.actual_start) : '—'}</td>
           <td class="mono">${r.actual_end ? esc(r.actual_end) : '—'}</td>
+          <td class="mono">${dd===null ? '—' : (dd>0 ? '+'+dd : dd)}</td>
           <td>${badge}</td>
         </tr>`;
       }).join('')}`;
@@ -1996,18 +2035,21 @@ async function renderDispatchReport(app){
 
   function repaint(){
     const rows = filteredRows();
-    paintChart(rows);
+    paintKpis(rows);
+    paintMonthChart(rows);
+    paintModelChart(rows);
     paintTable(rows);
   }
   repaint();
   document.getElementById('dispFrom').onchange = repaint;
   document.getElementById('dispTo').onchange = repaint;
+  document.getElementById('dispModel').onchange = repaint;
   document.getElementById('dispExportBtn').onclick = ()=>{
     const rows = filteredRows();
     const ws = XLSX.utils.json_to_sheet(rows.map(r=>({
-      Machine:r.machine_no, Customer:r.customer, Model:r.model_name,
+      Machine:r.machine_no, Model:r.model_name, Customer:r.customer,
       PlanStart:r.plan_start, PlanEnd:r.plan_end, ActualStart:r.actual_start, ActualEnd:r.actual_end,
-      OnTime: computeOnTime(r)===null ? '' : (computeOnTime(r) ? 'On-time' : 'Delayed')
+      DelayDays: delayDays(r), Status: isOnTime(r)===null ? '' : (isOnTime(r) ? 'On-time' : 'Late')
     })));
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Dispatched');
     XLSX.writeFile(wb, 'dispatch_dashboard_'+new Date().toISOString().slice(0,10)+'.xlsx');
@@ -2583,6 +2625,13 @@ function fmtDate(d){
   const dt = new Date(d + 'T00:00:00');
   return dt.toLocaleDateString('en-GB', {day:'2-digit', month:'short'});
 }
+// Financial year runs Apr–Mar, not calendar year — used to default the Dispatch
+// Dashboard's date range to "this FY" instead of an unfiltered all-time view.
+function getCurrentFYRange(){
+  const now = new Date();
+  const fyStartYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear()-1; // month 3 = April
+  return { from: fyStartYear+'-04-01', to: (fyStartYear+1)+'-03-31' };
+}
 function addDaysStr(dateStr, days){
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate()+days);
@@ -3009,11 +3058,18 @@ function renderTvControls(app){
     document.body.appendChild(bar);
   }
   bar.innerHTML = `
-    ${tvPageIdx>0 ? `<button class="tv-float-btn" id="tvHomeBtn">⌂ Overview</button>` : ''}
+    <button class="tv-float-btn ${tvPageIdx===0?'active':''}" id="tvCurrentDashBtn">Current Dashboard</button>
+    <button class="tv-float-btn ${tvPageIdx===1?'active':''}" id="tvDispatchDashBtn">Dispatch Dashboard</button>
     <button class="tv-float-btn" id="tvPauseBtn">${tvPaused?'▶ Resume':'⏸ Pause'}</button>
   `;
-  const homeBtn = document.getElementById('tvHomeBtn');
-  if(homeBtn) homeBtn.onclick = ()=>{ tvPageIdx=0; tvPaused=false; tvRenderCurrentPage(document.getElementById('app')); tvScheduleNext(); };
+  document.getElementById('tvCurrentDashBtn').onclick = ()=>{
+    tvPageIdx=0; tvPaused=true; tvRenderCurrentPage(document.getElementById('app'));
+    if(tvPageTimer) clearTimeout(tvPageTimer);
+  };
+  document.getElementById('tvDispatchDashBtn').onclick = ()=>{
+    tvPageIdx=1; tvPaused=true; tvRenderCurrentPage(document.getElementById('app'));
+    if(tvPageTimer) clearTimeout(tvPageTimer);
+  };
   document.getElementById('tvPauseBtn').onclick = ()=>{
     tvPaused = !tvPaused;
     renderTvControls(document.getElementById('app'));
@@ -3030,42 +3086,84 @@ function tvJumpToDetail(idx){
 
 async function renderDispatchDashboardTV(app){
   const { data: rows } = await sb.rpc('get_dispatch_summary');
-  const dispatched = rows || [];
+  const allDispatched = rows || [];
+  const fy = getCurrentFYRange();
+  // TV is a passive display with no filter controls, so it scopes to the current
+  // financial year (Apr–Mar) by default rather than an "all-time" number that
+  // never resets and stops being meaningful as a yearly performance snapshot.
+  const dispatched = allDispatched.filter(r=>{
+    const d = r.actual_end || r.dispatched_at.slice(0,10);
+    return d >= fy.from && d <= fy.to;
+  });
+
+  function delayDaysTV(r){
+    if(!r.actual_end || !r.plan_end) return null;
+    return Math.round((new Date(r.actual_end+'T00:00:00') - new Date(r.plan_end+'T00:00:00'))/86400000);
+  }
+  function isOnTimeTV(r){ const d = delayDaysTV(r); return d===null ? null : d<=0; }
+
+  const withKnown = dispatched.filter(r=>isOnTimeTV(r)!==null);
+  const onTimeCt = withKnown.filter(isOnTimeTV).length;
+  const lateCt = withKnown.filter(r=>!isOnTimeTV(r)).length;
+  const onTimePct = withKnown.length ? Math.round(onTimeCt/withKnown.length*100) : 0;
+  const latePct = withKnown.length ? Math.round(lateCt/withKnown.length*100) : 0;
+  const lateDelays = dispatched.map(delayDaysTV).filter(d=>d!==null && d>0);
+  const avgDelay = lateDelays.length ? (lateDelays.reduce((a,b)=>a+b,0)/lateDelays.length) : 0;
+
   const byMonth = {};
   dispatched.forEach(r=>{
     const d = r.actual_end || r.dispatched_at.slice(0,10);
-    const key = d.slice(0,7);
-    byMonth[key] = (byMonth[key]||0) + 1;
+    byMonth[d.slice(0,7)] = (byMonth[d.slice(0,7)]||0) + 1;
   });
-  const months = Object.keys(byMonth).sort().slice(-12); // last 12 months with activity
-  const recent = dispatched.slice(0, 10); // most recently dispatched, already ordered desc
+  const months = Object.keys(byMonth).sort().slice(-12);
+
+  const byModel = {};
+  dispatched.forEach(r=>{ const m=r.model_name||'Unknown'; byModel[m]=(byModel[m]||0)+1; });
+  const modelLabels = Object.keys(byModel);
+
+  const recent = dispatched.slice(0, 8);
 
   app.innerHTML = `
     <div class="tv-card" style="justify-content:center;padding-top:24px;">
       <div class="tv-ov-wrap">
         <div class="tv-ov-title">DISPATCH DASHBOARD</div>
-        <div class="tv-ov-subtitle">${dispatched.length} Machines Dispatched All-Time</div>
+        <div class="tv-ov-subtitle">${dispatched.length} Machines Dispatched — FY ${fy.from.slice(0,4)}-${fy.to.slice(2,4)} (Apr–Mar)</div>
 
-        <div class="tv-panel" style="margin-top:20px;width:100%;max-width:900px;">
-          <div class="tv-table-title">Dispatched by Month</div>
-          ${months.length ? `<canvas id="tvDispatchChart" height="70"></canvas>` : `<div class="tv-table-empty">No dispatches yet</div>`}
+        <div class="tv-metric-row" style="max-width:1100px;">
+          <div class="tv-mw"><div class="lbl">Total Dispatched</div><div class="big">${dispatched.length}</div></div>
+          <div class="tv-mw"><div class="lbl">On-Time</div><div class="big" style="color:#6fd39a;">${onTimePct}%</div><div class="caption">${onTimeCt} machines</div></div>
+          <div class="tv-mw"><div class="lbl">Late</div><div class="big red">${latePct}%</div><div class="caption">${lateCt} machines</div></div>
+          <div class="tv-mw"><div class="lbl">Avg Delay (late only)</div><div class="big" style="color:#ffc857;">${avgDelay.toFixed(1)}d</div></div>
         </div>
 
-        <div class="tv-panel" style="margin-top:16px;width:100%;">
+        <div class="tv-row2" style="max-width:1100px;margin-top:16px;">
+          <div class="tv-panel">
+            <div class="tv-table-title">Dispatched by Month</div>
+            ${months.length ? `<canvas id="tvDispatchChart" height="90"></canvas>` : `<div class="tv-table-empty">No dispatches yet</div>`}
+          </div>
+          <div class="tv-panel">
+            <div class="tv-table-title">Dispatched by Model</div>
+            ${modelLabels.length ? `<canvas id="tvDispatchModelChart" height="90"></canvas>` : `<div class="tv-table-empty">No dispatches yet</div>`}
+          </div>
+        </div>
+
+        <div class="tv-panel" style="margin-top:16px;width:100%;max-width:1100px;">
           <div class="tv-table-title">Recently Dispatched</div>
           <table class="tv-ops tv-ops-compact">
-            <tr><th>Machine</th><th>Customer</th><th>Plan End</th><th>Actual End</th><th>On-time / Delay</th></tr>
+            <tr><th>Machine</th><th>Model</th><th>Plan End</th><th>Actual End</th><th>Delay</th><th>Status</th></tr>
             ${recent.length ? recent.map(r=>{
-              const onTime = (r.actual_end && r.plan_end) ? r.actual_end <= r.plan_end : null;
-              const badge = onTime===null ? '<span class="tv-op-status-pill Pending">—</span>' : onTime ? '<span class="tv-op-status-pill Completed">ON-TIME</span>' : '<span class="tv-op-status-pill Hold">DELAYED</span>';
+              const dd = delayDaysTV(r);
+              const onTime = isOnTimeTV(r);
+              const badge = onTime===null ? '<span class="tv-op-status-pill Pending">—</span>' : onTime ? '<span class="tv-op-status-pill Completed">ON-TIME</span>' : '<span class="tv-op-status-pill Hold">LATE</span>';
               return `<tr>
                 <td><b>${esc(r.machine_no)}</b></td>
-                <td>${esc(r.customer||'')}</td>
+                <td>${esc(r.model_name||'')}</td>
                 <td>${r.plan_end ? esc(r.plan_end) : '—'}</td>
                 <td>${r.actual_end ? esc(r.actual_end) : '—'}</td>
+                <td>${dd===null ? '—' : (dd>0?'+'+dd:dd)+'d'}</td>
                 <td>${badge}</td>
               </tr>`;
-            }).join('') : '<tr><td colspan="5" class="tv-table-empty">No dispatches yet</td></tr>'}
+            }).join('') : '<tr><td colspan="6" class="tv-table-empty">No dispatches yet</td></tr>'}
           </table>
         </div>
       </div>
@@ -3078,6 +3176,14 @@ async function renderDispatchDashboardTV(app){
       data:{ labels:months, datasets:[{ label:'Dispatched', data:months.map(m=>byMonth[m]), backgroundColor:'#f2a30f' }] },
       options:{ responsive:true, plugins:{legend:{display:false}},
         scales:{ x:{ ticks:{color:'#cbd5c0'} }, y:{ beginAtZero:true, ticks:{stepSize:1, color:'#cbd5c0'} } } }
+    });
+  }
+  if(modelLabels.length){
+    if(window.__tvDispatchModelChart) window.__tvDispatchModelChart.destroy();
+    window.__tvDispatchModelChart = new Chart(document.getElementById('tvDispatchModelChart'), {
+      type:'doughnut',
+      data:{ labels:modelLabels, datasets:[{ data:modelLabels.map(l=>byModel[l]), backgroundColor:['#f2a30f','#7ec4e0','#8f6b9e','#4fbf85','#e0625a','#5a9fd4'] }] },
+      options:{ responsive:true, plugins:{legend:{position:'right', labels:{color:'#cbd5c0'}}} }
     });
   }
 }
