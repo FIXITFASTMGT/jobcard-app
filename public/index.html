@@ -2995,7 +2995,7 @@ async function renderStationOverview(app){
 }
 
 /* ================= TV rotation controller: Overview + each station's detail, in sequence ================= */
-let tvPageIdx = 0;       // 0 = overview, 1..N = detail page for tvStations[idx-1]
+let tvPageIdx = 0;       // 0 = Overview, 1 = Dispatch Dashboard, 2..N+1 = detail page for tvStations[idx-2]
 let tvPaused = false;
 let tvPageTimer = null;
 const tvOverviewSeconds = parseInt(params.get('overviewSeconds')) || 15;
@@ -3023,7 +3023,7 @@ function renderTvControls(app){
 }
 
 function tvJumpToDetail(idx){
-  tvPageIdx = idx+1;
+  tvPageIdx = idx+2; // +2: slot 0 is Overview, slot 1 is the Dispatch Dashboard
   tvPaused = true;
   tvRenderCurrentPage(document.getElementById('app'));
 }
