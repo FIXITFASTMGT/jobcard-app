@@ -323,6 +323,7 @@
   @media(max-width:900px){.tv-row2{grid-template-columns:1fr;}}
 
   .tv-metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;width:100%;max-width:none;margin-top:14px;}
+  .tv-metric-row.cols-5{grid-template-columns:repeat(5,1fr);}
   @media(max-width:900px){.tv-metric-row{grid-template-columns:1fr 1fr;}}
   .tv-mw{background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:16px 18px;text-align:left;box-shadow:0 4px 16px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.05);}
   .tv-mw .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--steel-300);display:flex;align-items:center;gap:6px;font-weight:600;}
@@ -685,7 +686,7 @@ function setNav(){
   const bar=document.getElementById('navBar');
   if(tvDisplay || scanToken){ bar.innerHTML=''; return; }
   if(!session){ bar.innerHTML=''; return; }
-  const items=[['dashboard','Dashboard'],['issues','Delay / Issue Log'],['entries','Production Entries'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels'],['manual','Manual Entry'],['gantt','Gantt Chart'],['dispatch','Dispatch Dashboard']];
+  const items=[['dashboard','Dashboard'],['issues','Delay / Issue Log'],['entries','Production Entries'],['models','Model Master'],['newjob','New Job'],['jobs','Jobs / QR Labels'],['machine','Machine Detail'],['manual','Manual Entry'],['gantt','Gantt Chart'],['dispatch','Dispatch Dashboard']];
   bar.innerHTML = items.map(([id,l])=>`<button data-v="${id}" class="${view===id?'active':''}">${l}</button>`).join('')
     + `<button id="logoutBtn" class="small">Log Out</button>`;
   bar.querySelectorAll('button[data-v]').forEach(b=> b.onclick=()=> switchView(b.dataset.v));
@@ -710,6 +711,7 @@ async function render(){
   if(view==='models') return renderModels(app);
   if(view==='newjob') return renderNewJob(app);
   if(view==='jobs') return renderJobsQr(app);
+  if(view==='machine') return renderMachineDetailPicker(app);
   if(view==='manual') return renderManualEntry(app);
   if(view==='gantt') return renderGanttChart(app);
   if(view==='dispatch') return renderDispatchReport(app);
@@ -1210,6 +1212,34 @@ function openDispatchEditor(job, app){
 }
 
 /* ================= SHARED OPERATIONS EDITOR ================= */
+// Saves a job's operations list without breaking existing entries' references —
+// operations that already exist (carry a real DB id) get UPDATEd in place so their
+// id (and therefore every entry logged against them) stays valid; brand-new rows get
+// INSERTed; rows removed from the list get DELETEd, unless entries already reference
+// them, in which case that's surfaced as a clear message instead of a raw FK error.
+async function saveJobOperationsUpsert(jobId, list){
+  const { data: existingRows } = await sb.from('job_operations').select('id').eq('job_id', jobId);
+  const existingIds = new Set((existingRows||[]).map(r=>r.id));
+  const keptIds = new Set(list.filter(o=>o.id).map(o=>o.id));
+  const toDelete = [...existingIds].filter(id => !keptIds.has(id));
+  if(toDelete.length){
+    const { error: delErr } = await sb.from('job_operations').delete().in('id', toDelete);
+    if(delErr) return { error: { message: 'Could not remove one or more operations — they already have entries logged against them. Remove those entries first if you really need to delete the operation.' } };
+  }
+  for(let i=0;i<list.length;i++){
+    const o = list[i];
+    const row = { job_id: jobId, op_no:o.op_no, group_name:o.group_name, description:o.description, std_hours:o.std_hours, std_manpower:o.std_manpower, execution_mode:o.execution_mode||'Series', sequence:i };
+    if(o.id && existingIds.has(o.id)){
+      const { error } = await sb.from('job_operations').update(row).eq('id', o.id);
+      if(error) return { error };
+    } else {
+      const { error } = await sb.from('job_operations').insert(row);
+      if(error) return { error };
+    }
+  }
+  return { error: null };
+}
+
 async function openOpsEditor({ title, loadFn, saveFn, filenamePrefix }){
   const panel = document.getElementById('opsPanel');
   panel.style.display='block';
@@ -1505,12 +1535,7 @@ async function renderNewJob(app){
     openOpsEditor({
       title: 'Job Operations — ' + machine_no,
       loadFn: async ()=> (await sb.from('job_operations').select('*').eq('job_id', job.id).order('sequence')).data,
-      saveFn: async (list)=>{
-        await sb.from('job_operations').delete().eq('job_id', job.id);
-        const rows = list.map((o,i)=>({ job_id:job.id, op_no:o.op_no, group_name:o.group_name, description:o.description, std_hours:o.std_hours, std_manpower:o.std_manpower, execution_mode:o.execution_mode||'Series', sequence:i }));
-        if(rows.length) return sb.from('job_operations').insert(rows);
-        return {error:null};
-      },
+      saveFn: async (list)=> saveJobOperationsUpsert(job.id, list),
       filenamePrefix: machine_no
     });
   });
@@ -1829,7 +1854,7 @@ async function renderJobsQr(app){
     <div class="job-card">
       <div class="job-head">
         <span class="lamp ${j.status==='Active'?'green':'grey'}"></span>
-        <b>${esc(j.machine_no)}</b>
+        <b class="machineDetailLink" data-jobid="${j.id}" style="cursor:pointer;text-decoration:underline;">${esc(j.machine_no)}</b>
         <span style="color:var(--steel-600);font-size:13px;">${esc(j.customer||'')}</span>
         <span class="model-tag">${esc(j.models?.model_name||'')}</span>
         ${stage ? `<span class="model-tag" style="background:var(--amber-600);">${stage}</span>` : ''}
@@ -1873,16 +1898,18 @@ async function renderJobsQr(app){
     b.onclick = ()=> openDispatchEditor(jobs.find(j=>j.id===b.dataset.dispatch), app);
   });
 
+  document.querySelectorAll('.machineDetailLink').forEach(b=>{
+    b.onclick = ()=>{
+      view = 'machine'; setNav();
+      renderMachineDetail(app, b.dataset.jobid);
+    };
+  });
+
   document.querySelectorAll('[data-edit]').forEach(b=>{
     b.onclick = ()=> openOpsEditor({
       title: 'Job Operations — ' + b.dataset.machine,
       loadFn: async ()=> (await sb.from('job_operations').select('*').eq('job_id', b.dataset.edit).order('sequence')).data,
-      saveFn: async (list)=>{
-        await sb.from('job_operations').delete().eq('job_id', b.dataset.edit);
-        const rows = list.map((o,i)=>({ job_id:b.dataset.edit, op_no:o.op_no, group_name:o.group_name, description:o.description, std_hours:o.std_hours, std_manpower:o.std_manpower, execution_mode:o.execution_mode||'Series', sequence:i }));
-        if(rows.length) return sb.from('job_operations').insert(rows);
-        return {error:null};
-      },
+      saveFn: async (list)=> saveJobOperationsUpsert(b.dataset.edit, list),
       filenamePrefix: b.dataset.machine
     });
   });
@@ -1959,6 +1986,133 @@ function buildLabelSheet(jobIds, activeJobs, startPos){
     sheet.appendChild(cell);
     new QRCode(qrDiv, { text:url, width:82, height:82, colorDark:'#1a1e22', colorLight:'#ffffff' });
   });
+}
+
+/* ================= MACHINE DETAIL (consolidated view — job details + ops + all entries, editable) ================= */
+async function renderMachineDetail(app, jobId){
+  const { data: job } = await sb.from('jobs').select('*, models(model_name)').eq('id', jobId).single();
+  if(!job){ app.innerHTML = '<div class="panel"><div class="empty">Job not found.</div></div>'; return; }
+  const { data: entries } = await sb.from('entries').select('*, job_operations(op_no, description)').eq('job_id', jobId).order('activity_date', {ascending:false});
+
+  app.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">${esc(job.machine_no)} — ${esc(job.customer||'')} — ${esc(job.models?.model_name||'')} <span class="sub">${job.status}${job.dispatched_at?' · Dispatched':''}</span></div>
+      <div class="row3">
+        <div><label>Machine No.</label><input id="md_machine" value="${esc(job.machine_no)}"></div>
+        <div><label>Customer</label><input id="md_customer" value="${esc(job.customer||'')}"></div>
+        <div><label>Station No.</label><input id="md_station" type="number" min="1" value="${job.station_no||''}"></div>
+      </div>
+      <div class="row3">
+        <div><label>Planned Start Date</label><input id="md_start" type="date" value="${job.start_date||''}"></div>
+        <div><label>Planned End Date</label><input id="md_end" type="date" value="${job.planned_end_date||''}"></div>
+        <div><label>Delivery Date (as per SO)</label><input id="md_delivery" type="date" value="${job.delivery_date||''}"></div>
+      </div>
+      <div class="row3">
+        <div><label>Actual Start Date</label><input id="md_actualstart" type="date" value="${job.actual_start_date||''}"></div>
+        <div><label>Shifts / Day</label><select id="md_shifts"><option value="1" ${(job.shift_count||1)==1?'selected':''}>1</option><option value="2" ${job.shift_count==2?'selected':''}>2</option><option value="3" ${job.shift_count==3?'selected':''}>3</option></select></div>
+        <div><label>Hours / Shift</label><input id="md_hrsday" type="number" step="0.5" value="${job.hours_per_shift ?? 7.5}"></div>
+      </div>
+      <button class="btn amber" id="md_saveDetailsBtn">Save Details</button>
+      <button class="btn ghost small" id="md_editOpsBtn" style="margin-left:8px;">Edit Operations →</button>
+      <button class="btn ghost small" id="md_addEntryBtn" style="margin-left:8px;">+ Add Entry</button>
+      ${!job.dispatched_at ? `<button class="btn ghost small" id="md_dispatchBtn" style="margin-left:8px;">Dispatch →</button>` : ''}
+    </div>
+    <div class="panel" id="opsPanel" style="display:none;"></div>
+    <div class="panel" id="mdAddEntryPanel" style="display:none;"></div>
+    <div class="panel">
+      <div class="panel-title">All Entries (${(entries||[]).length})</div>
+      <div class="table-scroll"><table class="entries" id="mdEntriesTable"></table></div>
+    </div>
+  `;
+
+  function paintEntriesTable(){
+    const table = document.getElementById('mdEntriesTable');
+    if(!entries || entries.length===0){ table.innerHTML = '<tr><td class="empty">No entries logged yet.</td></tr>'; return; }
+    table.innerHTML = `<tr><th>Op</th><th>Date</th><th>Operator</th><th>Time</th><th>Status</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th><th></th></tr>
+      ${entries.map(e=>`<tr>
+        <td>${esc(e.job_operations?.op_no||'')} ${esc(e.job_operations?.description||'')}</td>
+        <td class="mono">${esc(e.activity_date)}</td>
+        <td>${esc(e.primary_operator)}</td>
+        <td class="mono">${e.start_time ? esc(e.start_time)+'–'+esc(e.end_time) : 'not worked'}</td>
+        <td><span class="status-tag ${e.status}"><span class="lamp ${lampClass(e.status)}" style="width:8px;height:8px;"></span>${esc(e.status)}</span></td>
+        <td>${e.issue_reason ? esc(e.issue_reason) : '—'}</td>
+        <td class="mono">${e.delay_hours ?? '—'}</td>
+        <td>${e.responsibility ? esc(e.responsibility) : '—'}</td>
+        <td style="font-size:10.5px;color:var(--steel-600);" class="mono">${new Date(e.submitted_at).toLocaleString()}</td>
+        <td><button class="btn ghost small mdEditEntryBtn" data-id="${e.id}">Edit</button> <button class="btn danger small mdDeleteEntryBtn" data-id="${e.id}">Delete</button></td>
+      </tr>`).join('')}`;
+    table.querySelectorAll('.mdEditEntryBtn').forEach(b=>{
+      b.onclick = ()=>{
+        const found = entries.find(e=>e.id===b.dataset.id);
+        if(found) openEntryEditor(found, app, ()=>renderMachineDetail(app, jobId));
+      };
+    });
+    table.querySelectorAll('.mdDeleteEntryBtn').forEach(b=>{
+      b.onclick = async ()=>{
+        if(!confirm('Delete this entry permanently? This cannot be undone.')) return;
+        const { error } = await sb.from('entries').delete().eq('id', b.dataset.id);
+        if(error) { toast(error.message, true); return; }
+        toast('Entry deleted');
+        renderMachineDetail(app, jobId);
+      };
+    });
+  }
+  paintEntriesTable();
+
+  document.getElementById('md_saveDetailsBtn').onclick = (e)=> withLock(e.target, 'Saving…', async ()=>{
+    const machine_no = document.getElementById('md_machine').value.trim().toUpperCase();
+    const customer = document.getElementById('md_customer').value.trim();
+    const station_no = document.getElementById('md_station').value ? parseInt(document.getElementById('md_station').value) : null;
+    const start_date = document.getElementById('md_start').value || null;
+    const planned_end_date = document.getElementById('md_end').value || null;
+    const delivery_date = document.getElementById('md_delivery').value || null;
+    const actual_start_date = document.getElementById('md_actualstart').value || null;
+    const shift_count = parseInt(document.getElementById('md_shifts').value) || 1;
+    const hours_per_shift = parseFloat(document.getElementById('md_hrsday').value) || 7.5;
+    if(!machine_no) { toast('Machine No. is required', true); return; }
+    const { error } = await sb.from('jobs').update({ machine_no, customer, station_no, start_date, planned_end_date, delivery_date, actual_start_date, shift_count, hours_per_shift }).eq('id', job.id);
+    if(error) { toast(error.message, true); return; }
+    toast('Job details updated');
+    renderMachineDetail(app, jobId);
+  });
+
+  document.getElementById('md_editOpsBtn').onclick = ()=> openOpsEditor({
+    title: 'Job Operations — ' + job.machine_no,
+    loadFn: async ()=> (await sb.from('job_operations').select('*').eq('job_id', job.id).order('sequence')).data || [],
+    saveFn: async (list)=> saveJobOperationsUpsert(job.id, list),
+    filenamePrefix: job.machine_no
+  });
+
+  document.getElementById('md_addEntryBtn').onclick = async ()=>{
+    const panel = document.getElementById('mdAddEntryPanel');
+    const opening = panel.style.display==='none';
+    panel.style.display = opening ? 'block' : 'none';
+    if(opening) await renderEntryFormForJob(panel, job);
+  };
+
+  const dispatchBtn = document.getElementById('md_dispatchBtn');
+  if(dispatchBtn) dispatchBtn.onclick = ()=> openDispatchEditor(job, app);
+}
+
+async function renderMachineDetailPicker(app){
+  const { data: jobs } = await sb.from('jobs').select('*, models(model_name)').order('machine_no');
+  app.innerHTML = `
+    <div class="panel">
+      <div class="panel-title">Machine Detail</div>
+      <div class="stat-line">Pick a machine to view and edit its details, operations, and every entry logged against it, all in one place.</div>
+      <label>Machine / Job</label>
+      <select id="mdPickerSelect">
+        <option value="">— Select a machine —</option>
+        ${(jobs||[]).map(j=>`<option value="${j.id}">${esc(j.machine_no)} — ${esc(j.customer||'')} — ${esc(j.models?.model_name||'')}${j.status==='Completed'?' (Completed)':''}${j.dispatched_at?' · Dispatched':''}</option>`).join('')}
+      </select>
+    </div>
+    <div id="mdPickerArea"></div>
+  `;
+  document.getElementById('mdPickerSelect').onchange = (e)=>{
+    const area = document.getElementById('mdPickerArea');
+    if(!e.target.value){ area.innerHTML=''; return; }
+    renderMachineDetail(area, e.target.value);
+  };
 }
 
 /* ================= OPERATOR SCAN ================= */
@@ -2413,6 +2567,8 @@ async function drawGanttForJob(area, job){
 async function renderDispatchReport(app){
   const { data: rows } = await sb.rpc('get_dispatch_summary');
   const dispatched = rows || [];
+  const { data: onFloorRows } = await sb.rpc('get_station_summary'); // active, not-yet-dispatched machines — a live snapshot, not date-ranged
+  const onFloor = onFloorRows || [];
   const models = [...new Set(dispatched.map(r=>r.model_name).filter(Boolean))].sort();
   const fy = getCurrentFYRange();
 
@@ -2427,8 +2583,12 @@ async function renderDispatchReport(app){
     </div>
     <div class="panel"><div class="kpi-strip" id="dispKpiStrip"></div></div>
     <div class="row2">
-      <div class="panel"><div class="panel-title">Dispatched by Month</div><div id="dispatchChartArea"></div></div>
+      <div class="panel"><div class="panel-title">Dispatch Trend <span class="sub">Planned (by SO date) vs Actual (by dispatch date)</span></div><div id="dispatchChartArea"></div></div>
       <div class="panel"><div class="panel-title">Dispatched by Model</div><div id="dispatchModelChartArea"></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Dispatch Status <span class="sub">On-Time/Late reflect the date range above; Pending/In Process are current floor status, not date-filtered</span></div>
+      <div id="dispatchStatusChartArea"></div>
     </div>
     <div class="panel">
       <div class="stat-line"><button class="btn ghost small" id="dispExportBtn">Export to Excel</button></div>
@@ -2463,25 +2623,60 @@ async function renderDispatchReport(app){
     const avgDelay = lateDelays.length ? (lateDelays.reduce((a,b)=>a+b,0)/lateDelays.length) : 0;
     const onTimePct = withKnownStatus.length ? Math.round(onTimeCt/withKnownStatus.length*100) : 0;
     const latePct = withKnownStatus.length ? Math.round(lateCt/withKnownStatus.length*100) : 0;
+    const pendingCt = onFloor.filter(s=>!s.actual_hours || s.actual_hours<0.5).length;
+    const inProcessCt = onFloor.length - pendingCt;
     document.getElementById('dispKpiStrip').innerHTML = `
       <div class="kpi-card"><div class="kpi-num">${total}</div><div class="kpi-label">Total Dispatched</div></div>
       <div class="kpi-card"><div class="kpi-num" style="color:var(--green-600);">${onTimePct}%</div><div class="kpi-label">On-Time (${onTimeCt})</div></div>
       <div class="kpi-card warn"><div class="kpi-num" style="color:var(--red-600);">${latePct}%</div><div class="kpi-label">Late (${lateCt})</div></div>
       <div class="kpi-card"><div class="kpi-num">${avgDelay.toFixed(1)}d</div><div class="kpi-label">Avg Delay (late machines only)</div></div>
+      <div class="kpi-card"><div class="kpi-num">${onFloor.length}</div><div class="kpi-label">On-Floor Machines (now)</div></div>
+      <div class="kpi-card"><div class="kpi-num">${pendingCt} / ${inProcessCt}</div><div class="kpi-label">Pending / In Process</div></div>
     `;
   }
 
   function paintMonthChart(rows){
-    const byMonth = {};
-    rows.forEach(r=>{ const d=r.actual_end||r.dispatched_at.slice(0,10); const k=d.slice(0,7); byMonth[k]=(byMonth[k]||0)+1; });
-    const months = Object.keys(byMonth).sort();
+    // Planned = ALL jobs (dispatched or still on floor) whose SO/target date falls in
+    // that month; Actual = jobs actually dispatched that month. Two different scopes,
+    // shown together so a gap between the lines is visible at a glance.
+    const plannedByMonth = {};
+    dispatched.concat(onFloor.map(s=>({ plan_end: s.delivery_date }))).forEach(r=>{
+      if(!r.plan_end) return;
+      const k = r.plan_end.slice(0,7);
+      plannedByMonth[k] = (plannedByMonth[k]||0)+1;
+    });
+    const actualByMonth = {};
+    rows.forEach(r=>{ const d=r.actual_end||r.dispatched_at.slice(0,10); const k=d.slice(0,7); actualByMonth[k]=(actualByMonth[k]||0)+1; });
+    const months = [...new Set([...Object.keys(plannedByMonth), ...Object.keys(actualByMonth)])].sort();
     const area = document.getElementById('dispatchChartArea');
-    if(months.length===0){ area.innerHTML='<div class="empty">No dispatched machines in this range.</div>'; return; }
+    if(months.length===0){ area.innerHTML='<div class="empty">No data in this range.</div>'; return; }
     area.innerHTML = '<canvas id="dispatchChartCanvas" height="180"></canvas>';
     if(window.__dispatchChart) window.__dispatchChart.destroy();
     window.__dispatchChart = new Chart(document.getElementById('dispatchChartCanvas'), {
+      type:'line',
+      data:{ labels:months, datasets:[
+        { label:'Planned', data:months.map(m=>plannedByMonth[m]||0), borderColor:'#4fbf85', backgroundColor:'rgba(79,191,133,.15)', fill:true, tension:.3 },
+        { label:'Actual', data:months.map(m=>actualByMonth[m]||0), borderColor:'#f2a30f', backgroundColor:'rgba(242,163,15,.15)', fill:true, tension:.3 }
+      ]},
+      options:{ responsive:true, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } } } }
+    });
+  }
+
+  function paintStatusChart(rows){
+    const withKnownStatus = rows.filter(r=>isOnTime(r)!==null);
+    const onTimeCt = withKnownStatus.filter(r=>isOnTime(r)).length;
+    const lateCt = withKnownStatus.filter(r=>!isOnTime(r)).length;
+    const pendingCt = onFloor.filter(s=>!s.actual_hours || s.actual_hours<0.5).length;
+    const inProcessCt = onFloor.length - pendingCt;
+    const area = document.getElementById('dispatchStatusChartArea');
+    area.innerHTML = '<canvas id="dispatchStatusCanvas" height="140"></canvas>';
+    if(window.__dispatchStatusChart) window.__dispatchStatusChart.destroy();
+    window.__dispatchStatusChart = new Chart(document.getElementById('dispatchStatusCanvas'), {
       type:'bar',
-      data:{ labels:months, datasets:[{ label:'Machines Dispatched', data:months.map(m=>byMonth[m]), backgroundColor:'#f2a30f' }] },
+      data:{ labels:['On Time','Late','Pending','In Process'], datasets:[{
+        data:[onTimeCt, lateCt, pendingCt, inProcessCt],
+        backgroundColor:['#4fbf85','#e0625a','#f2a30f','#5a9fd4']
+      }]},
       options:{ responsive:true, plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } } } }
     });
   }
@@ -2528,6 +2723,7 @@ async function renderDispatchReport(app){
     paintKpis(rows);
     paintMonthChart(rows);
     paintModelChart(rows);
+    paintStatusChart(rows);
     paintTable(rows);
   }
   repaint();
@@ -2547,7 +2743,7 @@ async function renderDispatchReport(app){
 }
 
 /* ================= ENTRY EDITOR (supervisor corrects/moves an entry) ================= */
-async function openEntryEditor(entry, app){
+async function openEntryEditor(entry, app, onSaved){
   let panel = document.getElementById('entryEditPanel');
   if(!panel){
     panel = document.createElement('div');
@@ -2635,7 +2831,7 @@ async function openEntryEditor(entry, app){
     if(error) { toast(error.message, true); return; }
     toast('Entry updated');
     panel.style.display='none'; panel.innerHTML='';
-    renderDashboard(app);
+    if(onSaved) onSaved(); else renderDashboard(app);
   });
   panel.scrollIntoView({behavior:'smooth'});
 }
@@ -3577,6 +3773,8 @@ function tvJumpToDetail(idx){
 async function renderDispatchDashboardTV(app){
   const { data: rows } = await sb.rpc('get_dispatch_summary');
   const allDispatched = rows || [];
+  const { data: onFloorRows } = await sb.rpc('get_station_summary'); // live snapshot, not FY-scoped — these haven't dispatched yet
+  const onFloor = onFloorRows || [];
   const fy = getCurrentFYRange();
   // TV is a passive display with no filter controls, so it scopes to the current
   // financial year (Apr–Mar) by default rather than an "all-time" number that
@@ -3612,6 +3810,8 @@ async function renderDispatchDashboardTV(app){
   const modelLabels = Object.keys(byModel);
 
   const recent = dispatched.slice(0, 8);
+  const pendingCt = onFloor.filter(s=>!s.actual_hours || s.actual_hours<0.5).length;
+  const inProcessCt = onFloor.length - pendingCt;
 
   app.innerHTML = `
     <div class="tv-card" style="justify-content:center;padding-top:24px;">
@@ -3619,11 +3819,12 @@ async function renderDispatchDashboardTV(app){
         <div class="tv-ov-title">DISPATCH DASHBOARD</div>
         <div class="tv-ov-subtitle">${dispatched.length} Machines Dispatched — FY ${fy.from.slice(0,4)}-${fy.to.slice(2,4)} (Apr–Mar)</div>
 
-        <div class="tv-metric-row" style="max-width:1100px;">
+        <div class="tv-metric-row cols-5" style="max-width:1100px;">
           <div class="tv-mw"><div class="lbl">Total Dispatched</div><div class="big">${dispatched.length}</div></div>
           <div class="tv-mw"><div class="lbl">On-Time</div><div class="big" style="color:#6fd39a;">${onTimePct}%</div><div class="caption">${onTimeCt} machines</div></div>
           <div class="tv-mw"><div class="lbl">Late</div><div class="big red">${latePct}%</div><div class="caption">${lateCt} machines</div></div>
           <div class="tv-mw"><div class="lbl">Avg Delay (late only)</div><div class="big" style="color:#ffc857;">${avgDelay.toFixed(1)}d</div></div>
+          <div class="tv-mw"><div class="lbl">On-Floor Now</div><div class="big" style="color:#7ec4e0;">${onFloor.length}</div><div class="caption">${pendingCt} pending · ${inProcessCt} in process</div></div>
         </div>
 
         <div class="tv-row2" style="max-width:1100px;margin-top:16px;">
@@ -3635,6 +3836,11 @@ async function renderDispatchDashboardTV(app){
             <div class="tv-table-title">Dispatched by Model</div>
             ${modelLabels.length ? `<canvas id="tvDispatchModelChart" height="90"></canvas>` : `<div class="tv-table-empty">No dispatches yet</div>`}
           </div>
+        </div>
+
+        <div class="tv-panel" style="margin-top:16px;width:100%;max-width:1100px;">
+          <div class="tv-table-title">Dispatch Status <span style="font-weight:400;text-transform:none;color:var(--steel-300);">— On-Time/Late for FY ${fy.from.slice(0,4)}-${fy.to.slice(2,4)}; Pending/In Process are current floor status</span></div>
+          <canvas id="tvDispatchStatusChart" height="70"></canvas>
         </div>
 
         <div class="tv-panel" style="margin-top:16px;width:100%;max-width:1100px;">
@@ -3676,6 +3882,16 @@ async function renderDispatchDashboardTV(app){
       options:{ responsive:true, plugins:{legend:{position:'right', labels:{color:'#cbd5c0'}}} }
     });
   }
+  if(window.__tvDispatchStatusChart) window.__tvDispatchStatusChart.destroy();
+  window.__tvDispatchStatusChart = new Chart(document.getElementById('tvDispatchStatusChart'), {
+    type:'bar',
+    data:{ labels:['On Time','Late','Pending','In Process'], datasets:[{
+      data:[onTimeCt, lateCt, pendingCt, inProcessCt],
+      backgroundColor:['#4fbf85','#e0625a','#f2a30f','#5a9fd4']
+    }]},
+    options:{ responsive:true, plugins:{legend:{display:false}},
+      scales:{ x:{ ticks:{color:'#cbd5c0'} }, y:{ beginAtZero:true, ticks:{stepSize:1, color:'#cbd5c0'} } } }
+  });
 }
 
 async function tvRenderCurrentPage(app){
