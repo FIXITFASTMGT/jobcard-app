@@ -359,14 +359,14 @@
   .gantt-legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block;}
   .gantt-v2{background:#fff;border:1px solid var(--plate-100);border-radius:6px;overflow-x:auto;}
   .gantt-v2-inner{position:relative;}
-  .gantt-header{display:flex;border-bottom:2px solid var(--graphite-950);background:var(--plate-50);}
-  .gantt-label-col{flex-shrink:0;width:230px;padding:8px 10px;font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--steel-600);border-right:1px solid var(--plate-100);background:var(--plate-50);}
+  .gantt-header{display:flex;border-bottom:2px solid var(--graphite-950);background:var(--plate-50);position:sticky;top:0;z-index:3;}
+  .gantt-label-col{flex-shrink:0;width:230px;padding:8px 10px;font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--steel-600);border-right:1px solid var(--plate-100);background:var(--plate-50);position:sticky;left:0;z-index:4;}
   .gantt-ticks{position:relative;height:32px;}
   .gantt-tick{position:absolute;top:0;bottom:0;border-left:1px solid var(--plate-100);font-size:9px;color:var(--steel-600);padding:6px 0 0 3px;font-family:var(--font-mono);white-space:nowrap;transform:translateX(0);}
   .gantt-body{position:relative;}
   .gantt-row{display:flex;align-items:stretch;border-bottom:1px solid var(--plate-100);}
   .gantt-row:nth-child(even){background:#fbfcfc;}
-  .gantt-row-label{flex-shrink:0;width:230px;padding:6px 10px;font-size:10.5px;color:var(--graphite-950);border-right:1px solid var(--plate-100);display:flex;align-items:center;font-weight:600;line-height:1.25;}
+  .gantt-row-label{flex-shrink:0;width:230px;padding:6px 10px;font-size:10.5px;color:var(--graphite-950);border-right:1px solid var(--plate-100);display:flex;align-items:center;font-weight:600;line-height:1.25;position:sticky;left:0;background:inherit;z-index:2;}
   .gantt-row-track{position:relative;flex:1;}
   .gantt-today-line{position:absolute;top:0;bottom:0;border-left:2px dashed var(--amber-500);z-index:2;}
   .gantt-daygrid{position:absolute;top:0;bottom:0;border-left:1px solid var(--plate-100);z-index:0;pointer-events:none;}
