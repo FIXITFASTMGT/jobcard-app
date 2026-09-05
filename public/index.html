@@ -357,8 +357,8 @@
   .gantt-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--steel-600);align-items:center;}
   .gantt-legend span{display:inline-flex;align-items:center;gap:6px;}
   .gantt-legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block;}
-  .gantt-v2{background:#fff;border:1px solid var(--plate-100);border-radius:6px;overflow:hidden;}
-  .gantt-v2-inner{position:relative;width:100%;}
+  .gantt-v2{background:#fff;border:1px solid var(--plate-100);border-radius:6px;overflow-x:auto;}
+  .gantt-v2-inner{position:relative;}
   .gantt-header{display:flex;border-bottom:2px solid var(--graphite-950);background:var(--plate-50);}
   .gantt-label-col{flex-shrink:0;width:230px;padding:8px 10px;font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--steel-600);border-right:1px solid var(--plate-100);background:var(--plate-50);}
   .gantt-ticks{position:relative;height:32px;}
@@ -2280,13 +2280,19 @@ async function drawGanttForJob(area, job){
   });
   Object.values(entriesByOp).forEach(list=> list.sort((a,b)=> a.activity_date.localeCompare(b.activity_date)));
 
-  // Overall date span across plan, actual, and delay overrun, so nothing gets cut off.
+  // Overall date span across plan and actual — "today" only matters for a machine
+  // still on the floor; a dispatched machine's chart should end at its real
+  // completion/dispatch date instead of stretching pointlessly out to today.
   const allDates = [];
   Object.values(planned).forEach(w=>{ allDates.push(w.start.getTime(), w.end.getTime()); });
   Object.values(entriesByOp).forEach(list=>{
     list.forEach(e=> allDates.push(new Date(e.activity_date+'T00:00:00').getTime()));
   });
-  allDates.push(Date.now());
+  if(job.dispatched_at){
+    if(job.dispatch_date) allDates.push(new Date(job.dispatch_date+'T00:00:00').getTime());
+  } else {
+    allDates.push(Date.now());
+  }
   const spanStart = Math.min(...allDates);
   const spanEnd = Math.max(...allDates);
   const totalDays = Math.max(1, Math.round((spanEnd - spanStart)/86400000) + 1);
@@ -2314,8 +2320,10 @@ async function drawGanttForJob(area, job){
   // fills whatever container holds it — a resizable on-screen panel, or the full A3
   // print page — instead of guessing a fixed pixel width up front.
   function buildGanttHtml(rowHeightPx){
-    const tickCount = Math.min(16, totalDays);
-    const tickEveryDays = Math.max(1, Math.round(totalDays / tickCount));
+    // Every single day gets its own labeled tick (not a sparse subset) — this needs
+    // real horizontal space, so the chart's width grows with the day count and
+    // scrolls horizontally, rather than compressing labels into illegibility.
+    const tickEveryDays = 1;
     let ticksHtml = '';
     for(let d=0; d<=totalDays; d+=tickEveryDays){
       const t = new Date(spanStart + d*86400000);
@@ -2330,7 +2338,10 @@ async function drawGanttForJob(area, job){
     const todayPct = (Date.now() - spanStart)/86400000/totalDays*100;
 
     const barH = Math.max(6, Math.round(rowHeightPx*0.26));
-    const rowsHtml = ops.map(o=>{
+    // Rendered top-to-bottom in reverse sequence order — matching the shop's own Excel
+    // Gantt convention (highest/last operation at top, first operation at bottom) —
+    // purely a display choice; the underlying sequence/date logic is untouched.
+    const rowsHtml = ops.slice().reverse().map(o=>{
       const p = planned[o.id];
       let plannedBar = '';
       if(p){
@@ -2363,15 +2374,17 @@ async function drawGanttForJob(area, job){
     }).join('');
 
     return `
-      <div class="gantt-v2-inner" style="width:100%;">
+      <div class="gantt-v2-inner" style="width:max(100%, ${Math.max(230, totalDays*34)+230}px);">
         <div class="gantt-header">
           <div class="gantt-label-col">Operation</div>
           <div class="gantt-ticks" style="flex:1;position:relative;">${ticksHtml}</div>
         </div>
         <div class="gantt-body" style="position:relative;">
           ${dayGridHtml}
+          ${!job.dispatched_at && todayPct>=0 && todayPct<=100 ? `
           <div class="gantt-today-line" style="left:calc(230px + (100% - 230px) * ${todayPct/100});"></div>
           <div class="gantt-today-label" style="left:calc(230px + (100% - 230px) * ${todayPct/100});">TODAY</div>
+          ` : ''}
           ${rowsHtml}
         </div>
       </div>`;
