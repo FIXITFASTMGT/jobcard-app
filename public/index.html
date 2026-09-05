@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
 <style>
   :root{
     --graphite-950:#1a1e22;
@@ -753,6 +754,206 @@ function findOpsColValue(rowObj, field){
   return undefined;
 }
 
+// ============ Gantt-chart-with-colors importer ============
+// Reads a full color-coded Gantt chart Excel file directly from its underlying ZIP/XML
+// structure (bypassing the xlsx.js library's limited style support, which doesn't read
+// cell fill colors, borders, or comments — that's a paid feature of that library).
+// Verified against a real production Gantt file before shipping.
+function colLetterToNum(letters){
+  let n = 0;
+  for(let i=0;i<letters.length;i++) n = n*26 + (letters.charCodeAt(i)-64);
+  return n;
+}
+function splitCellRef(ref){
+  const m = ref.match(/^([A-Z]+)(\d+)$/);
+  return { col: colLetterToNum(m[1]), row: parseInt(m[2]) };
+}
+function excelSerialToDateStr(serial){
+  const utcDays = Math.floor(serial - 25569); // Excel epoch offset, incl. the 1900 leap-year quirk
+  return new Date(utcDays * 86400 * 1000).toISOString().slice(0,10);
+}
+
+async function parseGanttExcelWithColors(arrayBuffer){
+  const files = fflate.unzipSync(new Uint8Array(arrayBuffer));
+  const dec = new TextDecoder();
+  const domParser = new DOMParser();
+  const readXml = (path) => files[path] ? domParser.parseFromString(dec.decode(files[path]), 'text/xml') : null;
+
+  const workbookDoc = readXml('xl/workbook.xml');
+  if(!workbookDoc) throw new Error('Not a valid .xlsx file');
+  const relsDoc = readXml('xl/_rels/workbook.xml.rels');
+  const relMap = {};
+  Array.from(relsDoc.getElementsByTagName('Relationship')).forEach(r=>{ relMap[r.getAttribute('Id')] = r.getAttribute('Target'); });
+
+  const sheetEls = Array.from(workbookDoc.getElementsByTagName('sheet'));
+  const targetSheetEl = sheetEls.find(s => /gantt/i.test(s.getAttribute('name')) && /new/i.test(s.getAttribute('name')))
+                      || sheetEls.find(s => /gantt/i.test(s.getAttribute('name')))
+                      || sheetEls[0];
+  if(!targetSheetEl) throw new Error('No sheet found in this workbook');
+  const rId = targetSheetEl.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id') || targetSheetEl.getAttribute('r:id');
+  const sheetTarget = relMap[rId];
+  const sheetFileName = sheetTarget.split('/').pop();
+  const sheetDoc = readXml('xl/' + sheetTarget);
+
+  const sharedStrings = [];
+  const ssDoc = readXml('xl/sharedStrings.xml');
+  if(ssDoc){
+    Array.from(ssDoc.getElementsByTagName('si')).forEach(si=>{
+      sharedStrings.push(Array.from(si.getElementsByTagName('t')).map(t=>t.textContent).join(''));
+    });
+  }
+
+  const stylesDoc = readXml('xl/styles.xml');
+  const xfs = Array.from(stylesDoc.getElementsByTagName('cellXfs')[0].getElementsByTagName('xf')).map(xf => ({
+    fillId: parseInt(xf.getAttribute('fillId') || '0'),
+    borderId: parseInt(xf.getAttribute('borderId') || '0')
+  }));
+  const fills = Array.from(stylesDoc.getElementsByTagName('fills')[0].getElementsByTagName('fill')).map(f=>{
+    const patt = f.getElementsByTagName('patternFill')[0];
+    const fg = patt ? patt.getElementsByTagName('fgColor')[0] : null;
+    return fg ? (fg.getAttribute('rgb') || null) : null;
+  });
+  const borders = Array.from(stylesDoc.getElementsByTagName('borders')[0].getElementsByTagName('border')).map(b=>{
+    const top = b.getElementsByTagName('top')[0];
+    return top ? top.getAttribute('style') : null;
+  });
+  function styleToDayStatus(styleIdx){
+    const xf = xfs[styleIdx];
+    if(!xf) return { status:null, planned:false };
+    const rgb = fills[xf.fillId];
+    const borderStyle = borders[xf.borderId];
+    let status = null;
+    if(rgb === 'FF92D050') status = 'Completed';
+    else if(rgb === 'FFFFFF00') status = 'Partial';
+    else if(rgb === 'FFFF0000') status = 'Hold';
+    return { status, planned: !!borderStyle };
+  }
+
+  let commentsByRef = {};
+  const sheetRelsDoc = readXml(`xl/worksheets/_rels/${sheetFileName}.rels`);
+  if(sheetRelsDoc){
+    const cRel = Array.from(sheetRelsDoc.getElementsByTagName('Relationship')).find(r => /comment/i.test(r.getAttribute('Target')));
+    if(cRel){
+      const commentsDoc = readXml('xl/' + cRel.getAttribute('Target').replace('../',''));
+      if(commentsDoc){
+        Array.from(commentsDoc.getElementsByTagName('comment')).forEach(c=>{
+          const runs = Array.from(c.getElementsByTagName('t')).map(t=>t.textContent);
+          let text = runs.join('').trim().replace(/^[^:]+:\s*/, '').trim();
+          commentsByRef[c.getAttribute('ref')] = text;
+        });
+      }
+    }
+  }
+
+  function cellValue(cellEl){
+    if(!cellEl) return null;
+    const t = cellEl.getAttribute('t');
+    const vEl = cellEl.getElementsByTagName('v')[0];
+    if(!vEl) return null;
+    const raw = vEl.textContent;
+    if(t === 's') return sharedStrings[parseInt(raw)];
+    return raw;
+  }
+
+  const rows = {};
+  Array.from(sheetDoc.getElementsByTagName('row')).forEach(rowEl=>{
+    const r = parseInt(rowEl.getAttribute('r'));
+    const cells = {};
+    Array.from(rowEl.getElementsByTagName('c')).forEach(c=>{
+      cells[splitCellRef(c.getAttribute('r')).col] = c;
+    });
+    rows[r] = cells;
+  });
+
+  // Locate the header row (has "Op No" and "Description" somewhere in row) and the
+  // date-mapping row (numeric/date values across the day columns) automatically,
+  // rather than assuming fixed row numbers — different files may be laid out slightly differently.
+  const rowNums = Object.keys(rows).map(Number).sort((a,b)=>a-b);
+  let headerRow = null, dateRow = null;
+  for(const rn of rowNums){
+    const rowCells = rows[rn];
+    const rowTexts = Object.values(rowCells).map(c=>(cellValue(c)||'').toString().toLowerCase());
+    if(!headerRow && rowTexts.some(t=>t.includes('op no')) && rowTexts.some(t=>t.includes('description'))) headerRow = rn;
+  }
+  if(!headerRow) throw new Error('Could not find a header row with "Op No" and "Description" columns');
+  // date row: the row (any row after header) where columns 6+ contain plausible Excel date serials
+  for(const rn of rowNums){
+    if(rn <= headerRow) continue;
+    const cells = rows[rn];
+    const dayVals = [6,7,8].map(c=>parseFloat(cellValue(cells[c]))).filter(v=>!isNaN(v));
+    if(dayVals.length>=2 && dayVals.every(v=>v>40000 && v<80000)){ dateRow = rn; break; }
+  }
+  if(!dateRow) throw new Error('Could not find the day-to-date mapping row');
+
+  // header column positions (by meaning, reusing the same alias matcher as the plain importer)
+  const headerCells = [];
+  const maxCol = Math.max(...Object.keys(rows[headerRow]).map(Number));
+  for(let c=1;c<=maxCol;c++) headerCells.push(cellValue(rows[headerRow][c]) || '');
+  const colMap = mapOpsHeaderRow(headerCells);
+  if(colMap.op_no===undefined || colMap.description===undefined) throw new Error('Header row is missing Op No or Description columns');
+  const dayColStart = Math.max(colMap.op_no, colMap.group_name??0, colMap.description, colMap.std_hours??0, colMap.std_manpower??0) + 2; // first day column is right after the known header columns
+
+  // build the date-per-day-column map from the date row
+  const dateByCol = {};
+  for(let c=dayColStart; c<=maxCol; c++){
+    const raw = cellValue(rows[dateRow][c]);
+    if(raw && !isNaN(parseFloat(raw))) dateByCol[c] = excelSerialToDateStr(parseFloat(raw));
+  }
+
+  function numToColLetters(n){
+    let s = '';
+    while(n>0){ const rem=(n-1)%26; s = String.fromCharCode(65+rem)+s; n = Math.floor((n-1)/26); }
+    return s;
+  }
+
+  // operations + their day-by-day statuses
+  const operations = [];
+  for(const rn of rowNums){
+    if(rn <= headerRow || rn >= dateRow) continue; // real operation rows sit strictly between the header row and the date-mapping footer row — verified against a real file, this ordering was wrong on first attempt
+    const cells = rows[rn];
+    const opNo = (cellValue(cells[colMap.op_no])||'').toString().trim();
+    const description = (cellValue(cells[colMap.description])||'').toString().trim();
+    if(!opNo || !description) continue;
+    const op = {
+      op_no: opNo,
+      group_name: colMap.group_name!==undefined ? (cellValue(cells[colMap.group_name])||'').toString().trim() : '',
+      description,
+      std_hours: colMap.std_hours!==undefined ? (parseFloat(cellValue(cells[colMap.std_hours]))||0) : 0,
+      std_manpower: colMap.std_manpower!==undefined ? (parseInt(cellValue(cells[colMap.std_manpower]))||2) : 2,
+      days: []
+    };
+    for(let c=dayColStart; c<=maxCol; c++){
+      if(!dateByCol[c]) continue;
+      const cellEl = cells[c];
+      const styleIdx = cellEl ? parseInt(cellEl.getAttribute('s')||'0') : 0;
+      const { status } = styleToDayStatus(styleIdx);
+      if(!status) continue;
+      const ref = numToColLetters(c) + rn;
+      op.days.push({ col: c, date: dateByCol[c], status, comment: commentsByRef[ref] || null });
+    }
+    operations.push(op);
+  }
+
+  // Pull machine/customer/model out of the free-text header block above the table —
+  // these are plain text cells (no color-coding needed), scanned by label pattern
+  // since their exact row/column position varies between files.
+  let guessedMachine = '', guessedCustomer = '', guessedModel = '';
+  for(let rn=1; rn<headerRow; rn++){
+    if(!rows[rn]) continue;
+    const maxC = Math.max(...Object.keys(rows[rn]).map(Number));
+    for(let c=1;c<=maxC;c++){
+      const v = (cellValue(rows[rn][c])||'').toString();
+      if(!v) continue;
+      let m;
+      if(!guessedMachine && (m = v.match(/machine\s*no\.?\s*:?\s*-?\s*(.+)/i))) guessedMachine = m[1].trim();
+      if(!guessedCustomer && (m = v.match(/customer\s*:?\s*-?\s*(.+)/i))) guessedCustomer = m[1].trim().replace(/\.+$/,'').trim();
+      if(!guessedModel && (m = v.match(/gantt\s*chart\s*for\s*(.+)/i))) guessedModel = m[1].trim();
+    }
+  }
+
+  return { operations, headerRow, dateRow, guessedMachine, guessedCustomer, guessedModel };
+}
+
 function importOpsFromExcel(file, onDone){
   const reader = new FileReader();
   reader.onload = (e)=>{
@@ -1213,6 +1414,7 @@ async function renderNewJob(app){
   app.innerHTML = `
     <div class="panel">
       <div class="panel-title">Create New Job</div>
+      <div class="stat-line">Have a full historical Gantt chart for an existing/dispatched machine instead? <button class="btn ghost small" id="ganttImportEntryBtn" type="button">Import from Gantt Chart Excel →</button></div>
       <div class="row3">
         <div><label>Machine No.</label><input id="f_machine" placeholder="e.g. 7822M"></div>
         <div><label>Customer</label><input id="f_customer" placeholder="e.g. BAJAJ AUTO TOOLS"></div>
@@ -1256,6 +1458,7 @@ async function renderNewJob(app){
       line.style.color = 'var(--steel-600)';
     }
   }
+  document.getElementById('ganttImportEntryBtn').onclick = ()=> renderGanttImportWizard(app);
   document.getElementById('f_model').onchange = refreshOpCount;
   refreshOpCount();
   let copyOps = true;
@@ -1304,6 +1507,246 @@ async function renderNewJob(app){
       filenamePrefix: machine_no
     });
   });
+}
+
+/* ================= HISTORICAL GANTT CHART IMPORT (colors + comments -> full backfill) ================= */
+function addHoursToTime(timeStr, hours){
+  const [h,m] = timeStr.split(':').map(Number);
+  const totalMin = h*60+m + Math.round(hours*60);
+  const hh = Math.floor(totalMin/60)%24;
+  const mm = totalMin%60;
+  return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')+':00';
+}
+
+async function renderGanttImportWizard(app){
+  const { data: models } = await sb.from('models').select('*').order('model_name');
+  const { data: resps } = await sb.from('responsibilities').select('*').order('name');
+
+  let parsed = null, jobFields = {}, isDispatched = false, delayFills = {};
+
+  function fuzzyModelMatch(name){
+    const norm = (s)=> (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const target = norm(name);
+    return (models||[]).find(m=> norm(m.model_name)===target);
+  }
+
+  function renderStage0(){
+    app.innerHTML = `
+      <div class="panel">
+        <div class="panel-title">Import Historical Machine from Gantt Chart Excel</div>
+        <div class="stat-line">Reads a full color-coded Gantt chart — planned/completed/partial/hold day colors, plus supervisor comments — and backfills the whole job at once (operations + one entry per colored day) instead of typing it all in by hand.</div>
+        <label>Upload Gantt Chart Excel (.xlsx)</label>
+        <input type="file" id="ganttFileInput" accept=".xlsx">
+        <div id="ganttParseStatus" class="stat-line" style="margin-top:8px;"></div>
+      </div>
+    `;
+    document.getElementById('ganttFileInput').onchange = async (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      const statusEl = document.getElementById('ganttParseStatus');
+      statusEl.textContent = 'Parsing…'; statusEl.style.color = '';
+      try{
+        const buf = await file.arrayBuffer();
+        parsed = await parseGanttExcelWithColors(buf);
+        if(!parsed.operations || parsed.operations.length===0) throw new Error('No operations found — check this file has the expected Op No / Description columns and day-by-day colored cells.');
+        renderStage1();
+      }catch(err){
+        statusEl.textContent = 'Failed to parse: '+err.message;
+        statusEl.style.color = 'var(--red-600)';
+      }
+    };
+  }
+
+  function renderStage1(){
+    const matched = fuzzyModelMatch(parsed.guessedModel);
+    const totalHold = parsed.operations.reduce((s,o)=>s+o.days.filter(d=>d.status==='Hold').length,0);
+    const totalPartial = parsed.operations.reduce((s,o)=>s+o.days.filter(d=>d.status==='Partial').length,0);
+    const totalCompleted = parsed.operations.reduce((s,o)=>s+o.days.filter(d=>d.status==='Completed').length,0);
+    app.innerHTML = `
+      <div class="panel">
+        <div class="panel-title">Review — ${parsed.operations.length} operations found</div>
+        <div class="stat-line">${totalCompleted} completed days · ${totalPartial} partial days · ${totalHold} hold days detected from cell colors.</div>
+        <div class="row3">
+          <div><label>Machine No.</label><input id="gj_machine" value="${esc(parsed.guessedMachine)}"></div>
+          <div><label>Customer</label><input id="gj_customer" value="${esc(parsed.guessedCustomer)}"></div>
+          <div><label>Model</label>
+            <select id="gj_model">
+              <option value="">— Create new model "${esc(parsed.guessedModel)}" —</option>
+              ${(models||[]).map(m=>`<option value="${m.id}" ${matched && matched.id===m.id ? 'selected':''}>${esc(m.model_name)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="row3">
+          <div><label>Shifts / Day</label><select id="gj_shifts"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select></div>
+          <div><label>Hours / Shift</label><input id="gj_hrsday" type="number" step="0.5" value="7.5"></div>
+          <div><label>Station No. <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span></label><input id="gj_station" type="number" min="1"></div>
+        </div>
+        <label>Is this machine already dispatched, or still on the floor?</label>
+        <div class="toggle-pair">
+          <button type="button" id="gj_floor_btn" class="on">Still On Floor</button>
+          <button type="button" id="gj_dispatched_btn">Already Dispatched</button>
+        </div>
+        <div id="gj_dispatch_fields" style="display:none;margin-top:10px;">
+          <div class="row3">
+            <div><label>Packing Start Date</label><input id="gj_pack_start" type="date"></div>
+            <div><label>Packing End Date</label><input id="gj_pack_end" type="date"></div>
+            <div><label>Dispatch Date</label><input id="gj_dispatch_date" type="date"></div>
+          </div>
+        </div>
+        <button class="btn amber" id="gj_next_btn" style="margin-top:14px;">Next: Review Delays →</button>
+      </div>
+    `;
+    document.getElementById('gj_floor_btn').onclick = ()=>{
+      isDispatched=false;
+      document.getElementById('gj_floor_btn').classList.add('on');
+      document.getElementById('gj_dispatched_btn').classList.remove('on');
+      document.getElementById('gj_dispatch_fields').style.display='none';
+    };
+    document.getElementById('gj_dispatched_btn').onclick = ()=>{
+      isDispatched=true;
+      document.getElementById('gj_dispatched_btn').classList.add('on');
+      document.getElementById('gj_floor_btn').classList.remove('on');
+      document.getElementById('gj_dispatch_fields').style.display='block';
+    };
+    document.getElementById('gj_next_btn').onclick = ()=>{
+      jobFields = {
+        machine_no: document.getElementById('gj_machine').value.trim().toUpperCase(),
+        customer: document.getElementById('gj_customer').value.trim(),
+        model_id: document.getElementById('gj_model').value || null,
+        new_model_name: parsed.guessedModel || 'Imported Model',
+        shift_count: parseInt(document.getElementById('gj_shifts').value)||1,
+        hours_per_shift: parseFloat(document.getElementById('gj_hrsday').value)||7.5,
+        station_no: document.getElementById('gj_station').value ? parseInt(document.getElementById('gj_station').value) : null,
+        packing_start_date: document.getElementById('gj_pack_start')?.value || null,
+        packing_end_date: document.getElementById('gj_pack_end')?.value || null,
+        dispatch_date: document.getElementById('gj_dispatch_date')?.value || null,
+      };
+      if(!jobFields.machine_no){ toast('Machine No. is required', true); return; }
+      renderStage2();
+    };
+  }
+
+  function renderStage2(){
+    const flaggedDays = [];
+    parsed.operations.forEach(op=>{
+      op.days.forEach(d=>{
+        if(d.status==='Hold' || d.status==='Partial') flaggedDays.push({ op_no: op.op_no, description: op.description, date: d.date, status: d.status, comment: d.comment });
+      });
+    });
+    const defaultDailyCap = jobFields.shift_count * jobFields.hours_per_shift;
+    app.innerHTML = `
+      <div class="panel">
+        <div class="panel-title">Fill in Delay Details (${flaggedDays.length} flagged days)</div>
+        <div class="stat-line">The file tells us which days were Hold or Partial, but not the exact hours lost or which department was responsible — fill those in below. The issue reason pre-fills from the supervisor's note where one exists.</div>
+        ${flaggedDays.length ? `<div class="table-scroll"><table class="entries">
+          <tr><th>Op</th><th>Date</th><th>Status</th><th>Responsibility</th><th>Delay Hours</th><th>Issue Reason</th></tr>
+          ${flaggedDays.map((d,i)=>`
+            <tr>
+              <td>${esc(d.op_no)} ${esc(d.description)}</td>
+              <td class="mono">${esc(d.date)}</td>
+              <td>${esc(d.status)}</td>
+              <td><select id="gjd_resp_${i}"><option value="">—</option>${(resps||[]).map(r=>`<option value="${esc(r.name)}">${esc(r.name)}</option>`).join('')}</select></td>
+              <td><input id="gjd_hrs_${i}" type="number" step="0.5" value="${d.status==='Hold' ? defaultDailyCap : (defaultDailyCap/2)}" style="width:70px;"></td>
+              <td><input id="gjd_reason_${i}" value="${esc(d.comment||'')}" style="width:220px;"></td>
+            </tr>`).join('')}
+        </table></div>` : '<div class="stat-line">No Hold or Partial days detected — nothing to fill in here.</div>'}
+        <button class="btn amber" id="gj_confirm_btn" style="margin-top:14px;">Confirm Import →</button>
+        <button class="btn ghost small" id="gj_back_btn" style="margin-top:14px;margin-left:8px;">← Back</button>
+      </div>
+    `;
+    document.getElementById('gj_back_btn').onclick = renderStage1;
+    document.getElementById('gj_confirm_btn').onclick = (e)=> withLock(e.target, 'Importing…', async ()=>{
+      flaggedDays.forEach((d,i)=>{
+        delayFills[d.op_no+'|'+d.date] = {
+          responsibility: document.getElementById(`gjd_resp_${i}`).value || null,
+          delay_hours: parseFloat(document.getElementById(`gjd_hrs_${i}`).value) || 0,
+          issue_reason: document.getElementById(`gjd_reason_${i}`).value.trim() || null
+        };
+      });
+      await doImport();
+    });
+  }
+
+  async function doImport(){
+    let modelId = jobFields.model_id;
+    if(!modelId){
+      const { data: newModel, error: modelErr } = await sb.from('models').insert({
+        model_name: jobFields.new_model_name, base_model: jobFields.new_model_name
+      }).select().single();
+      if(modelErr){ toast('Failed to create model: '+modelErr.message, true); return; }
+      modelId = newModel.id;
+    }
+
+    let earliestDate = null;
+    parsed.operations.forEach(op=> op.days.forEach(d=>{ if(!earliestDate || d.date<earliestDate) earliestDate = d.date; }));
+
+    const jobInsert = {
+      machine_no: jobFields.machine_no, customer: jobFields.customer, model_id: modelId,
+      start_date: earliestDate, actual_start_date: earliestDate,
+      shift_count: jobFields.shift_count, hours_per_shift: jobFields.hours_per_shift,
+      station_no: jobFields.station_no, status: 'Active'
+    };
+    if(isDispatched){
+      jobInsert.packing_start_date = jobFields.packing_start_date;
+      jobInsert.packing_end_date = jobFields.packing_end_date;
+      jobInsert.dispatch_date = jobFields.dispatch_date;
+      jobInsert.dispatched_at = jobFields.dispatch_date ? new Date().toISOString() : null;
+    }
+    const { data: job, error: jobErr } = await sb.from('jobs').insert(jobInsert).select().single();
+    if(jobErr){ toast('Failed to create job: '+jobErr.message, true); return; }
+
+    const sortedOps = parsed.operations.slice().sort((a,b)=> (parseFloat(a.op_no)||0)-(parseFloat(b.op_no)||0));
+    const opRows = sortedOps.map((op,i)=>({
+      job_id: job.id, op_no: op.op_no, group_name: op.group_name, description: op.description,
+      std_hours: op.std_hours, std_manpower: op.std_manpower, execution_mode: 'Series', sequence: i
+    }));
+    const { data: insertedOps, error: opsErr } = await sb.from('job_operations').insert(opRows).select();
+    if(opsErr){ toast('Job was created but operations failed to import: '+opsErr.message, true); return; }
+    const opIdByOpNo = {};
+    insertedOps.forEach(o=> opIdByOpNo[o.op_no] = o.id);
+
+    const dailyCap = jobFields.shift_count * jobFields.hours_per_shift;
+    const entryRows = [];
+    parsed.operations.forEach(op=>{
+      op.days.forEach(d=>{
+        const jobOperationId = opIdByOpNo[op.op_no];
+        if(!jobOperationId) return;
+        const row = { job_id: job.id, job_operation_id: jobOperationId, primary_operator: 'Imported (Historical Data)', activity_date: d.date, status: d.status };
+        if(d.status==='Hold'){
+          const fill = delayFills[op.op_no+'|'+d.date] || {};
+          row.start_time = null; row.end_time = null;
+          row.delay_hours = fill.delay_hours ?? dailyCap;
+          row.responsibility = fill.responsibility || null;
+          row.issue_reason = fill.issue_reason || 'Imported from historical Gantt chart';
+        } else if(d.status==='Partial'){
+          const fill = delayFills[op.op_no+'|'+d.date] || {};
+          const lost = fill.delay_hours ?? (dailyCap/2);
+          const workedHours = Math.max(0.5, dailyCap - lost);
+          row.start_time = '09:00:00';
+          row.end_time = addHoursToTime('09:00:00', workedHours);
+          row.delay_hours = lost;
+          row.responsibility = fill.responsibility || null;
+          row.issue_reason = fill.issue_reason || 'Imported from historical Gantt chart';
+        } else {
+          // Completed — the file only tells us WHICH day, not the exact clock-in/out times,
+          // so a full shift starting at 09:00 is synthesized to make actual-hours math work.
+          row.start_time = '09:00:00';
+          row.end_time = addHoursToTime('09:00:00', dailyCap);
+        }
+        entryRows.push(row);
+      });
+    });
+    const BATCH = 200;
+    for(let i=0;i<entryRows.length;i+=BATCH){
+      const { error: entErr } = await sb.from('entries').insert(entryRows.slice(i,i+BATCH));
+      if(entErr){ toast('Job and operations were created, but some entries failed to import: '+entErr.message, true); return; }
+    }
+
+    toast(`Imported ${insertedOps.length} operations and ${entryRows.length} entries for ${job.machine_no}`);
+    view = 'jobs'; render();
+  }
+
+  renderStage0();
 }
 
 /* ================= JOBS / QR LABELS ================= */
