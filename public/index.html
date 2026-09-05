@@ -951,7 +951,10 @@ async function parseGanttExcelWithColors(arrayBuffer){
     }
   }
 
-  return { operations, headerRow, dateRow, guessedMachine, guessedCustomer, guessedModel };
+  return {
+    operations, headerRow, dateRow, guessedMachine, guessedCustomer, guessedModel,
+    _diag: { sheetTarget, totalRowsFound: rowNums.length, firstRow: rowNums[0], lastRow: rowNums[rowNums.length-1], colMap, dayColStart, maxCol }
+  };
 }
 
 function importOpsFromExcel(file, onDone){
@@ -1572,7 +1575,10 @@ async function renderGanttImportWizard(app){
       try{
         const buf = await readFileRobustly(file);
         parsed = await parseGanttExcelWithColors(buf);
-        if(!parsed.operations || parsed.operations.length===0) throw new Error('No operations found — check this file has the expected Op No / Description columns and day-by-day colored cells.');
+        if(!parsed.operations || parsed.operations.length===0){
+          const d = parsed._diag || {};
+          throw new Error('No operations found. Diagnostics — please copy this back: sheet='+d.sheetTarget+' totalRows='+d.totalRowsFound+' (rows '+d.firstRow+'–'+d.lastRow+') headerRow='+parsed.headerRow+' dateRow='+parsed.dateRow+' colMap='+JSON.stringify(d.colMap)+' dayColStart='+d.dayColStart+' maxCol='+d.maxCol);
+        }
         renderStage1();
       }catch(err){
         statusEl.innerHTML = 'Failed to parse: '+esc(err.message)+'<br><span style="color:var(--steel-600);">If this keeps happening on every browser, it\'s very likely antivirus or endpoint-security software briefly locking the file the moment it\'s selected — try copying the file to a new location and retrying, or ask IT whether security software is intercepting file uploads on this machine.</span>';
