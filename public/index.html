@@ -1518,6 +1518,30 @@ function addHoursToTime(timeStr, hours){
   return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')+':00';
 }
 
+// A brief lock on a file at the exact moment a browser tries to read it — commonly
+// caused by antivirus/endpoint-security software scanning it — can fail the modern
+// File.arrayBuffer() call while the older FileReader API succeeds, or vice versa,
+// since they go through different internal browser code paths. Retries a few times,
+// then tries the alternate API, before giving up.
+async function readFileRobustly(file, maxRetries){
+  maxRetries = maxRetries || 3;
+  let lastErr = null;
+  for(let attempt=0; attempt<maxRetries; attempt++){
+    try{ return await file.arrayBuffer(); }
+    catch(err){ lastErr = err; await new Promise(r=>setTimeout(r, 400)); }
+  }
+  try{
+    return await new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result);
+      reader.onerror = ()=> reject(reader.error || lastErr);
+      reader.readAsArrayBuffer(file);
+    });
+  }catch(fallbackErr){
+    throw lastErr; // the original browser error is usually more descriptive than the fallback's
+  }
+}
+
 async function renderGanttImportWizard(app){
   const { data: models } = await sb.from('models').select('*').order('model_name');
   const { data: resps } = await sb.from('responsibilities').select('*').order('name');
@@ -1546,12 +1570,12 @@ async function renderGanttImportWizard(app){
       const statusEl = document.getElementById('ganttParseStatus');
       statusEl.textContent = 'Parsing…'; statusEl.style.color = '';
       try{
-        const buf = await file.arrayBuffer();
+        const buf = await readFileRobustly(file);
         parsed = await parseGanttExcelWithColors(buf);
         if(!parsed.operations || parsed.operations.length===0) throw new Error('No operations found — check this file has the expected Op No / Description columns and day-by-day colored cells.');
         renderStage1();
       }catch(err){
-        statusEl.textContent = 'Failed to parse: '+err.message;
+        statusEl.innerHTML = 'Failed to parse: '+esc(err.message)+'<br><span style="color:var(--steel-600);">If this keeps happening on every browser, it\'s very likely antivirus or endpoint-security software briefly locking the file the moment it\'s selected — try copying the file to a new location and retrying, or ask IT whether security software is intercepting file uploads on this machine.</span>';
         statusEl.style.color = 'var(--red-600)';
       }
     };
