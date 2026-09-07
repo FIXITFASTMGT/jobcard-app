@@ -733,7 +733,7 @@ function normColKey(k){ return (k||'').toString().toLowerCase().replace(/[\s.()]
 const OPS_COLUMN_ALIASES = {
   op_no: ['opno'],
   group_name: ['group','groupname'],
-  description: ['description'],
+  description: ['description','activity','activityganttchart','activitydescription','operationdescription','operationname','jobdescription','workdescription'],
   std_hours: ['stdhours','stdtimehrs','stdtime'],
   std_manpower: ['stdmanpower','stdman'],
   execution_mode: ['executionmode','execution','mode']
@@ -775,7 +775,7 @@ function excelSerialToDateStr(serial){
   return new Date(utcDays * 86400 * 1000).toISOString().slice(0,10);
 }
 
-async function parseGanttExcelWithColors(arrayBuffer){
+async function parseGanttExcelWithColors(arrayBuffer, manualStartDate){
   const files = fflate.unzipSync(new Uint8Array(arrayBuffer));
   const dec = new TextDecoder();
   const domParser = new DOMParser();
@@ -867,25 +867,34 @@ async function parseGanttExcelWithColors(arrayBuffer){
     rows[r] = cells;
   });
 
-  // Locate the header row (has "Op No" and "Description" somewhere in row) and the
-  // date-mapping row (numeric/date values across the day columns) automatically,
-  // rather than assuming fixed row numbers — different files may be laid out slightly differently.
+  // Locate the header row (has "Op No" and "Description" somewhere in row) and, if
+  // one exists, a separate date-mapping row (real Excel date serials across the day
+  // columns) — some shop templates put a second row of real dates below all the
+  // operations; others just number the day columns 1,2,3... with no real dates
+  // anywhere in the file at all, in which case the caller must supply a start date.
   const rowNums = Object.keys(rows).map(Number).sort((a,b)=>a-b);
   let headerRow = null, dateRow = null;
   for(const rn of rowNums){
     const rowCells = rows[rn];
-    const rowTexts = Object.values(rowCells).map(c=>(cellValue(c)||'').toString().toLowerCase());
-    if(!headerRow && rowTexts.some(t=>t.includes('op no')) && rowTexts.some(t=>t.includes('description'))) headerRow = rn;
+    const maxColThisRow = Math.max(...Object.keys(rowCells).map(Number));
+    const cellsInOrder = [];
+    for(let c=1;c<=maxColThisRow;c++) cellsInOrder.push(cellValue(rowCells[c]) || '');
+    const trialMap = mapOpsHeaderRow(cellsInOrder);
+    // Same alias list used for column mapping decides what counts as a header row —
+    // one definition, not two that can silently drift apart (a real bug found and
+    // fixed here: this used to require the literal word "description", which some
+    // real templates use "Activity Gantt Chart" or similar for instead).
+    if(!headerRow && trialMap.op_no !== undefined && trialMap.description !== undefined) headerRow = rn;
   }
-  if(!headerRow) throw new Error('Could not find a header row with "Op No" and "Description" columns');
-  // date row: the row (any row after header) where columns 6+ contain plausible Excel date serials
+  if(!headerRow) throw new Error('Could not find a header row with an Op No and a Description/Activity column');
   for(const rn of rowNums){
     if(rn <= headerRow) continue;
     const cells = rows[rn];
     const dayVals = [6,7,8].map(c=>parseFloat(cellValue(cells[c]))).filter(v=>!isNaN(v));
     if(dayVals.length>=2 && dayVals.every(v=>v>40000 && v<80000)){ dateRow = rn; break; }
   }
-  if(!dateRow) throw new Error('Could not find the day-to-date mapping row');
+  const lastRealRow = rowNums[rowNums.length-1];
+  const opRowUpperBound = dateRow || lastRealRow; // no separate date row -> operations run to the end of the sheet
 
   // header column positions (by meaning, reusing the same alias matcher as the plain importer)
   const headerCells = [];
@@ -899,11 +908,51 @@ async function parseGanttExcelWithColors(arrayBuffer){
   if(colMap.op_no===undefined || colMap.description===undefined) throw new Error('Header row is missing Op No or Description columns');
   const dayColStart = Math.max(colMap.op_no, colMap.group_name??0, colMap.description, colMap.std_hours??0, colMap.std_manpower??0) + 2; // first day column is right after the known header columns
 
-  // build the date-per-day-column map from the date row
+  // build the date-per-day-column map — from the real date row when one exists;
+  // otherwise from a supervisor-supplied start date, walking forward one working
+  // day (skipping Sundays) per day-column, matching the app's own scheduling convention.
   const dateByCol = {};
-  for(let c=dayColStart; c<=maxCol; c++){
-    const raw = cellValue(rows[dateRow][c]);
-    if(raw && !isNaN(parseFloat(raw))) dateByCol[c] = excelSerialToDateStr(parseFloat(raw));
+  if(dateRow){
+    for(let c=dayColStart; c<=maxCol; c++){
+      const raw = cellValue(rows[dateRow][c]);
+      if(raw && !isNaN(parseFloat(raw))) dateByCol[c] = excelSerialToDateStr(parseFloat(raw));
+    }
+  } else if(manualStartDate){
+    let d = new Date(manualStartDate+'T00:00:00');
+    while(d.getDay()===0) d.setDate(d.getDate()+1);
+    for(let c=dayColStart; c<=maxCol; c++){
+      dateByCol[c] = d.toISOString().slice(0,10);
+      d.setDate(d.getDate()+1);
+      while(d.getDay()===0) d.setDate(d.getDate()+1);
+    }
+  }
+  // Pull machine/customer/model out of the free-text header block above the table —
+  // these are plain text cells (no color-coding needed), scanned by label pattern
+  // since their exact row/column position varies between files. Some templates put
+  // the label and its value in the SAME cell ("Machine No : 7863"); others split them
+  // across two adjacent cells ("Machine No :" | "11099M") — check both. Done before
+  // the manual-start-date check so this info is available even when we have to pause
+  // and ask for a date, rather than making the caller re-parse from scratch.
+  let guessedMachine = '', guessedCustomer = '', guessedModel = '';
+  for(let rn=1; rn<headerRow; rn++){
+    if(!rows[rn]) continue;
+    const maxC = Math.max(...Object.keys(rows[rn]).map(Number));
+    for(let c=1;c<=maxC;c++){
+      const v = (cellValue(rows[rn][c])||'').toString();
+      if(!v) continue;
+      const next = (cellValue(rows[rn][c+1])||'').toString().trim();
+      let m;
+      if(!guessedMachine && (m = v.match(/machine\s*no\.?\s*:?\s*-?\s*(.*)/i))) guessedMachine = (m[1].trim() || next);
+      if(!guessedCustomer && (m = v.match(/customer\s*:?\s*-?\s*(.*)/i))) guessedCustomer = (m[1].trim() || next).replace(/\.+$/,'').trim();
+      if(!guessedModel && (m = v.match(/gantt\s*chart\s*for\s*(.+)/i))) guessedModel = m[1].trim();
+    }
+  }
+
+  const needsManualStartDate = !dateRow && !manualStartDate;
+  if(needsManualStartDate){
+    // Can't resolve real dates without a start date — return early with enough info
+    // for the caller to ask for one and try again, rather than guessing a date.
+    return { needsManualStartDate: true, dayColumnCount: maxCol - dayColStart + 1, guessedMachine, guessedCustomer, guessedModel };
   }
 
   function numToColLetters(n){
@@ -914,12 +963,14 @@ async function parseGanttExcelWithColors(arrayBuffer){
 
   // operations + their day-by-day statuses
   const operations = [];
+  const skippedRows = []; // rows with a description but no Op No — real data-entry gaps, surfaced rather than silently dropped
   for(const rn of rowNums){
-    if(rn <= headerRow || rn >= dateRow) continue; // real operation rows sit strictly between the header row and the date-mapping footer row — verified against a real file, this ordering was wrong on first attempt
+    if(rn <= headerRow || rn >= opRowUpperBound) continue;
     const cells = rows[rn];
     const opNo = (cellValue(cells[colMap.op_no])||'').toString().trim();
     const description = (cellValue(cells[colMap.description])||'').toString().trim();
-    if(!opNo || !description) continue;
+    if(!description) continue;
+    if(!opNo){ skippedRows.push({ row: rn, description }); continue; }
     const op = {
       op_no: opNo,
       group_name: colMap.group_name!==undefined ? (cellValue(cells[colMap.group_name])||'').toString().trim() : '',
@@ -940,25 +991,8 @@ async function parseGanttExcelWithColors(arrayBuffer){
     operations.push(op);
   }
 
-  // Pull machine/customer/model out of the free-text header block above the table —
-  // these are plain text cells (no color-coding needed), scanned by label pattern
-  // since their exact row/column position varies between files.
-  let guessedMachine = '', guessedCustomer = '', guessedModel = '';
-  for(let rn=1; rn<headerRow; rn++){
-    if(!rows[rn]) continue;
-    const maxC = Math.max(...Object.keys(rows[rn]).map(Number));
-    for(let c=1;c<=maxC;c++){
-      const v = (cellValue(rows[rn][c])||'').toString();
-      if(!v) continue;
-      let m;
-      if(!guessedMachine && (m = v.match(/machine\s*no\.?\s*:?\s*-?\s*(.+)/i))) guessedMachine = m[1].trim();
-      if(!guessedCustomer && (m = v.match(/customer\s*:?\s*-?\s*(.+)/i))) guessedCustomer = m[1].trim().replace(/\.+$/,'').trim();
-      if(!guessedModel && (m = v.match(/gantt\s*chart\s*for\s*(.+)/i))) guessedModel = m[1].trim();
-    }
-  }
-
   return {
-    operations, headerRow, dateRow, guessedMachine, guessedCustomer, guessedModel,
+    operations, headerRow, dateRow, guessedMachine, guessedCustomer, guessedModel, skippedRows,
     _diag: { sheetTarget, totalRowsFound: rowNums.length, firstRow: rowNums[0], lastRow: rowNums[rowNums.length-1], colMap, dayColStart, maxCol }
   };
 }
@@ -1602,18 +1636,47 @@ async function renderGanttImportWizard(app){
       const statusEl = document.getElementById('ganttParseStatus');
       statusEl.textContent = 'Parsing…'; statusEl.style.color = '';
       try{
-        const buf = await readFileRobustly(file);
-        parsed = await parseGanttExcelWithColors(buf);
-        if(!parsed.operations || parsed.operations.length===0){
-          const d = parsed._diag || {};
-          throw new Error('No operations found. Diagnostics — please copy this back: sheet='+d.sheetTarget+' totalRows='+d.totalRowsFound+' (rows '+d.firstRow+'–'+d.lastRow+') headerRow='+parsed.headerRow+' dateRow='+parsed.dateRow+' colMap='+JSON.stringify(d.colMap)+' dayColStart='+d.dayColStart+' maxCol='+d.maxCol);
-        }
-        renderStage1();
+        lastParsedBuf = await readFileRobustly(file);
+        await tryParse();
       }catch(err){
         statusEl.innerHTML = 'Failed to parse: '+esc(err.message)+'<br><span style="color:var(--steel-600);">If this keeps happening on every browser, it\'s very likely antivirus or endpoint-security software briefly locking the file the moment it\'s selected — try copying the file to a new location and retrying, or ask IT whether security software is intercepting file uploads on this machine.</span>';
         statusEl.style.color = 'var(--red-600)';
       }
     };
+  }
+
+  let lastParsedBuf = null;
+  async function tryParse(manualStartDate){
+    const statusEl = document.getElementById('ganttParseStatus');
+    try{
+      parsed = await parseGanttExcelWithColors(lastParsedBuf, manualStartDate);
+      if(parsed.needsManualStartDate){
+        // This file has no real calendar dates anywhere — just sequential day
+        // numbers — so a start date has to come from the person importing it.
+        statusEl.innerHTML = `
+          <div style="margin-top:6px;">This file has ${parsed.dayColumnCount} day columns but no real dates anywhere in it (just numbered 1, 2, 3...) — what date does <b>Day 1</b> correspond to?
+          ${parsed.guessedMachine ? ' (Machine '+esc(parsed.guessedMachine)+(parsed.guessedCustomer?' — '+esc(parsed.guessedCustomer):'')+')' : ''}</div>
+          <input type="date" id="ganttManualStartDate" style="margin-top:6px;max-width:200px;display:inline-block;">
+          <button class="btn amber small" id="ganttManualStartBtn" style="margin-left:8px;">Continue →</button>
+        `;
+        statusEl.style.color = '';
+        document.getElementById('ganttManualStartBtn').onclick = async ()=>{
+          const d = document.getElementById('ganttManualStartDate').value;
+          if(!d){ toast('Pick a date first', true); return; }
+          statusEl.textContent = 'Parsing…';
+          await tryParse(d);
+        };
+        return;
+      }
+      if(!parsed.operations || parsed.operations.length===0){
+        const d = parsed._diag || {};
+        throw new Error('No operations found. Diagnostics — please copy this back: sheet='+d.sheetTarget+' totalRows='+d.totalRowsFound+' (rows '+d.firstRow+'–'+d.lastRow+') headerRow='+parsed.headerRow+' dateRow='+parsed.dateRow+' colMap='+JSON.stringify(d.colMap)+' dayColStart='+d.dayColStart+' maxCol='+d.maxCol);
+      }
+      renderStage1();
+    }catch(err){
+      statusEl.innerHTML = 'Failed to parse: '+esc(err.message)+'<br><span style="color:var(--steel-600);">If this keeps happening on every browser, it\'s very likely antivirus or endpoint-security software briefly locking the file the moment it\'s selected — try copying the file to a new location and retrying, or ask IT whether security software is intercepting file uploads on this machine.</span>';
+      statusEl.style.color = 'var(--red-600)';
+    }
   }
 
   function renderStage1(){
@@ -1625,6 +1688,7 @@ async function renderGanttImportWizard(app){
       <div class="panel">
         <div class="panel-title">Review — ${parsed.operations.length} operations found</div>
         <div class="stat-line">${totalCompleted} completed days · ${totalPartial} partial days · ${totalHold} hold days detected from cell colors.</div>
+        ${parsed.skippedRows && parsed.skippedRows.length ? `<div class="stat-line" style="color:var(--red-600);">⚠ ${parsed.skippedRows.length} row(s) skipped — no Op No was given: ${parsed.skippedRows.map(r=>`row ${r.row} ("${esc(r.description)}")`).join(', ')}. Add these manually afterward in Edit Operations if you need them.</div>` : ''}
         <div class="row3">
           <div><label>Machine No.</label><input id="gj_machine" value="${esc(parsed.guessedMachine)}"></div>
           <div><label>Customer</label><input id="gj_customer" value="${esc(parsed.guessedCustomer)}"></div>
