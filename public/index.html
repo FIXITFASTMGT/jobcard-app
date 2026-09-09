@@ -705,7 +705,7 @@ async function boot(){
 async function render(){
   setNav();
   const app=document.getElementById('app');
-  app.classList.toggle('wide', view==='gantt' && !tvDisplay && !scanToken);
+  app.classList.toggle('wide', (view==='gantt' || view==='dispatch') && !tvDisplay && !scanToken);
   if(tvDisplay) return renderStationDisplay(app);
   if(scanToken) return renderScan(app, scanToken);
   if(view==='models') return renderModels(app);
@@ -787,16 +787,6 @@ async function parseGanttExcelWithColors(arrayBuffer, manualStartDate){
   const relMap = {};
   Array.from(relsDoc.getElementsByTagName('Relationship')).forEach(r=>{ relMap[r.getAttribute('Id')] = r.getAttribute('Target'); });
 
-  const sheetEls = Array.from(workbookDoc.getElementsByTagName('sheet'));
-  const targetSheetEl = sheetEls.find(s => /gantt/i.test(s.getAttribute('name')) && /new/i.test(s.getAttribute('name')))
-                      || sheetEls.find(s => /gantt/i.test(s.getAttribute('name')))
-                      || sheetEls[0];
-  if(!targetSheetEl) throw new Error('No sheet found in this workbook');
-  const rId = targetSheetEl.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id') || targetSheetEl.getAttribute('r:id');
-  const sheetTarget = relMap[rId];
-  const sheetFileName = sheetTarget.split('/').pop();
-  const sheetDoc = readXml('xl/' + sheetTarget);
-
   const sharedStrings = [];
   const ssDoc = readXml('xl/sharedStrings.xml');
   if(ssDoc){
@@ -804,6 +794,65 @@ async function parseGanttExcelWithColors(arrayBuffer, manualStartDate){
       sharedStrings.push(Array.from(si.getElementsByTagName('t')).map(t=>t.textContent).join(''));
     });
   }
+  function cellValue(cellEl){
+    if(!cellEl) return null;
+    const t = cellEl.getAttribute('t');
+    const vEl = cellEl.getElementsByTagName('v')[0];
+    if(!vEl) return null;
+    const raw = vEl.textContent;
+    if(t === 's') return sharedStrings[parseInt(raw)];
+    return raw;
+  }
+
+  // A workbook can contain several sheets that all mention "Gantt" — an old/superseded
+  // draft, a comparison sheet, and the real current one, which often isn't even named
+  // with the word "Gantt" at all (sometimes just the machine number). Rather than trust
+  // sheet naming, try every sheet, keep only ones that actually have a valid Op No +
+  // Description header row, and pick the largest/most complete one among those.
+  const sheetEls = Array.from(workbookDoc.getElementsByTagName('sheet'));
+  if(sheetEls.length===0) throw new Error('No sheet found in this workbook');
+  let best = null;
+  for(const sheetEl of sheetEls){
+    const rId = sheetEl.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id') || sheetEl.getAttribute('r:id');
+    const target = relMap[rId];
+    if(!target) continue;
+    const fileName = target.split('/').pop();
+    const doc = readXml('xl/' + target);
+    if(!doc) continue;
+    const candidateRows = {};
+    Array.from(doc.getElementsByTagName('row')).forEach(rowEl=>{
+      const r = parseInt(rowEl.getAttribute('r'));
+      const cells = {};
+      Array.from(rowEl.getElementsByTagName('c')).forEach(c=>{ cells[splitCellRef(c.getAttribute('r')).col] = c; });
+      candidateRows[r] = cells;
+    });
+    const candidateRowNums = Object.keys(candidateRows).map(Number).sort((a,b)=>a-b);
+    let candidateHeaderRow = null, candidateMaxCol = 0;
+    for(const rn of candidateRowNums){
+      const rowCells = candidateRows[rn];
+      const cols = Object.keys(rowCells).map(Number);
+      if(cols.length===0) continue;
+      const maxColThisRow = Math.max(...cols);
+      const cellsInOrder = [];
+      for(let c=1;c<=maxColThisRow;c++) cellsInOrder.push(cellValue(rowCells[c]) || '');
+      const trialMap = mapOpsHeaderRow(cellsInOrder);
+      if(!candidateHeaderRow && trialMap.op_no !== undefined && trialMap.description !== undefined){
+        candidateHeaderRow = rn;
+        candidateMaxCol = maxColThisRow;
+      }
+    }
+    if(candidateHeaderRow===null) continue; // not a real operations sheet — skip (e.g. a totals/comparison tab)
+    const score = candidateMaxCol; // wider sheet = more day columns = the real, complete chart
+    if(!best || score > best.score){
+      best = { sheetEl, fileName, doc, rows: candidateRows, rowNums: candidateRowNums, headerRow: candidateHeaderRow, score };
+    }
+  }
+  if(!best) throw new Error('No sheet in this workbook has a recognizable Op No + Description header row');
+  const sheetFileName = best.fileName;
+  const sheetDoc = best.doc;
+  const rows = best.rows;
+  const rowNums = best.rowNums;
+  const headerRow = best.headerRow;
 
   const stylesDoc = readXml('xl/styles.xml');
   const xfs = Array.from(stylesDoc.getElementsByTagName('cellXfs')[0].getElementsByTagName('xf')).map(xf => ({
@@ -847,46 +896,9 @@ async function parseGanttExcelWithColors(arrayBuffer, manualStartDate){
     }
   }
 
-  function cellValue(cellEl){
-    if(!cellEl) return null;
-    const t = cellEl.getAttribute('t');
-    const vEl = cellEl.getElementsByTagName('v')[0];
-    if(!vEl) return null;
-    const raw = vEl.textContent;
-    if(t === 's') return sharedStrings[parseInt(raw)];
-    return raw;
-  }
-
-  const rows = {};
-  Array.from(sheetDoc.getElementsByTagName('row')).forEach(rowEl=>{
-    const r = parseInt(rowEl.getAttribute('r'));
-    const cells = {};
-    Array.from(rowEl.getElementsByTagName('c')).forEach(c=>{
-      cells[splitCellRef(c.getAttribute('r')).col] = c;
-    });
-    rows[r] = cells;
-  });
-
-  // Locate the header row (has "Op No" and "Description" somewhere in row) and, if
-  // one exists, a separate date-mapping row (real Excel date serials across the day
-  // columns) — some shop templates put a second row of real dates below all the
-  // operations; others just number the day columns 1,2,3... with no real dates
-  // anywhere in the file at all, in which case the caller must supply a start date.
-  const rowNums = Object.keys(rows).map(Number).sort((a,b)=>a-b);
-  let headerRow = null, dateRow = null;
-  for(const rn of rowNums){
-    const rowCells = rows[rn];
-    const maxColThisRow = Math.max(...Object.keys(rowCells).map(Number));
-    const cellsInOrder = [];
-    for(let c=1;c<=maxColThisRow;c++) cellsInOrder.push(cellValue(rowCells[c]) || '');
-    const trialMap = mapOpsHeaderRow(cellsInOrder);
-    // Same alias list used for column mapping decides what counts as a header row —
-    // one definition, not two that can silently drift apart (a real bug found and
-    // fixed here: this used to require the literal word "description", which some
-    // real templates use "Activity Gantt Chart" or similar for instead).
-    if(!headerRow && trialMap.op_no !== undefined && trialMap.description !== undefined) headerRow = rn;
-  }
-  if(!headerRow) throw new Error('Could not find a header row with an Op No and a Description/Activity column');
+  // headerRow, rows, and rowNums were already determined for the winning sheet during
+  // selection above — just need to find the (optional) real date-mapping row now.
+  let dateRow = null;
   for(const rn of rowNums){
     if(rn <= headerRow) continue;
     const cells = rows[rn];
@@ -993,7 +1005,7 @@ async function parseGanttExcelWithColors(arrayBuffer, manualStartDate){
 
   return {
     operations, headerRow, dateRow, guessedMachine, guessedCustomer, guessedModel, skippedRows,
-    _diag: { sheetTarget, totalRowsFound: rowNums.length, firstRow: rowNums[0], lastRow: rowNums[rowNums.length-1], colMap, dayColStart, maxCol }
+    _diag: { sheetFileName, totalRowsFound: rowNums.length, firstRow: rowNums[0], lastRow: rowNums[rowNums.length-1], colMap, dayColStart, maxCol }
   };
 }
 
@@ -1670,7 +1682,7 @@ async function renderGanttImportWizard(app){
       }
       if(!parsed.operations || parsed.operations.length===0){
         const d = parsed._diag || {};
-        throw new Error('No operations found. Diagnostics — please copy this back: sheet='+d.sheetTarget+' totalRows='+d.totalRowsFound+' (rows '+d.firstRow+'–'+d.lastRow+') headerRow='+parsed.headerRow+' dateRow='+parsed.dateRow+' colMap='+JSON.stringify(d.colMap)+' dayColStart='+d.dayColStart+' maxCol='+d.maxCol);
+        throw new Error('No operations found. Diagnostics — please copy this back: sheet='+d.sheetFileName+' totalRows='+d.totalRowsFound+' (rows '+d.firstRow+'–'+d.lastRow+') headerRow='+parsed.headerRow+' dateRow='+parsed.dateRow+' colMap='+JSON.stringify(d.colMap)+' dayColStart='+d.dayColStart+' maxCol='+d.maxCol);
       }
       renderStage1();
     }catch(err){
@@ -1963,10 +1975,7 @@ async function renderJobsQr(app){
   });
 
   document.querySelectorAll('.machineDetailLink').forEach(b=>{
-    b.onclick = ()=>{
-      view = 'machine'; setNav();
-      renderMachineDetail(app, b.dataset.jobid);
-    };
+    b.onclick = ()=> goToMachineDetail(b.dataset.jobid);
   });
 
   document.querySelectorAll('[data-edit]').forEach(b=>{
@@ -2053,10 +2062,21 @@ function buildLabelSheet(jobIds, activeJobs, startPos){
 }
 
 /* ================= MACHINE DETAIL (consolidated view — job details + ops + all entries, editable) ================= */
+// Jumps to Machine Detail for a given job — used wherever a machine number is
+// shown as a clickable link (Jobs list, Dispatch Dashboard, etc.), so every one of
+// those leads to the same consolidated edit view instead of separate one-off pages.
+function goToMachineDetail(jobId){
+  view = 'machine'; setNav();
+  renderMachineDetail(document.getElementById('app'), jobId);
+}
+
 async function renderMachineDetail(app, jobId){
   const { data: job } = await sb.from('jobs').select('*, models(model_name)').eq('id', jobId).single();
   if(!job){ app.innerHTML = '<div class="panel"><div class="empty">Job not found.</div></div>'; return; }
+  const { data: ops } = await sb.from('job_operations').select('*').eq('job_id', jobId).order('sequence');
   const { data: entries } = await sb.from('entries').select('*, job_operations(op_no, description)').eq('job_id', jobId).order('activity_date', {ascending:false});
+  const planned = (ops && ops.length) ? computePlannedSchedule(job, ops) : {};
+  const recentEntries = (entries||[]).slice().sort((a,b)=> new Date(b.submitted_at) - new Date(a.submitted_at)).slice(0,3);
 
   app.innerHTML = `
     <div class="panel">
@@ -2084,6 +2104,14 @@ async function renderMachineDetail(app, jobId){
     <div class="panel" id="opsPanel" style="display:none;"></div>
     <div class="panel" id="mdAddEntryPanel" style="display:none;"></div>
     <div class="panel">
+      <div class="panel-title">Last Entered <span class="sub">most recently logged, so you know how current the data is</span></div>
+      <div class="stat-line" style="display:flex;gap:24px;flex-wrap:wrap;">
+        ${recentEntries.length ? recentEntries.map(e=>`
+          <span><b>${esc(e.activity_date)}</b> — ${esc(e.job_operations?.op_no||'')} ${esc(e.job_operations?.description||'')} · ${esc(e.status)} <span style="color:var(--steel-600);">(logged ${new Date(e.submitted_at).toLocaleDateString('en-GB')})</span></span>
+        `).join('') : '<span>No entries logged yet.</span>'}
+      </div>
+    </div>
+    <div class="panel">
       <div class="panel-title">All Entries (${(entries||[]).length})</div>
       <div class="table-scroll"><table class="entries" id="mdEntriesTable"></table></div>
     </div>
@@ -2092,9 +2120,13 @@ async function renderMachineDetail(app, jobId){
   function paintEntriesTable(){
     const table = document.getElementById('mdEntriesTable');
     if(!entries || entries.length===0){ table.innerHTML = '<tr><td class="empty">No entries logged yet.</td></tr>'; return; }
-    table.innerHTML = `<tr><th>Op</th><th>Date</th><th>Operator</th><th>Time</th><th>Status</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th><th></th></tr>
-      ${entries.map(e=>`<tr>
+    table.innerHTML = `<tr><th>Op</th><th>Plan Start</th><th>Plan End</th><th>Date</th><th>Operator</th><th>Time</th><th>Status</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th><th></th></tr>
+      ${entries.map(e=>{
+        const win = planned[e.job_operation_id];
+        return `<tr>
         <td>${esc(e.job_operations?.op_no||'')} ${esc(e.job_operations?.description||'')}</td>
+        <td class="mono">${win ? win.start.toISOString().slice(0,10) : '—'}</td>
+        <td class="mono">${win ? win.end.toISOString().slice(0,10) : '—'}</td>
         <td class="mono">${esc(e.activity_date)}</td>
         <td>${esc(e.primary_operator)}</td>
         <td class="mono">${e.start_time ? esc(e.start_time)+'–'+esc(e.end_time) : 'not worked'}</td>
@@ -2104,7 +2136,8 @@ async function renderMachineDetail(app, jobId){
         <td>${e.responsibility ? esc(e.responsibility) : '—'}</td>
         <td style="font-size:10.5px;color:var(--steel-600);" class="mono">${new Date(e.submitted_at).toLocaleString()}</td>
         <td><button class="btn ghost small mdEditEntryBtn" data-id="${e.id}">Edit</button> <button class="btn danger small mdDeleteEntryBtn" data-id="${e.id}">Delete</button></td>
-      </tr>`).join('')}`;
+      </tr>`;
+      }).join('')}`;
     table.querySelectorAll('.mdEditEntryBtn').forEach(b=>{
       b.onclick = ()=>{
         const found = entries.find(e=>e.id===b.dataset.id);
@@ -2442,19 +2475,11 @@ async function renderGanttChart(app){
   };
 }
 
-async function drawGanttForJob(area, job){
-  area.innerHTML = `<div class="panel"><div class="empty">Loading…</div></div>`;
-  const { data: ops } = await sb.from('job_operations').select('*').eq('job_id', job.id).order('sequence');
-  const { data: entries } = await sb.from('entries').select('*').eq('job_id', job.id);
-
-  if(!ops || ops.length===0){
-    area.innerHTML = `<div class="panel"><div class="empty">No operations set up for this job yet — add some in Jobs / QR Labels → Edit Ops first.</div></div>`;
-    return;
-  }
-
-  // Planned schedule: walk Series operations sequentially, consuming daily shift
-  // capacity and skipping Sundays. Parallel operations share the window of
-  // whichever Series operation they run alongside, so they don't extend the timeline.
+// Walks Series operations sequentially, consuming daily shift capacity and skipping
+// Sundays, to compute each operation's planned start/end window. Parallel operations
+// share the window of whichever Series operation they run alongside. Shared by the
+// Gantt Chart and Machine Detail pages so both always agree on the same numbers.
+function computePlannedSchedule(job, ops){
   const dailyCap = Math.max(0.1, (job.shift_count||1) * (job.hours_per_shift||8));
   let cursor = new Date((job.start_date || new Date().toISOString().slice(0,10)) + 'T00:00:00');
   while(cursor.getDay()===0) cursor.setDate(cursor.getDate()+1);
@@ -2487,6 +2512,22 @@ async function drawGanttForJob(area, job){
       dayRemaining = dailyCap;
     }
   });
+  return planned;
+}
+
+async function drawGanttForJob(area, job){
+  area.innerHTML = `<div class="panel"><div class="empty">Loading…</div></div>`;
+  const { data: ops } = await sb.from('job_operations').select('*').eq('job_id', job.id).order('sequence');
+  const { data: entries } = await sb.from('entries').select('*').eq('job_id', job.id);
+
+  if(!ops || ops.length===0){
+    area.innerHTML = `<div class="panel"><div class="empty">No operations set up for this job yet — add some in Jobs / QR Labels → Edit Ops first.</div></div>`;
+    return;
+  }
+
+  // Planned schedule — shared with Machine Detail's Plan Start/Plan End columns, so
+  // both pages always agree on the same numbers rather than maintaining two copies.
+  const planned = computePlannedSchedule(job, ops);
 
   // Actual schedule: group entries per operation, per exact day, so each day renders
   // in its own real chronological position — not compressed into one bar with delay
@@ -2722,7 +2763,8 @@ async function renderDispatchReport(app){
         { label:'Planned', data:months.map(m=>plannedByMonth[m]||0), borderColor:'#4fbf85', backgroundColor:'rgba(79,191,133,.15)', fill:true, tension:.3 },
         { label:'Actual', data:months.map(m=>actualByMonth[m]||0), borderColor:'#f2a30f', backgroundColor:'rgba(242,163,15,.15)', fill:true, tension:.3 }
       ]},
-      options:{ responsive:true, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } } } }
+      options:{ responsive:true, plugins:{legend:{labels:{font:{size:13},color:'#2a2f33'}}},
+        scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1, font:{size:12}, color:'#2a2f33' } }, x:{ ticks:{font:{size:12},color:'#2a2f33'} } } }
     });
   }
 
@@ -2741,7 +2783,8 @@ async function renderDispatchReport(app){
         data:[onTimeCt, lateCt, pendingCt, inProcessCt],
         backgroundColor:['#4fbf85','#e0625a','#f2a30f','#5a9fd4']
       }]},
-      options:{ responsive:true, plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } } } }
+      options:{ responsive:true, plugins:{legend:{display:false}},
+        scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1, font:{size:12}, color:'#2a2f33' } }, x:{ ticks:{font:{size:13,weight:'bold'},color:'#2a2f33'} } } }
     });
   }
 
@@ -2756,7 +2799,7 @@ async function renderDispatchReport(app){
     window.__dispatchModelChart = new Chart(document.getElementById('dispatchModelCanvas'), {
       type:'doughnut',
       data:{ labels, datasets:[{ data:labels.map(l=>byModel[l]), backgroundColor:['#f2a30f','#7ec4e0','#8f6b9e','#4fbf85','#e0625a','#5a9fd4'] }] },
-      options:{ responsive:true, plugins:{legend:{position:'right'}} }
+      options:{ responsive:true, plugins:{legend:{position:'right', labels:{font:{size:13},color:'#2a2f33'}}} }
     });
   }
 
@@ -2769,7 +2812,7 @@ async function renderDispatchReport(app){
         const onTime = isOnTime(r);
         const badge = onTime===null ? '—' : onTime ? '<span style="color:var(--green-600);font-weight:700;">ON-TIME</span>' : '<span style="color:var(--red-600);font-weight:700;">LATE</span>';
         return `<tr>
-          <td><b>${esc(r.machine_no)}</b></td>
+          <td><b class="machineDetailLink" data-jobid="${r.job_id}" style="cursor:pointer;text-decoration:underline;">${esc(r.machine_no)}</b></td>
           <td>${esc(r.model_name||'')}</td>
           <td>${esc(r.customer||'')}</td>
           <td class="mono">${r.plan_start ? esc(r.plan_start) : '—'}</td>
@@ -2789,6 +2832,9 @@ async function renderDispatchReport(app){
     paintModelChart(rows);
     paintStatusChart(rows);
     paintTable(rows);
+    document.querySelectorAll('#dispTable .machineDetailLink').forEach(b=>{
+      b.onclick = ()=> goToMachineDetail(b.dataset.jobid);
+    });
   }
   repaint();
   document.getElementById('dispFrom').onchange = repaint;
