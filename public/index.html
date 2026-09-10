@@ -3213,6 +3213,11 @@ async function renderIssueLog(app){
         </div>
         <div class="chart-box" style="margin-top:10px;"><b style="font-size:12px;">Top Machines by Delay Hours</b><div class="ranked-list" id="topMachineList"></div></div>
       </div>
+      <div class="panel" style="background:var(--plate-50);margin-top:14px;">
+        <div class="panel-title">Backfill Generic Delay Reasons <span class="sub">fills placeholder "Imported from historical Gantt chart" text forward from the nearest real supervisor comment within the same continuous Hold stretch</span></div>
+        <button class="btn ghost small" id="backfillPreviewBtn">Preview Changes</button>
+        <div id="backfillArea" style="margin-top:10px;"></div>
+      </div>
       <div class="row3" style="margin-bottom:10px;">
         <div><label>Machine</label><select id="iFilterM"><option value="">All</option>${(jobs||[]).map(j=>`<option value="${esc(j.machine_no)}">${esc(j.machine_no)}</option>`).join('')}</select></div>
         <div><label>Responsibility</label><select id="iFilterR"><option value="">All</option>${(respList||[]).map(r=>`<option>${esc(r.name)}</option>`).join('')}</select></div>
@@ -3288,6 +3293,81 @@ async function renderIssueLog(app){
       paintIssues();
     };
   });
+
+  const GENERIC_REASON = 'Imported from historical Gantt chart';
+  function computeBackfillPlan(){
+    // Groups entries by job+operation, splits each into contiguous runs of Hold-status
+    // days (any Completed or Partial day breaks a run), and within each run fills every
+    // generic-placeholder day both forward AND backward from whichever real reason(s)
+    // exist in that run — a comment attached partway through a red stretch should cover
+    // the whole stretch, not just the days after it. A second distinct real reason later
+    // in the same run takes over from that point on ("unless there is new remark").
+    const byJobOp = {};
+    (entries||[]).forEach(e=>{
+      if(!e.job_operation_id) return;
+      const key = e.job_id+'|'+e.job_operation_id;
+      (byJobOp[key] = byJobOp[key]||[]).push(e);
+    });
+    const changes = [];
+    Object.values(byJobOp).forEach(list=>{
+      list.sort((a,b)=> (a.activity_date||'').localeCompare(b.activity_date||''));
+      let runs = [], current = [];
+      list.forEach(e=>{
+        if(e.status==='Hold'){ current.push(e); }
+        else { if(current.length) runs.push(current); current=[]; }
+      });
+      if(current.length) runs.push(current);
+      runs.forEach(run=>{
+        const resolved = new Array(run.length).fill(null);
+        let carry = null;
+        run.forEach((e,i)=>{
+          const isGeneric = !e.issue_reason || e.issue_reason===GENERIC_REASON;
+          if(!isGeneric){ carry = e.issue_reason; resolved[i] = e.issue_reason; }
+          else if(carry){ resolved[i] = carry; }
+        });
+        let backCarry = null;
+        for(let i=run.length-1;i>=0;i--){
+          if(resolved[i]){ backCarry = resolved[i]; }
+          else if(backCarry){ resolved[i] = backCarry; }
+        }
+        run.forEach((e,i)=>{
+          const isGeneric = !e.issue_reason || e.issue_reason===GENERIC_REASON;
+          if(isGeneric && resolved[i] && resolved[i]!==e.issue_reason){
+            changes.push({ entry: e, from: e.issue_reason, to: resolved[i] });
+          }
+        });
+      });
+    });
+    return changes;
+  }
+
+  document.getElementById('backfillPreviewBtn').onclick = ()=>{
+    const changes = computeBackfillPlan();
+    const area = document.getElementById('backfillArea');
+    if(changes.length===0){ area.innerHTML = '<div class="stat-line">Nothing to backfill — no generic placeholders sit inside a Hold run that has a real reason to inherit.</div>'; return; }
+    area.innerHTML = `
+      <div class="stat-line">${changes.length} entries would be updated:</div>
+      <div class="table-scroll"><table class="entries">
+        <tr><th>Machine</th><th>Op</th><th>Date</th><th>From</th><th>To</th></tr>
+        ${changes.map(c=>`<tr>
+          <td>${esc(c.entry.jobs?.machine_no||'')}</td>
+          <td>${esc(c.entry.job_operations?.op_no||'')} ${esc(c.entry.job_operations?.description||'')}</td>
+          <td class="mono">${esc(c.entry.activity_date)}</td>
+          <td style="color:var(--steel-600);">${esc(c.from||'(blank)')}</td>
+          <td style="color:var(--green-600);font-weight:600;">${esc(c.to)}</td>
+        </tr>`).join('')}
+      </table></div>
+      <button class="btn amber" id="backfillApplyBtn" style="margin-top:10px;">Apply These ${changes.length} Changes</button>
+    `;
+    document.getElementById('backfillApplyBtn').onclick = (e)=> withLock(e.target, 'Applying…', async ()=>{
+      for(const c of changes){
+        const { error } = await sb.from('entries').update({ issue_reason: c.to }).eq('id', c.entry.id);
+        if(error){ toast('Stopped due to an error: '+error.message, true); return; }
+      }
+      toast(`Updated ${changes.length} entries`);
+      renderIssueLog(app);
+    });
+  };
 }
 
 /* ================= ALL PRODUCTION ENTRIES (own tab) ================= */
@@ -3793,6 +3873,9 @@ async function renderStationOverview(app){
   const stations = tvStations || [];
   const byStationNo = {};
   stations.forEach(s=>{ if(s.station_no) byStationNo[s.station_no] = s; });
+  const { data: notesData } = await sb.from('station_notes').select('*');
+  const notesByStation = {};
+  (notesData||[]).forEach(n=>{ notesByStation[n.station_no] = n.note; });
 
   let runningCt=0, holdCt=0, completedCt=0, delayedCt=0, pendingCt=0, totalDelayHours=0;
   const computed = stations.map(s=>{
@@ -3813,10 +3896,12 @@ async function renderStationOverview(app){
   for(let i=1;i<=TOTAL_STATIONS;i++){
     const s = byStationNo[i];
     if(!s){
-      cardsHtml += `<div class="tv-ov-card empty">
+      const note = notesByStation[i];
+      cardsHtml += `<div class="tv-ov-card empty stationNoteTarget" data-stationno="${i}" style="cursor:pointer;">
         <div class="tv-ov-station-no">STATION ${String(i).padStart(2,'0')}</div>
+        ${note ? `<div class="tv-ov-empty-label" style="color:#ffc857;font-weight:700;">${esc(note)}</div>` : `
         <div class="tv-ov-empty-plus">+</div>
-        <div class="tv-ov-empty-label">No Job Assigned<br>Station Empty</div>
+        <div class="tv-ov-empty-label">No Job Assigned<br>Station Empty</div>`}
       </div>`;
       continue;
     }
@@ -3875,6 +3960,20 @@ async function renderStationOverview(app){
       const jobId = card.dataset.jobid;
       const idx = tvStations.findIndex(s=>s.job_id===jobId);
       if(idx>=0) tvJumpToDetail(idx);
+    };
+  });
+  document.querySelectorAll('.stationNoteTarget').forEach(card=>{
+    card.onclick = async ()=>{
+      const stNo = card.dataset.stationno;
+      const current = notesByStation[stNo] || '';
+      const next = prompt('Note for Station '+stNo+' (leave blank to clear):', current);
+      if(next===null) return; // cancelled
+      if(next.trim()===''){
+        await sb.from('station_notes').delete().eq('station_no', stNo);
+      } else {
+        await sb.from('station_notes').upsert({ station_no: parseInt(stNo), note: next.trim(), updated_at: new Date().toISOString() });
+      }
+      renderStationOverview(app);
     };
   });
 }
