@@ -431,6 +431,46 @@
   .tv-ov-area-status.ontrack{border-color:var(--green-600);background:rgba(63,143,99,.14);color:#6fd39a;}
   .tv-ov-area-status.atrisk{border-color:var(--amber-signal);background:rgba(224,163,0,.14);color:#ffc857;}
   .tv-ov-area-status.delayed{border-color:var(--red-600);background:rgba(192,57,43,.16);color:#ff8a7a;}
+  body.tv-ov-active{background:#eef1f4;}
+  body.tv-ov-active .tv-ov-title{color:var(--graphite-950);}
+  body.tv-ov-active .tv-ov-subtitle{color:var(--steel-600);}
+  body.tv-ov-active .tv-ov-kpi{background:#fff;border:1px solid var(--plate-100);box-shadow:0 2px 10px rgba(20,30,40,.06);}
+  body.tv-ov-active .tv-ov-kpi .n{color:var(--graphite-950);}
+  body.tv-ov-active .tv-ov-kpi .l{color:var(--steel-600);}
+  body.tv-ov-active .tv-ov-kpi.green .n{color:#2f9e5c;} body.tv-ov-active .tv-ov-kpi.blue .n{color:#2f80c4;}
+  body.tv-ov-active .tv-ov-kpi.amber .n{color:#c98400;} body.tv-ov-active .tv-ov-kpi.red .n{color:#d84a3d;}
+  body.tv-ov-active .tv-ov-area-status.ontrack{background:#e8f7ee;color:#1f7a44;}
+  body.tv-ov-active .tv-ov-area-status.atrisk{background:#fef4e0;color:#a86400;}
+  body.tv-ov-active .tv-ov-area-status.delayed{background:#fdeceb;color:#c0392b;}
+  body.tv-ov-active .tv-ov-card{background:#fff;border-top:1px solid var(--plate-100);border-right:1px solid var(--plate-100);border-bottom:1px solid var(--plate-100);box-shadow:0 2px 12px rgba(20,30,40,.07);}
+  body.tv-ov-active .tv-ov-station-no{color:var(--steel-600);}
+  body.tv-ov-active .tv-ov-machine{color:var(--graphite-950);}
+  body.tv-ov-active .tv-ov-customer{color:var(--steel-600);}
+  body.tv-ov-active .tv-ov-op{color:var(--graphite-950);}
+  body.tv-ov-active .tv-ov-progress-track{background:var(--plate-100);}
+  body.tv-ov-active .tv-ov-pct{color:var(--steel-600);}
+  body.tv-ov-active .tv-ov-status-badge.green{background:#e8f7ee;color:#1f7a44;}
+  body.tv-ov-active .tv-ov-status-badge.blue{background:#e6f2fb;color:#2f80c4;}
+  body.tv-ov-active .tv-ov-status-badge.amber{background:#fef4e0;color:#a86400;}
+  body.tv-ov-active .tv-ov-status-badge.red{background:#fdeceb;color:#c0392b;}
+  body.tv-ov-active .tv-ov-card.empty{background:#f6f8f9;border-left-color:var(--plate-100);opacity:1;}
+  body.tv-ov-active .tv-ov-card.empty .tv-ov-station-no{color:var(--steel-600);}
+  body.tv-ov-active .tv-ov-empty-plus{color:var(--steel-600);}
+  body.tv-ov-active .tv-ov-empty-label{color:var(--steel-600);}
+  /* Station notes ("Booked for CNC" etc.) need to read clearly at TV viewing distance */
+  body.tv-ov-active .tv-ov-empty-label.has-note{font-size:16px;font-weight:800;color:#a86400;letter-spacing:.2px;line-height:1.3;}
+  .tv-ov-delay-badges{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .tv-ov-delay-badge{font-size:9.5px;font-weight:700;text-transform:uppercase;padding:2px 7px;border-radius:6px;letter-spacing:.2px;}
+  body.tv-ov-active .tv-ov-delay-badge.green{background:#e8f7ee;color:#1f7a44;}
+  body.tv-ov-active .tv-ov-delay-badge.blue{background:#e6f2fb;color:#2f80c4;}
+  body.tv-ov-active .tv-ov-delay-badge.amber{background:#fef4e0;color:#a86400;}
+  body.tv-ov-active .tv-ov-delay-badge.red{background:#fdeceb;color:#c0392b;}
+  body.tv-ov-active .tv-ov-delay-badge.grey{background:var(--plate-100);color:var(--steel-600);}
+  .tv-ov-delay-badge.green{background:rgba(63,143,99,.25);color:#6fd39a;}
+  .tv-ov-delay-badge.blue{background:rgba(126,196,224,.22);color:#7ec4e0;}
+  .tv-ov-delay-badge.amber{background:rgba(224,163,0,.25);color:#ffc857;}
+  .tv-ov-delay-badge.red{background:rgba(192,57,43,.25);color:#ff8a7a;}
+  .tv-ov-delay-badge.grey{background:rgba(255,255,255,.1);color:var(--steel-300);}
   .tv-ov-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;width:100%;margin-top:24px;}
   @media(max-width:1300px){.tv-ov-grid{grid-template-columns:repeat(3,1fr);}}
   .tv-ov-card{border-radius:8px;padding:14px 16px;text-align:left;min-height:180px;cursor:pointer;
@@ -3569,6 +3609,33 @@ function computeTargetDate(startDateStr, totalHours, shiftsPerDay, hoursPerShift
   return d.toISOString().slice(0,10);
 }
 // ontrack = finishing on/before SO date · atrisk = late but within a 3-day buffer · delayed = beyond that
+function computeExpectedHoursByToday(startDateStr, shiftsPerDay, hoursPerShift){
+  // How many working hours (skipping Sundays) SHOULD have elapsed between a planned
+  // start date and today, if everything ran exactly on the original internal schedule.
+  if(!startDateStr) return 0;
+  const dailyCap = (shiftsPerDay||1)*(hoursPerShift||8);
+  let cursor = new Date(startDateStr+'T00:00:00');
+  const today = new Date(new Date().toISOString().slice(0,10)+'T00:00:00');
+  let hours = 0;
+  while(cursor < today){
+    if(cursor.getDay()!==0) hours += dailyCap;
+    cursor.setDate(cursor.getDate()+1);
+  }
+  return hours;
+}
+function computePlanAdherence(s){
+  // "Behind Plan" — are we behind our OWN internal schedule right now, today —
+  // distinct from "vs SO", which is a forward-looking projection against the
+  // customer's promised date. A job can be behind its internal plan while still
+  // safely on track for the SO if there's schedule buffer, or vice versa.
+  if(!s.planned_start_date || !s.std_hours) return null;
+  const dailyCap = (s.shift_count||1)*(s.hours_per_shift||8);
+  const expected = Math.min(computeExpectedHoursByToday(s.planned_start_date, s.shift_count, s.hours_per_shift), s.std_hours);
+  const behindHours = expected - (s.earned_hours||0);
+  if(behindHours <= dailyCap*0.25) return { status:'ontrack', behindDays:0 };
+  const behindDays = behindHours / dailyCap;
+  return { status: behindDays>1 ? 'delayed' : 'atrisk', behindDays };
+}
 function deliveryRiskLevel(estDateStr, soDateStr, bufferDays){
   if(!estDateStr || !soDateStr) return null;
   if(estDateStr <= soDateStr) return 'ontrack';
@@ -3904,13 +3971,20 @@ async function renderStationOverview(app){
       const note = notesByStation[i];
       cardsHtml += `<div class="tv-ov-card empty stationNoteTarget" data-stationno="${i}" style="cursor:pointer;">
         <div class="tv-ov-station-no">STATION ${String(i).padStart(2,'0')}</div>
-        ${note ? `<div class="tv-ov-empty-label" style="color:#ffc857;font-weight:700;">${esc(note)}</div>` : `
+        ${note ? `<div class="tv-ov-empty-label has-note">${esc(note)}</div>` : `
         <div class="tv-ov-empty-plus">+</div>
         <div class="tv-ov-empty-label">No Job Assigned<br>Station Empty</div>`}
       </div>`;
       return;
     }
     const st = computeOverviewStatus(s);
+    const remainingHours = Math.max(0, (s.std_hours||0) - (s.earned_hours||0));
+    const estDate = computeTargetDate(new Date().toISOString().slice(0,10), remainingHours, s.shift_count, s.hours_per_shift);
+    const soRisk = deliveryRiskLevel(estDate, s.delivery_date, 3); // null | 'ontrack' | 'atrisk' | 'delayed'
+    const planAdh = computePlanAdherence(s); // null | { status, behindDays }
+    const soBadgeText = soRisk===null ? 'SO: —' : soRisk==='ontrack' ? 'SO: On Time' : soRisk==='atrisk' ? 'SO: At Risk' : 'SO: Late';
+    const planBadgeText = planAdh===null ? 'PLAN: —' : planAdh.status==='ontrack' ? 'PLAN: On Track' : `PLAN: -${planAdh.behindDays.toFixed(1)}d`;
+    const badgeColorClass = (r)=> r==='delayed' ? 'red' : r==='atrisk' ? 'amber' : r==='ontrack' ? 'green' : 'grey';
     cardsHtml += `<div class="tv-ov-card ${st.color}" data-jobid="${s.job_id}">
       <div>
         <div class="tv-ov-card-top">
@@ -3921,6 +3995,10 @@ async function renderStationOverview(app){
         <div class="tv-ov-customer">${esc(s.customer||'')} · ${esc(s.model_name||'')}</div>
         <div class="tv-ov-op">${s.current_op_no ? esc(s.current_op_no)+' — '+esc(s.current_op_description||'') : 'All ops complete'}</div>
         <div class="tv-ov-progress-track"><div class="tv-ov-progress-fill" style="width:${st.totalMachinePct}%;"></div></div>
+        <div class="tv-ov-delay-badges">
+          <span class="tv-ov-delay-badge ${badgeColorClass(soRisk)}">${soBadgeText}</span>
+          <span class="tv-ov-delay-badge ${badgeColorClass(planAdh?.status)}">${planBadgeText}</span>
+        </div>
       </div>
       <div class="tv-ov-card-bottom">
         <span class="tv-ov-pct">${st.totalMachinePct}%</span>
@@ -4150,13 +4228,14 @@ async function renderDispatchDashboardTV(app){
 
 async function tvRenderCurrentPage(app){
   renderTvControls(app);
+  document.body.classList.toggle('tv-ov-active', tvPageIdx===0); // Overview uses a light theme; Detail/Dispatch stay dark
   if(tvPageIdx===0){
     await renderStationOverview(app);
   } else if(tvPageIdx===1){
     await renderDispatchDashboardTV(app);
   } else {
     const idx = tvPageIdx-2;
-    if(idx>=tvStations.length){ tvPageIdx=0; await renderStationOverview(app); return; }
+    if(idx>=tvStations.length){ tvPageIdx=0; document.body.classList.add('tv-ov-active'); await renderStationOverview(app); return; }
     await renderStationCard(app, tvStations[idx], idx, tvStations.length);
   }
 }
