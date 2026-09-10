@@ -2227,6 +2227,7 @@ async function renderScan(app, token){
 async function renderEntryFormForJob(app, job){
   const { data: ops } = await sb.from('job_operations').select('*').eq('job_id', job.id).order('sequence');
   const { data: resp } = await sb.from('responsibilities').select('*').order('name');
+  const { data: recent } = await sb.rpc('get_recent_entries_for_job', { p_job_id: job.id, p_limit: 2 });
   const today = new Date().toISOString().slice(0,10);
 
   app.innerHTML = `
@@ -2235,6 +2236,13 @@ async function renderEntryFormForJob(app, job){
       <div class="np-row"><span>Customer</span><b>${esc(job.customer||'—')}</b></div>
       <div class="np-row"><span>Model</span><b>${esc(job.models?.model_name||'—')}</b></div>
     </div>
+    ${recent && recent.length ? `
+    <div class="panel" style="padding-top:10px;padding-bottom:10px;">
+      <div class="stat-line" style="font-weight:700;text-transform:uppercase;font-size:11px;color:var(--steel-600);margin-bottom:4px;">Last Logged — so you know what's already been entered</div>
+      <div class="stat-line" style="display:flex;flex-direction:column;gap:3px;">
+        ${recent.map(e=>`<span><b>${esc(e.activity_date)}</b> — ${esc(e.op_no||'')} ${esc(e.op_description||'')} · ${esc(e.status)} · by ${esc(e.primary_operator)}</span>`).join('')}
+      </div>
+    </div>` : ''}
     <div class="panel">
       <div class="panel-title">Log Your Work</div>
       <label>Your Name</label><input id="s_name" name="operator_name" autocomplete="name" placeholder="Your name">
