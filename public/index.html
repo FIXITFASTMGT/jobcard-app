@@ -298,7 +298,7 @@
   .tv-event-time{color:var(--steel-300);font-family:var(--font-mono);min-width:60px;font-size:10.5px;}
 
   /* ---------- TV redesign v3: horizontal identity strip, 4 metric widgets, ranked reasons ---------- */
-  .tv-hbar{display:flex;align-items:stretch;gap:0;width:100%;max-width:none;
+  .tv-hbar{display:flex;align-items:stretch;gap:0;width:100%;max-width:none;margin-top:46px;
     background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.015));
     border:1px solid rgba(255,255,255,.12);border-radius:10px;overflow:hidden;text-align:left;
     box-shadow:0 4px 16px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.05);}
@@ -3694,6 +3694,7 @@ async function renderStationCard(app, s, idx, total){
   const remainingHours = Math.max(0, (s.std_hours||0) - (s.earned_hours||0));
   const estDate = computeTargetDate(todayStr, remainingHours, s.shift_count, s.hours_per_shift);
   const risk = deliveryRiskLevel(estDate, s.delivery_date, 3);
+  const planAdh = computePlanAdherence(s);
   const riskLabel = risk==='ontrack' ? 'ON TRACK' : risk==='atrisk' ? 'AT RISK' : risk==='delayed' ? 'DELAYED' : 'STATUS UNKNOWN';
   const riskClass = risk || '';
   const riskSub = risk==='ontrack' ? 'Comfortably meeting the target delivery.' : risk==='atrisk' ? 'Slightly behind — within buffer.' : risk==='delayed' ? 'Delivery is at risk based on current projection.' : '';
@@ -3821,7 +3822,7 @@ async function renderStationCard(app, s, idx, total){
         </div>` : `<div class="tv-panel"><div class="tv-table-title">Current Issue</div><div class="tv-table-empty">No open issue logged</div></div>`}
       </div>
 
-      <div class="tv-metric-row">
+      <div class="tv-metric-row" style="grid-template-columns:1fr 1fr 1fr 1.7fr;">
         <div class="tv-mw">
           <div class="lbl">${tvIcon('trending',12)} Overall Progress</div>
           <div class="tv-mw-donut-wrap">
@@ -3840,10 +3841,20 @@ async function renderStationCard(app, s, idx, total){
           <div class="caption">Across all operations</div>
         </div>
         <div class="tv-mw">
-          <div class="lbl">${tvIcon('calendar',12)} Est. Delivery</div>
-          <div class="big ${risk==='delayed'?'red':''}" style="font-size:19px;">${fmtDate(estDate)}</div>
-          <div class="caption">Plan: ${fmtDate(s.delivery_date)}</div>
-          ${lateBadge}
+          <div class="lbl">${tvIcon('calendar',12)} Delivery — As per SO vs As per Gantt Plan</div>
+          <div style="display:flex;gap:16px;margin-top:4px;">
+            <div style="flex:1;">
+              <div class="caption" style="text-transform:uppercase;font-weight:700;letter-spacing:.4px;">As per SO</div>
+              <div class="big ${risk==='delayed'?'red':risk==='atrisk'?'amber':''}" style="font-size:17px;">${fmtDate(estDate)}</div>
+              <div class="caption">SO Target: ${fmtDate(s.delivery_date)}</div>
+              ${lateBadge}
+            </div>
+            <div style="flex:1;border-left:1px solid rgba(255,255,255,.1);padding-left:16px;">
+              <div class="caption" style="text-transform:uppercase;font-weight:700;letter-spacing:.4px;">As per Gantt Plan</div>
+              <div class="big ${planAdh?.status==='delayed'?'red':planAdh?.status==='atrisk'?'amber':''}" style="font-size:17px;">${planAdh===null ? '—' : planAdh.status==='ontrack' ? 'On Track' : 'Delayed'}</div>
+              <div class="caption">${planAdh===null ? 'No planned start date set' : planAdh.status==='ontrack' ? 'Matching internal schedule' : planAdh.behindDays.toFixed(1)+'d behind internal schedule'}</div>
+            </div>
+          </div>
         </div>
       </div>
 
