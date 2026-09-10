@@ -3847,7 +3847,8 @@ async function renderStationCard(app, s, idx, total){
   }
 }
 let tvCountdownTimer=null, tvCountdownVal=60;
-const TOTAL_STATIONS = 24; // change this constant if the floor grows/shrinks — nothing else to touch
+const TOTAL_STATIONS = 24; // highest station NUMBER used on the floor — not the same as the count of real stations, see EXCLUDED_STATIONS below
+const EXCLUDED_STATIONS = [16, 21]; // station numbers that don't physically exist / aren't in use — never rendered as a card at all
 
 // Computes an overview card's color/label entirely from data get_station_summary() already
 // returns — no extra per-station queries needed for 18 cards at once.
@@ -3876,6 +3877,8 @@ async function renderStationOverview(app){
   const { data: notesData } = await sb.from('station_notes').select('*');
   const notesByStation = {};
   (notesData||[]).forEach(n=>{ notesByStation[n.station_no] = n.note; });
+  const activeStationNumbers = [];
+  for(let i=1;i<=TOTAL_STATIONS;i++){ if(!EXCLUDED_STATIONS.includes(i)) activeStationNumbers.push(i); }
 
   let runningCt=0, holdCt=0, completedCt=0, delayedCt=0, pendingCt=0, totalDelayHours=0;
   const computed = stations.map(s=>{
@@ -3888,12 +3891,14 @@ async function renderStationOverview(app){
     totalDelayHours += (s.delay_hours_total||0);
     return { s, st };
   });
-  const emptyCt = TOTAL_STATIONS - stations.length;
+  // "Empty" means genuinely nothing going on — no job AND no note explaining the
+  // station's absence (e.g. "Booked for CNC" isn't empty, it's just not a tracked job).
+  const emptyCt = activeStationNumbers.filter(i => !byStationNo[i] && !notesByStation[i]).length;
   const areaRisk = delayedCt>0 ? 'delayed' : (holdCt>0 || runningCt===0 && completedCt===0 ? 'atrisk' : (holdCt>0?'atrisk':'ontrack'));
   const areaLabel = areaRisk==='delayed'?'DELAYED':areaRisk==='atrisk'?'AT RISK':'ON TRACK';
 
   let cardsHtml = '';
-  for(let i=1;i<=TOTAL_STATIONS;i++){
+  activeStationNumbers.forEach(i=>{
     const s = byStationNo[i];
     if(!s){
       const note = notesByStation[i];
@@ -3903,7 +3908,7 @@ async function renderStationOverview(app){
         <div class="tv-ov-empty-plus">+</div>
         <div class="tv-ov-empty-label">No Job Assigned<br>Station Empty</div>`}
       </div>`;
-      continue;
+      return;
     }
     const st = computeOverviewStatus(s);
     cardsHtml += `<div class="tv-ov-card ${st.color}" data-jobid="${s.job_id}">
@@ -3922,7 +3927,7 @@ async function renderStationOverview(app){
         <span class="tv-ov-status-badge ${st.color}">${st.label}</span>
       </div>
     </div>`;
-  }
+  });
 
   app.innerHTML = `
     <div class="tv-card" style="justify-content:center;padding-top:24px;">
@@ -3930,7 +3935,7 @@ async function renderStationOverview(app){
         <div class="tv-ov-title">HYD ASSEMBLY AREA</div>
         <div class="tv-ov-subtitle">All Stations Overview</div>
         <div class="tv-ov-kpi-row">
-          <div class="tv-ov-kpi"><div class="n">${TOTAL_STATIONS}</div><div class="l">Total Stations</div></div>
+          <div class="tv-ov-kpi"><div class="n">${activeStationNumbers.length}</div><div class="l">Total Stations</div></div>
           <div class="tv-ov-kpi blue"><div class="n">${runningCt}</div><div class="l">Running</div></div>
           <div class="tv-ov-kpi amber"><div class="n">${holdCt}</div><div class="l">On Hold</div></div>
           <div class="tv-ov-kpi green"><div class="n">${completedCt}</div><div class="l">Completed</div></div>
