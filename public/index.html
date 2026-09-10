@@ -1716,6 +1716,11 @@ async function renderGanttImportWizard(app){
           <div><label>Hours / Shift</label><input id="gj_hrsday" type="number" step="0.5" value="7.5"></div>
           <div><label>Station No. <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(optional)</span></label><input id="gj_station" type="number" min="1"></div>
         </div>
+        <div class="row3">
+          <div><label>Target Delivery Date (as per SO) <span style="color:var(--steel-600);text-transform:none;font-weight:400;">(without this, Overall Status can't be computed and will show "Status Unknown")</span></label><input id="gj_delivery" type="date"></div>
+          <div></div>
+          <div></div>
+        </div>
         <label>Is this machine already dispatched, or still on the floor?</label>
         <div class="toggle-pair">
           <button type="button" id="gj_floor_btn" class="on">Still On Floor</button>
@@ -1752,6 +1757,7 @@ async function renderGanttImportWizard(app){
         shift_count: parseInt(document.getElementById('gj_shifts').value)||1,
         hours_per_shift: parseFloat(document.getElementById('gj_hrsday').value)||7.5,
         station_no: document.getElementById('gj_station').value ? parseInt(document.getElementById('gj_station').value) : null,
+        delivery_date: document.getElementById('gj_delivery').value || null,
         packing_start_date: document.getElementById('gj_pack_start')?.value || null,
         packing_end_date: document.getElementById('gj_pack_end')?.value || null,
         dispatch_date: document.getElementById('gj_dispatch_date')?.value || null,
@@ -1819,7 +1825,7 @@ async function renderGanttImportWizard(app){
       machine_no: jobFields.machine_no, customer: jobFields.customer, model_id: modelId,
       start_date: earliestDate, actual_start_date: earliestDate,
       shift_count: jobFields.shift_count, hours_per_shift: jobFields.hours_per_shift,
-      station_no: jobFields.station_no, status: 'Active'
+      station_no: jobFields.station_no, delivery_date: jobFields.delivery_date, status: 'Active'
     };
     if(isDispatched){
       jobInsert.packing_start_date = jobFields.packing_start_date;
@@ -2113,15 +2119,36 @@ async function renderMachineDetail(app, jobId){
     </div>
     <div class="panel">
       <div class="panel-title">All Entries (${(entries||[]).length})</div>
+      <div class="row3">
+        <div><label>Status</label><select id="mdFilterStatus"><option value="">All</option><option value="Completed">Completed</option><option value="Partial">Partial</option><option value="Hold">Hold</option></select></div>
+        <div><label>Operation</label><select id="mdFilterOp"><option value="">All</option>${(ops||[]).map(o=>`<option value="${esc(o.op_no)}">${esc(o.op_no)} — ${esc(o.description)}</option>`).join('')}</select></div>
+        <div><label>Operator</label><input id="mdFilterOperator" placeholder="Type a name..."></div>
+      </div>
+      <div class="row2">
+        <div><label>From Date</label><input id="mdFilterFrom" type="date"></div>
+        <div><label>To Date</label><input id="mdFilterTo" type="date"></div>
+      </div>
       <div class="table-scroll"><table class="entries" id="mdEntriesTable"></table></div>
     </div>
   `;
 
   function paintEntriesTable(){
     const table = document.getElementById('mdEntriesTable');
-    if(!entries || entries.length===0){ table.innerHTML = '<tr><td class="empty">No entries logged yet.</td></tr>'; return; }
+    const statusF = document.getElementById('mdFilterStatus')?.value || '';
+    const opF = document.getElementById('mdFilterOp')?.value || '';
+    const operatorF = (document.getElementById('mdFilterOperator')?.value || '').toLowerCase();
+    const fromF = document.getElementById('mdFilterFrom')?.value || '';
+    const toF = document.getElementById('mdFilterTo')?.value || '';
+    const filtered = (entries||[]).filter(e=>
+      (!statusF || e.status===statusF) &&
+      (!opF || e.job_operations?.op_no===opF) &&
+      (!operatorF || (e.primary_operator||'').toLowerCase().includes(operatorF)) &&
+      (!fromF || e.activity_date>=fromF) &&
+      (!toF || e.activity_date<=toF)
+    );
+    if(!filtered || filtered.length===0){ table.innerHTML = '<tr><td class="empty">No entries match this filter.</td></tr>'; return; }
     table.innerHTML = `<tr><th>Op</th><th>Plan Start</th><th>Plan End</th><th>Date</th><th>Operator</th><th>Time</th><th>Status</th><th>Issue</th><th>Delay Hrs</th><th>Resp.</th><th>Logged</th><th></th></tr>
-      ${entries.map(e=>{
+      ${filtered.map(e=>{
         const win = planned[e.job_operation_id];
         return `<tr>
         <td>${esc(e.job_operations?.op_no||'')} ${esc(e.job_operations?.description||'')}</td>
@@ -2155,6 +2182,10 @@ async function renderMachineDetail(app, jobId){
     });
   }
   paintEntriesTable();
+  ['mdFilterStatus','mdFilterOp','mdFilterFrom','mdFilterTo'].forEach(id=>{
+    document.getElementById(id).onchange = paintEntriesTable;
+  });
+  document.getElementById('mdFilterOperator').oninput = paintEntriesTable;
 
   document.getElementById('md_saveDetailsBtn').onclick = (e)=> withLock(e.target, 'Saving…', async ()=>{
     const machine_no = document.getElementById('md_machine').value.trim().toUpperCase();
@@ -3637,6 +3668,7 @@ async function renderStationCard(app, s, idx, total){
           <div class="issue-meta">
             <div>REPORTED<b style="font-size:12px;">${new Date(latestIssue.submitted_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})} · ${new Date(latestIssue.submitted_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</b></div>
             <div>RESPONSIBLE<b style="font-size:12px;">${esc(latestIssue.responsibility||'—')}</b></div>
+            <div>LOSS HOURS<b style="font-size:12px;">${latestIssue.delay_hours!=null ? Number(latestIssue.delay_hours).toFixed(1)+'h' : '—'}</b></div>
           </div>
         </div>` : `<div class="tv-panel"><div class="tv-table-title">Current Issue</div><div class="tv-table-empty">No open issue logged</div></div>`}
       </div>
