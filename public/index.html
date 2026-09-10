@@ -417,13 +417,13 @@
 
   /* ---------- Station Overview (homepage grid) ---------- */
   .tv-ov-wrap{width:100%;max-width:none;display:flex;flex-direction:column;align-items:center;}
-  .tv-ov-title{font-family:var(--font-display);font-size:min(4vw,32px);font-weight:700;letter-spacing:1px;color:#fff;}
-  .tv-ov-subtitle{font-size:13px;color:var(--steel-300);margin-top:2px;text-transform:uppercase;letter-spacing:1px;}
+  .tv-ov-title{font-family:var(--font-display);font-size:min(4.5vw,38px);font-weight:700;letter-spacing:1px;color:#fff;}
+  .tv-ov-subtitle{font-size:14px;color:var(--steel-300);margin-top:2px;text-transform:uppercase;letter-spacing:1px;}
   .tv-ov-kpi-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:16px;width:100%;}
   .tv-ov-kpi{background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.12);
     border-radius:10px;padding:10px 20px;text-align:center;min-width:110px;box-shadow:0 4px 14px rgba(0,0,0,.2);}
-  .tv-ov-kpi .n{font-family:var(--font-display);font-size:28px;font-weight:700;color:#fff;}
-  .tv-ov-kpi .l{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--steel-300);margin-top:2px;}
+  .tv-ov-kpi .n{font-family:var(--font-display);font-size:36px;font-weight:700;color:#fff;}
+  .tv-ov-kpi .l{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--steel-300);margin-top:2px;}
   .tv-ov-kpi.green .n{color:#6fd39a;} .tv-ov-kpi.blue .n{color:#7ec4e0;}
   .tv-ov-kpi.amber .n{color:#ffc857;} .tv-ov-kpi.red .n{color:#ff8a7a;}
   .tv-ov-area-status{margin-top:14px;padding:8px 24px;border-radius:8px;border-left:3px solid;font-family:var(--font-display);
@@ -432,6 +432,7 @@
   .tv-ov-area-status.atrisk{border-color:var(--amber-signal);background:rgba(224,163,0,.14);color:#ffc857;}
   .tv-ov-area-status.delayed{border-color:var(--red-600);background:rgba(192,57,43,.16);color:#ff8a7a;}
   body.tv-ov-active{background:#eef1f4;}
+  body.tv-ov-active .tv-card{background:#eef1f4;}
   body.tv-ov-active .tv-ov-title{color:var(--graphite-950);}
   body.tv-ov-active .tv-ov-subtitle{color:var(--steel-600);}
   body.tv-ov-active .tv-ov-kpi{background:#fff;border:1px solid var(--plate-100);box-shadow:0 2px 10px rgba(20,30,40,.06);}
@@ -483,10 +484,10 @@
   .tv-ov-card.red{border-left-color:var(--red-600);}
   .tv-ov-card-top{display:flex;justify-content:space-between;align-items:flex-start;}
   .tv-ov-thumb{width:60px;height:60px;object-fit:cover;border-radius:6px;border:1.5px solid rgba(255,255,255,.3);flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.3);}
-  .tv-ov-station-no{font-family:var(--font-mono);font-size:11px;color:var(--amber-500);letter-spacing:1px;}
-  .tv-ov-machine{font-family:var(--font-display);font-size:17px;font-weight:700;color:#fff;margin-top:1px;}
-  .tv-ov-customer{font-size:10px;color:var(--steel-300);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .tv-ov-op{font-size:11px;color:#fff;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tv-ov-station-no{font-family:var(--font-mono);font-size:13px;color:var(--amber-500);letter-spacing:1px;}
+  .tv-ov-machine{font-family:var(--font-display);font-size:22px;font-weight:700;color:#fff;margin-top:1px;}
+  .tv-ov-customer{font-size:13px;color:var(--steel-300);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tv-ov-op{font-size:13px;color:#fff;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .tv-ov-progress-track{background:rgba(255,255,255,.1);border-radius:3px;height:7px;margin-top:6px;overflow:hidden;}
   .tv-ov-progress-fill{height:100%;border-radius:3px;}
   .tv-ov-card.green .tv-ov-progress-fill{background:var(--green-600);}
@@ -3947,7 +3948,7 @@ async function renderStationOverview(app){
   const activeStationNumbers = [];
   for(let i=1;i<=TOTAL_STATIONS;i++){ if(!EXCLUDED_STATIONS.includes(i)) activeStationNumbers.push(i); }
 
-  let runningCt=0, holdCt=0, completedCt=0, delayedCt=0, pendingCt=0, totalDelayHours=0;
+  let runningCt=0, holdCt=0, completedCt=0, delayedCt=0, pendingCt=0, totalDelayHours=0, soDelayedCt=0, planDelayedCt=0;
   const computed = stations.map(s=>{
     const st = computeOverviewStatus(s);
     if(st.isComplete) completedCt++;
@@ -3956,6 +3957,10 @@ async function renderStationOverview(app){
     else if(st.label==='PENDING') pendingCt++;
     else runningCt++;
     totalDelayHours += (s.delay_hours_total||0);
+    const remainingHoursForKpi = Math.max(0, (s.std_hours||0) - (s.earned_hours||0));
+    const estDateForKpi = computeTargetDate(new Date().toISOString().slice(0,10), remainingHoursForKpi, s.shift_count, s.hours_per_shift);
+    if(deliveryRiskLevel(estDateForKpi, s.delivery_date, 3) === 'delayed') soDelayedCt++;
+    if(computePlanAdherence(s)?.status === 'delayed') planDelayedCt++;
     return { s, st };
   });
   // "Empty" means genuinely nothing going on — no job AND no note explaining the
@@ -3983,7 +3988,7 @@ async function renderStationOverview(app){
     const soRisk = deliveryRiskLevel(estDate, s.delivery_date, 3); // null | 'ontrack' | 'atrisk' | 'delayed'
     const planAdh = computePlanAdherence(s); // null | { status, behindDays }
     const soBadgeText = soRisk===null ? 'SO: —' : soRisk==='ontrack' ? 'SO: On Time' : soRisk==='atrisk' ? 'SO: At Risk' : 'SO: Late';
-    const planBadgeText = planAdh===null ? 'PLAN: —' : planAdh.status==='ontrack' ? 'PLAN: On Track' : `PLAN: -${planAdh.behindDays.toFixed(1)}d`;
+    const planBadgeText = planAdh===null ? 'PLAN: —' : planAdh.status==='ontrack' ? 'PLAN: On Track' : 'PLAN: Delayed';
     const badgeColorClass = (r)=> r==='delayed' ? 'red' : r==='atrisk' ? 'amber' : r==='ontrack' ? 'green' : 'grey';
     cardsHtml += `<div class="tv-ov-card ${st.color}" data-jobid="${s.job_id}">
       <div>
@@ -4017,7 +4022,8 @@ async function renderStationOverview(app){
           <div class="tv-ov-kpi blue"><div class="n">${runningCt}</div><div class="l">Running</div></div>
           <div class="tv-ov-kpi amber"><div class="n">${holdCt}</div><div class="l">On Hold</div></div>
           <div class="tv-ov-kpi green"><div class="n">${completedCt}</div><div class="l">Completed</div></div>
-          <div class="tv-ov-kpi red"><div class="n">${delayedCt}</div><div class="l">Delayed</div></div>
+          <div class="tv-ov-kpi red"><div class="n">${soDelayedCt}</div><div class="l">SO Delayed</div></div>
+          <div class="tv-ov-kpi red"><div class="n">${planDelayedCt}</div><div class="l">Plan Delayed</div></div>
           <div class="tv-ov-kpi"><div class="n">${emptyCt}</div><div class="l">Empty</div></div>
         </div>
         <div class="tv-ov-area-status ${areaRisk}">AREA STATUS: ${areaLabel}</div>
